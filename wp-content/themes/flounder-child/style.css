@@ -1,0 +1,284 @@
+/*
+Theme Name: Flounder Child
+Template: flounder
+Author: Kelly Dwan &amp; Mel Choyce
+Author URI: http://themes.redradar.net
+Description: Flounder is a flat, minimally styled theme for bloggers which features colorful support for post formats and a clean, responsive layout.
+Tags: two-columns,three-columns,left-sidebar,right-sidebar,post-formats,custom-header,featured-images,editor-style,threaded-comments,flexible-width,custom-menu,blue,gray,green,orange,pink,purple,yellow,dark
+Version: 0.2.4.1604557721
+Updated: 2020-11-05 06:28:41
+
+*/
+
+.clearfix::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+@media (max-width: 770px) {
+	.site-branding {
+		float: none !important;
+	}
+}
+.entry-header, .entry-content{
+	margin-right: 0;
+}
+.iksm-widget{
+	padding: 0;
+	margin-top: 1.5em;
+}
+.page-header, .widget, .site-branding, .hentry {
+  box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+}
+.page-header:hover, .widget:hover, .site-branding:hover, .hentry:hover {
+  box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+}
+
+.taxonomy-description{
+	font-style: normal !important;
+}
+#nav-below{
+	display: none;
+}
+#page{
+	margin-left: 3vw;
+	margin-right: 3vw;
+	max-width: none;
+}
+#masthead, #secondary{
+	overflow: visible !important;
+}
+
+/* additional css */
+.entry-meta{
+	display:none;
+}
+.entry-header, .entry-content{
+	margin-right: 0;
+}
+.comment-links{
+	display:none;
+}
+.entry-header, .page-header{
+	background-color: #0693E3!important;
+}
+.entry-header a{
+	color: #ffffff !important;
+}
+
+body, #page, .entry-content{
+	color: #757575;
+}
+.hentry, .widget, .post, .entry-area, .entry-content{
+	background-color: #ffffff;
+}
+.entry-title, .site-title{
+	color: #ffffff;
+}
+.iksm-widget{
+	padding: 0;
+	margin-top: 1.5em;
+}
+.site-branding{
+	background-color: #0693E3;
+}
+.page-header, .widget, .site-branding, .hentry {
+  box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+	overflow: hidden;
+}
+.page-header, .widget, .hentry {
+	border-radius: 4px;
+}
+.page-header:hover, .widget:hover, .site-branding:hover, .hentry:hover {
+  box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+}
+.site-title{
+	color: #ffffff;
+}
+.taxonomy-description p{
+	font-size: 24px;
+}
+
+.taxonomy-description{
+	font-style: normal !important;
+}
+h1{
+	font-weight: 400;
+}
+#comments{
+	display: none;
+}
+#nav-below{
+	display: none;
+}
+#page{
+	margin-left: 3vw;
+	margin-right: 3vw;
+	max-width: none;
+}
+#masthead, #secondary{
+	overflow: visible !important;
+}
+.wp-block-qubely-button{
+	padding-top: 0!important;
+}
+.advgb-accordion-item{
+	box-shadow: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
+	border-radius: 4px;
+	position: relative;
+	overflow: hidden;
+	margin-bottom: 1px !important;
+}
+.advgb-accordion-header h4{
+	font-weight: 400;
+	color: #757575 !important;
+}
+
+.advgb-accordion-header{
+	transition: all 0.3s ease 0.15s;
+	margin-top: 0 !important;
+	border: none !important;
+	padding: 12px 16px !important;
+	background-color: #ffffff !important;
+}
+/*
+.advgb-accordion-item+.advgb-accordion-item .advgb-accordion-header.ui-accordion-header-active{
+	margin-top: 16px !important;
+}
+*/
+.advgb-accordion-item+.advgb-accordion-item:before{
+    top: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    content: "";
+    opacity: 1;
+    position: absolute;
+    transition: opacity 150ms cubic-bezier(.4,0,.2,1) 0s,background-color 150ms cubic-bezier(.4,0,.2,1) 0s;
+    background-color: rgba(0,0,0,.12);
+}
+.advgb-accordion-header-icon{
+	margin-right: 0px !important;
+}
+.advgb-accordion-header .advgb-accordion-header-icon{
+	transition: all 0.15s ease 0s;
+  transform: rotate(0deg);
+	color: #757575 !important;
+}
+
+.advgb-accordion-header.ui-accordion-header-active .advgb-accordion-header-icon{
+	display: block !important;
+  transform: rotate(180deg);
+}
+
+.advgb-accordion-body{
+	margin-bottom: 0px !important;
+	transition: all 0.15s ease 0s;
+	border: 0px solid #00000000 !important;
+	color: #757575 !important;
+}
+/*
+.advgb-accordion-body.ui-accordion-content-active{
+	margin-bottom: 16px !important;
+}
+*/
+/*
+.advgb-accordion-header:hover{
+	background-color: #0693E3 !important;
+}
+*/
+
+.iksm-term--current>.iksm-term__inner{
+	background-color: #E3F4FF !important;
+}
+
+
+.iksm-term__link{
+	font-weight: bold;
+}
+.iksm-term--current>.iksm-term__link, 
+.iksm-term--current>.iksm-term__inner .iksm-term__link{
+	font-weight: bolder;
+	/*
+	color: #000000;
+	*/
+	color: #0066b1;
+}
+
+.btn-list-plain{
+	border-radius: 4px;
+	overflow: hidden;
+	margin: 0 !important;
+}
+.btn-list-plain a{
+	transition: all 0.2s ease 0s;
+	border-radius: 4px;
+	overflow: hidden;
+	color: #0066b1 !important;
+}
+.btn-list-plain a:hover{
+	background-color: #E3F4FF !important;
+	color: #0066b1 !important;
+	box-shadow: none !important;
+}
+
+/* tablepress */
+.tablepress,
+.dataTables_filter input,
+.dataTables_length select {
+	box-shadow: 0 2px 1px -1px rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.14), 0 1px 3px 0 rgba(0,0,0,0.12);
+	border-radius: 4px;
+	border: none;
+	overflow: hidden;
+}
+
+.tablepress {
+	margin-top: 8px !important;
+	margin-bottom: 8px !important;
+}
+
+.dataTables_filter input,
+.dataTables_length select {
+	padding: 8px !important;
+}
+
+.dataTables_filter,
+.dataTables_length {
+	margin-bottom: 8px !important;
+}
+
+.tablepress tfoot th,
+.tablepress thead th {
+	background-color: #ffffff;
+}
+
+.tablepress th,
+.tablepress td {
+	padding: 16px !important;
+	transition: all .2s ease 0s;
+}
+
+.tablepress thead th.sorting,
+.tablepress thead th.sorting_asc,
+.tablepress thead th.sorting_desc {
+	padding-right: 32px !important;
+}
+
+.tablepress tfoot th:hover,
+.tablepress thead th:hover,
+.tablepress .sorting:hover {
+	background-color: #f3f3f3;
+}
+
+.tablepress .sorting_asc,
+.tablepress .sorting_desc {
+	background-color: #E3F4FF;
+}
+
+.tablepress .sorting:after,
+.tablepress .sorting_asc:after,
+.tablepress .sorting_desc:after {
+	right: 16px;
+}
