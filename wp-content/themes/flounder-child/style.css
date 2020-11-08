@@ -50,8 +50,7 @@ Updated: 2020-11-05 06:28:41
 	overflow: visible !important;
 }
 
-/* additional css */
-.entry-meta{
+/* additional css */.entry-meta{
 	display:none;
 }
 .entry-header, .entry-content{
@@ -67,10 +66,10 @@ Updated: 2020-11-05 06:28:41
 	color: #ffffff !important;
 }
 
-body, #page, .entry-content{
+body, #page, .entry-content, .page-content{
 	color: #757575;
 }
-.hentry, .widget, .post, .entry-area, .entry-content{
+.hentry, .widget, .entry-area, .entry-content, .page-content{
 	background-color: #ffffff;
 }
 .entry-title, .site-title{
@@ -91,8 +90,25 @@ body, #page, .entry-content{
 .page-header, .widget, .hentry {
 	border-radius: 4px;
 }
+
+.page-content, .page-content>*{
+	background-color: #00000000;
+	margin-bottom: 30px;
+}
+.page-content>* {
+	border-radius: 4px !important;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23) !important;
+  transition: all 0.3s cubic-bezier(.25,.8,.25,1) !important;
+	overflow: hidden !important;
+}
 .page-header:hover, .widget:hover, .site-branding:hover, .hentry:hover {
-  box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+  	box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+}
+.page-header a{
+	color: #ffffff;
+}
+span.post{
+	background-color: #00000000;
 }
 .site-title{
 	color: #ffffff;
@@ -113,6 +129,9 @@ h1{
 #nav-below{
 	display: none;
 }
+#image-navigation{
+	display: none;
+}
 #page{
 	margin-left: 3vw;
 	margin-right: 3vw;
@@ -126,11 +145,15 @@ h1{
 }
 .advgb-accordion-item{
 	box-shadow: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
-	border-radius: 4px;
 	position: relative;
 	overflow: hidden;
 	margin-bottom: 1px !important;
 }
+/*
+.entry-content .advgb-accordion-item{
+	box-shadow: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
+}
+*/
 .advgb-accordion-header h4{
 	font-weight: 400;
 	color: #757575 !important;
@@ -222,6 +245,7 @@ h1{
 	background-color: #E3F4FF !important;
 	color: #0066b1 !important;
 	box-shadow: none !important;
+	opacity: 1 !important;
 }
 
 /* tablepress */
