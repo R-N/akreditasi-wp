@@ -201,6 +201,7 @@ h1{
 	transition: all 0.15s ease 0s;
 	border: 0px solid #00000000 !important;
 	color: #757575 !important;
+	padding: 16px !important;
 }
 /*
 .advgb-accordion-body.ui-accordion-content-active{
@@ -305,4 +306,10 @@ h1{
 .tablepress .sorting_asc:after,
 .tablepress .sorting_desc:after {
 	right: 16px;
+}
+a{
+	color: #0066b1;
+}
+br{
+	display: none;
 }

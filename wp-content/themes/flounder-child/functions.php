@@ -26,6 +26,9 @@ add_action( 'init', function() {
 	add_shortcode( 'site_url', function( $atts = null, $content = null ) {
 		return site_url();
 	} );
+  add_shortcode( 'site_url_no_scheme', function( $atts = null, $content = null ) {
+    return substr(site_url(), is_ssl() ? 8 : 7);
+  } );
 } );
 add_action( 'pre_get_posts', 'my_change_sort_order'); 
 function my_change_sort_order($query){
