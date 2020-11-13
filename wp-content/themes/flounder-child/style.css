@@ -66,8 +66,15 @@ Updated: 2020-11-05 06:28:41
 	color: #ffffff !important;
 }
 
+body{
+	font-size: 1.1em;
+}
 body, #page, .entry-content, .page-content{
-	color: #757575;
+	color: #959595;
+}
+a{
+	color: #0066b1;
+	font-weight: bold;
 }
 .hentry, .widget, .entry-area, .entry-content, .page-content{
 	background-color: #ffffff;
@@ -156,7 +163,7 @@ h1{
 */
 .advgb-accordion-header h4{
 	font-weight: 400;
-	color: #757575 !important;
+	color: #959595 !important;
 }
 
 .advgb-accordion-header{
@@ -191,7 +198,7 @@ h1{
 .advgb-accordion-header .advgb-accordion-header-icon{
 	transition: all 0.15s ease 0s;
   transform: rotate(0deg);
-	color: #757575 !important;
+	color: #959595 !important;
 }
 
 .advgb-accordion-header.ui-accordion-header-active .advgb-accordion-header-icon{
@@ -203,7 +210,7 @@ h1{
 	margin-bottom: 0px !important;
 	transition: all 0.15s ease 0s;
 	border: 0px solid #00000000 !important;
-	color: #757575 !important;
+	color: #959595 !important;
 	padding: 16px !important;
 }
 /*
@@ -251,9 +258,6 @@ h1{
 	box-shadow: none !important;
 	opacity: 1 !important;
 }
-a{
-	color: #0066b1;
-}
 br{
 	display: none;
 }
@@ -275,6 +279,12 @@ br{
 .pdf>*{
 	width: 100% !important;
 	height: 100% !important;
+}
+figure.aligncenter figcaption{
+	text-align: center;
+}
+.border-1 img{
+	border: 1px solid black;
 }
 
 /* tablepress */
