@@ -40,3 +40,5 @@ function my_change_sort_order($query){
        $query->set( 'orderby', 'title' );
     endif;    
 };
+add_filter( 'widget_text', 'shortcode_unautop');
+add_filter( 'widget_text', 'do_shortcode');
