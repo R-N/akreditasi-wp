@@ -14,7 +14,7 @@ if ( ! defined( 'WPINC' ) ) {
  * Plugin Name:       Advanced Import
  * Plugin URI:        https://addonspress.com/item/advanced-import
  * Description:       Easily import demo data starter site packages or Migrate your site data
- * Version:           1.2.4
+ * Version:           1.4.4
  * Author:            AddonsPress
  * Author URI:        https://addonspress.com/
  * License:           GPL-2.0+
@@ -24,16 +24,16 @@ if ( ! defined( 'WPINC' ) ) {
  */
 
 /*Define Constants for this plugin*/
-define( 'ADVANCED_IMPORT_VERSION', '1.2.4' );
+define( 'ADVANCED_IMPORT_VERSION', '1.4.4' );
 define( 'ADVANCED_IMPORT_PLUGIN_NAME', 'advanced-import' );
-define( 'ADVANCED_IMPORT_PATH',  plugin_dir_path( __FILE__ ) );
+define( 'ADVANCED_IMPORT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'ADVANCED_IMPORT_URL', plugin_dir_url( __FILE__ ) );
 define( 'ADVANCED_IMPORT_SCRIPT_PREFIX', ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '.min' );
 
-$upload_dir = wp_upload_dir();
-$advanced_import_temp =  $upload_dir['basedir'] . '/advanced-import-temp/';
-$advanced_import_temp_zip =  $upload_dir['basedir'] . '/advanced-import-temp-zip/';
-$advanced_import_temp_uploads =  $advanced_import_temp . '/uploads/';
+$upload_dir                   = wp_upload_dir();
+$advanced_import_temp         = $upload_dir['basedir'] . '/advanced-import-temp/';
+$advanced_import_temp_zip     = $upload_dir['basedir'] . '/advanced-import-temp-zip/';
+$advanced_import_temp_uploads = $advanced_import_temp . '/uploads/';
 
 define( 'ADVANCED_IMPORT_TEMP', $advanced_import_temp );
 define( 'ADVANCED_IMPORT_TEMP_ZIP', $advanced_import_temp_zip );

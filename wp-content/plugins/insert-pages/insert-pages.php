@@ -7,7 +7,8 @@
  * Text Domain: insert-pages
  * Domain Path: /languages
  * License: GPL2
- * Version: 3.5.7
+ * Requires at least: 3.3.0
+ * Version: 3.9.1
  *
  * @package insert-pages
  */
@@ -31,7 +32,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /**
  * Shortcode Format:
- * [insert page='{slug}|{id}' display='title|link|excerpt|excerpt-only|content|post-thumbnail|all|{custom-template.php}' class='any-classes' id='any-id' [inline] [public] querystring='{url-encoded-values}']
+ * [insert page='{slug}|{id}|{url}' display='title|link|excerpt|excerpt-only|content|title-content|post-thumbnail|all|{custom-template.php}' class='any-classes' id='any-id' [inline] [public] querystring='{url-encoded-values}' size='post-thumbnail|thumbnail|medium|large|full|{custom-size}']
  */
 
 if ( ! class_exists( 'InsertPagesPlugin' ) ) {
@@ -46,6 +47,20 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 		 */
 		protected $inserted_page_ids;
 
+		/**
+		 * Flag to only render the TinyMCE plugin dialog once.
+		 *
+		 * @var boolean
+		 */
+		private static $link_dialog_printed = false;
+
+		/**
+		 * Flag checked when rendering TinyMCE modal to ensure that required scripts
+		 * and styles were enqueued (normally done in `admin_init` hook).
+		 *
+		 * @var boolean
+		 */
+		private static $is_admin_initialized = false;
 
 		/**
 		 * Singleton plugin instance.
@@ -99,13 +114,16 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 				! WP_Block_Type_Registry::get_instance()->is_registered( 'insert-pages/block' )
 			) {
 				// Automatically load dependencies and version.
-				$asset_file = include( plugin_dir_path( __FILE__ ) . 'lib/gutenberg-block/build/index.asset.php');
+				$asset_file = include plugin_dir_path( __FILE__ ) . 'lib/gutenberg-block/build/index.asset.php';
 
 				wp_register_script(
 					'insert-pages-gutenberg-block',
 					plugins_url( 'lib/gutenberg-block/build/index.js', __FILE__ ),
 					$asset_file['dependencies'],
-					$asset_file['version']
+					$asset_file['version'],
+					array(
+						'in_footer' => false,
+					)
 				);
 
 				wp_register_style(
@@ -157,6 +175,10 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 								'type' => 'string',
 								'default' => '',
 							),
+							'size' => array(
+								'type' => 'string',
+								'default' => '',
+							),
 						),
 						'render_callback' => array( $this, 'block_render_callback' ),
 					)
@@ -179,22 +201,44 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 			if ( isset( $attr['display'] ) && strlen( $attr['display'] ) > 0 ) {
 				$display = esc_attr( $attr['display'] );
 			}
-			if ( 'custom' === $display && isset( $attr['template'] ) && strlen( $attr['template'] ) > 0) {
+			if ( 'custom' === $display && isset( $attr['template'] ) && strlen( $attr['template'] ) > 0 ) {
 				$display = esc_attr( $attr['template'] );
 			}
 
 			$shortcode = sprintf(
-				'[insert page="%1$s" display="%2$s"%3$s%4$s%5$s%6$s%7$s]',
+				'[insert page="%1$s" display="%2$s"%3$s%4$s%5$s%6$s%7$s%8$s]',
 				isset( $attr['page'] ) && strlen( $attr['page'] ) > 0 ? esc_attr( $attr['page'] ) : '0',
 				$display,
 				isset( $attr['class'] ) && strlen( $attr['class'] ) > 0 ? ' class="' . esc_attr( $attr['class'] ) . '"' : '',
 				isset( $attr['id'] ) && strlen( $attr['id'] ) > 0 ? ' id="' . esc_attr( $attr['id'] ) . '"' : '',
 				isset( $attr['querystring'] ) && strlen( $attr['querystring'] ) > 0 ? ' querystring="' . esc_attr( $attr['querystring'] ) . '"' : '',
+				isset( $attr['size'] ) && strlen( $attr['size'] ) > 0 ? ' size="' . esc_attr( $attr['size'] ) . '"' : '',
 				isset( $attr['inline'] ) && 'true' === $attr['inline'] ? ' inline' : '',
 				isset( $attr['public'] ) && 'true' === $attr['public'] ? ' public' : ''
 			);
 
-			return do_shortcode( $shortcode );
+			$rendered_shortcode = do_shortcode( $shortcode );
+
+			// If we're in the block editor, enqueue any layout styles for blocks
+			// (normally this is done in core but since we're not in the main context,
+			// we need to do so manually). For example, the Grid block uses layout
+			// styles to set the number of columns.
+			// See: https://github.com/WordPress/WordPress/blob/6.6.2/wp-includes/block-supports/layout.php#L539-L551.
+			// See: https://developer.wordpress.org/reference/functions/wp_style_engine_get_stylesheet_from_css_rules/.
+			// See: https://developer.wordpress.org/reference/functions/wp_add_inline_style/.
+			$current_screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+			if (
+				! empty( $current_screen ) && $current_screen->is_block_editor() &&
+				! in_array( $display, array( 'title', 'link', 'post-thumbnail' ), true ) &&
+				function_exists( 'wp_style_engine_get_stylesheet_from_context' )
+			) {
+				$layout_styles = wp_style_engine_get_stylesheet_from_context( 'block-supports' );
+				if ( ! empty( $layout_styles ) ) {
+					wp_add_inline_style( 'wp-block-library', $layout_styles );
+				}
+			}
+
+			return $rendered_shortcode;
 		}
 
 
@@ -230,7 +274,7 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 				'wpinsertpages',
 				plugins_url( '/js/wpinsertpages.js', __FILE__ ),
 				array( 'wpdialogs' ),
-				'20200722',
+				'20221216',
 				false
 			);
 			wp_localize_script(
@@ -243,7 +287,8 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 					'noMatchesFound' => __( 'No matches found.', 'insert-pages' ),
 					'l10n_print_after' => 'try{convertEntities(wpInsertPagesL10n);}catch(e){};',
 					'format' => $options['wpip_format'],
-					'private' => __( 'Private' ),
+					'private' => __( 'Private', 'insert-pages' ),
+					'tinymce_state' => $this->get_tinymce_state(),
 				)
 			);
 
@@ -252,7 +297,7 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 				'wpinsertpagescss',
 				plugins_url( '/css/wpinsertpages.css', __FILE__ ),
 				array( 'wp-jquery-ui-dialog' ),
-				'20191101'
+				'20221216'
 			);
 
 			/**
@@ -271,8 +316,10 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 			load_plugin_textdomain(
 				'insert-pages',
 				false,
-				plugin_basename( dirname( __FILE__ ) ) . '/languages'
+				plugin_basename( __DIR__ ) . '/languages'
 			);
+
+			self::$is_admin_initialized = true;
 		}
 
 
@@ -289,13 +336,14 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 			// Shortcode attributes.
 			$attributes = shortcode_atts(
 				array(
-					'page' => '0',
-					'display' => 'all',
-					'class' => '',
-					'id' => '',
-					'inline' => false,
-					'public' => false,
+					'page'        => '0',
+					'display'     => 'all',
+					'class'       => '',
+					'id'          => '',
 					'querystring' => '',
+					'size'        => '',
+					'inline'      => false,
+					'public'      => false,
 				),
 				$atts,
 				'insert'
@@ -308,11 +356,9 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 
 			// Short circuit if trying to embed same page in itself.
 			if (
-				! is_null( $post ) && property_exists( $post, 'ID' ) &&
-				(
-					( intval( $attributes['page'] ) > 0 && intval( $attributes['page'] ) === $post->ID ) ||
-					$attributes['page'] === $post->post_name
-				)
+				( is_object( $post ) && property_exists( $post, 'ID' ) && intval( $attributes['page'] ) === $post->ID ) ||
+				( is_object( $post ) && property_exists( $post, 'post_name' ) && $attributes['page'] === $post->post_name ) ||
+				( is_int( $post ) && intval( $attributes['page'] ) === $post )
 			) {
 				return $content;
 			}
@@ -374,7 +420,12 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 			 */
 			$attributes['display'] = apply_filters( 'insert_pages_override_display', $attributes['display'] );
 
-			// Get the WP_Post object from the provided slug or ID.
+			// If a URL is provided, translate it to a post ID.
+			if ( filter_var( $attributes['page'], FILTER_VALIDATE_URL ) ) {
+				$attributes['page'] = url_to_postid( $attributes['page'] );
+			}
+
+			// Get the WP_Post object from the provided slug, or ID.
 			if ( ! is_numeric( $attributes['page'] ) ) {
 				// Get list of post types that can be inserted (page, post, custom
 				// types), excluding builtin types (nav_menu_item, attachment).
@@ -405,10 +456,39 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 				$inserted_page = get_post( intval( $attributes['page'] ) );
 			}
 
+			// Integration: If WPML is enabled, ensure the inserted page matches the
+			// language of the parent page.
+			if ( is_object( $inserted_page ) && class_exists( 'Sitepress' ) ) {
+				$translated_inserted_page = apply_filters( 'wpml_object_id', $inserted_page->ID, 'any' );
+				if ( ! empty( $translated_inserted_page ) && intval( $translated_inserted_page ) !== $inserted_page->ID ) {
+					$inserted_page = get_post( intval( $translated_inserted_page ) );
+				}
+			}
+
+			// Prevent unprivileged users from inserting private posts from others.
+			if ( is_object( $inserted_page ) && 'publish' !== $inserted_page->post_status ) {
+				$post_type = get_post_type_object( $inserted_page->post_type );
+				$parent_post_author_id = intval( get_the_author_meta( 'ID' ) );
+				if ( ! user_can( $parent_post_author_id, $post_type->cap->read_post, $inserted_page->ID ) ) {
+					$inserted_page = null;
+				}
+			}
+
 			// If inserted page's status is private, don't show to anonymous users
 			// unless 'public' option is set.
 			if ( is_object( $inserted_page ) && 'private' === $inserted_page->post_status && ! $attributes['public'] ) {
 				$inserted_page = null;
+			}
+
+			// Integration: if Simple Membership plugin is used, check that the
+			// current user has permission to see the inserted post.
+			// See: https://simple-membership-plugin.com/simple-membership-miscellaneous-php-tweaks/
+			if ( class_exists( 'SwpmAccessControl' ) ) {
+				$access_ctrl = SwpmAccessControl::get_instance();
+				if ( ! $access_ctrl->can_i_read_post( $inserted_page ) && ! current_user_can( 'edit_files' ) ) {
+					$inserted_page = null;
+					$content = wp_kses_post( $access_ctrl->why() );
+				}
 			}
 
 			// Loop detection: check if the page we are inserting has already been
@@ -418,7 +498,7 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 				$this->inserted_page_ids = array( get_the_ID() );
 			}
 			if ( isset( $inserted_page->ID ) ) {
-				if ( ! in_array( $inserted_page->ID, $this->inserted_page_ids ) ) {
+				if ( ! in_array( $inserted_page->ID, $this->inserted_page_ids, true ) ) {
 					// Add the page being inserted to the stack.
 					$this->inserted_page_ids[] = $inserted_page->ID;
 				} else {
@@ -434,6 +514,15 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 			foreach ( $querystring as $param => $value ) {
 				$_GET[ $param ] = $value;
 				$_REQUEST[ $param ] = $value;
+			}
+			$original_wp_query_vars = $GLOBALS['wp']->query_vars;
+			if (
+				! empty( $querystring ) &&
+				isset( $GLOBALS['wp'] ) &&
+				method_exists( $GLOBALS['wp'], 'parse_request' ) &&
+				empty( $GLOBALS['wp']->query_vars['rest_route'] )
+			) {
+				$GLOBALS['wp']->parse_request( $querystring );
 			}
 
 			// Use "Normal" insert method (get_post).
@@ -461,6 +550,7 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 				// Note: Temporarily set the global $post->ID to the inserted page ID,
 				// since both builders rely on the id to load the appropriate styles.
 				if (
+					class_exists( 'UAGB_Post_Assets' ) ||
 					class_exists( 'FLBuilder' ) ||
 					class_exists( 'SiteOrigin_Panels' ) ||
 					class_exists( '\Elementor\Post_CSS_File' ) ||
@@ -474,9 +564,19 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 					if ( is_null( $post ) ) {
 						$old_post_id = null;
 						$post = $inserted_page; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+					} elseif ( is_int( $post ) ) {
+						$old_post_id = $post;
+						$post = $inserted_page->ID;
 					} else {
 						$old_post_id = $post->ID;
 						$post->ID = $inserted_page->ID;
+					}
+
+					// Enqueue assets for Ultimate Addons for Gutenberg.
+					// See: https://ultimategutenberg.com/docs/assets-api-third-party-plugins/.
+					if ( class_exists( 'UAGB_Post_Assets' ) ) {
+						$post_assets_instance = new UAGB_Post_Assets( $inserted_page->ID );
+						$post_assets_instance->enqueue_scripts();
 					}
 
 					if ( class_exists( 'FLBuilder' ) ) {
@@ -495,6 +595,10 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 
 					// Enqueue custom style from WPBakery Page Builder (Visual Composer).
 					if ( defined( 'VCV_VERSION' ) ) {
+						wp_enqueue_style( 'vcv:assets:front:style' );
+						wp_enqueue_script( 'vcv:assets:runtime:script' );
+						wp_enqueue_script( 'vcv:assets:front:script' );
+
 						$bundle_url = get_post_meta( $inserted_page->ID, 'vcvSourceCssFileUrl', true );
 						if ( $bundle_url ) {
 							$version = get_post_meta( $inserted_page->ID, 'vcvSourceCssFileHash', true );
@@ -535,20 +639,22 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 						// Post custom CSS.
 						$post_custom_css = get_post_meta( $inserted_page->ID, '_wpb_post_custom_css', true );
 						if ( ! empty( $post_custom_css ) ) {
-							$post_custom_css = wp_strip_all_tags( $post_custom_css );
 							echo '<style type="text/css" data-type="vc_custom-css">';
-							echo $post_custom_css;
+							echo esc_html( wp_strip_all_tags( $post_custom_css ) );
 							echo '</style>';
 						}
 						// Shortcodes custom CSS.
 						$shortcodes_custom_css = get_post_meta( $inserted_page->ID, '_wpb_shortcodes_custom_css', true );
 						if ( ! empty( $shortcodes_custom_css ) ) {
-							$shortcodes_custom_css = wp_strip_all_tags( $shortcodes_custom_css );
 							echo '<style type="text/css" data-type="vc_shortcodes-custom-css">';
-							echo $shortcodes_custom_css;
+							echo esc_html( wp_strip_all_tags( $shortcodes_custom_css ) );
 							echo '</style>';
 						}
 					}
+
+					// GoodLayers page builder content (retrieved from post meta).
+					// See: https://docs.goodlayers.com/add-page-builder-in-product/.
+					do_action( 'gdlr_core_print_page_builder' );
 
 					if ( is_null( $old_post_id ) ) {
 						$post = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
@@ -572,9 +678,32 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 				switch ( $attributes['display'] ) {
 					case 'title':
 						$title_tag = $attributes['inline'] ? 'span' : 'h1';
-						echo "<$title_tag class='insert-page-title'>";
-						echo get_the_title( $inserted_page->ID );
-						echo "</$title_tag>";
+						echo wp_kses_post( "<$title_tag class='insert-page-title'>" );
+						echo esc_html( get_the_title( $inserted_page->ID ) );
+						echo wp_kses_post( "</$title_tag>" );
+						break;
+
+					case 'title-content':
+						// Title.
+						$title_tag = $attributes['inline'] ? 'span' : 'h1';
+						echo wp_kses_post( "<$title_tag class='insert-page-title'>" );
+						echo esc_html( get_the_title( $inserted_page->ID ) );
+						echo wp_kses_post( "</$title_tag>" );
+						// Content.
+						// If Elementor is installed, try to render the page with it. If there is no Elementor content, fall back to normal rendering.
+						if ( class_exists( '\Elementor\Plugin' ) ) {
+							$elementor_content = \Elementor\Plugin::$instance->frontend->get_builder_content( $inserted_page->ID );
+							if ( strlen( $elementor_content ) > 0 ) {
+								echo $elementor_content;
+								break;
+							}
+						}
+						// Render the content normally.
+						$content = get_post_field( 'post_content', $inserted_page->ID );
+						if ( $attributes['should_apply_the_content_filter'] ) {
+							$content = apply_filters( 'the_content', $content );
+						}
+						echo $content;
 						break;
 
 					case 'link':
@@ -611,54 +740,24 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 						break;
 
 					case 'post-thumbnail':
-						?><a href="<?php echo esc_url( get_permalink( $inserted_page->ID ) ); ?>"><?php echo get_the_post_thumbnail( $inserted_page->ID ); ?></a>
+						$size = empty( $attributes['size'] ) ? 'post-thumbnail' : $attributes['size'];
+						?><a href="<?php echo esc_url( get_permalink( $inserted_page->ID ) ); ?>"><?php echo get_the_post_thumbnail( $inserted_page->ID, $size ); ?></a>
 						<?php
 						break;
 
 					case 'all':
 						// Title.
 						$title_tag = $attributes['inline'] ? 'span' : 'h1';
-						echo "<$title_tag class='insert-page-title'>";
-						echo get_the_title( $inserted_page->ID );
-						echo "</$title_tag>";
+						echo wp_kses_post( "<$title_tag class='insert-page-title'>" );
+						echo esc_html( get_the_title( $inserted_page->ID ) );
+						echo wp_kses_post( "</$title_tag>" );
 						// Content.
 						$content = get_post_field( 'post_content', $inserted_page->ID );
 						if ( $attributes['should_apply_the_content_filter'] ) {
 							$content = apply_filters( 'the_content', $content );
 						}
 						echo $content;
-						/**
-						 * Meta.
-						 *
-						 * @see https://core.trac.wordpress.org/browser/tags/4.4/src/wp-includes/post-template.php#L968
-						 */
-						$keys = get_post_custom_keys( $inserted_page->ID );
-						if ( $keys ) {
-							echo "<ul class='post-meta'>\n";
-							foreach ( (array) $keys as $key ) {
-								$keyt = trim( $key );
-								if ( is_protected_meta( $keyt, 'post' ) ) {
-									continue;
-								}
-								$value = get_post_custom_values( $key, $inserted_page->ID );
-								if ( is_array( $value ) ) {
-									$values = array_map( 'trim', $value );
-									$value = implode( $values, ', ' );
-								}
-
-								/**
-								 * Filter the HTML output of the li element in the post custom fields list.
-								 *
-								 * @since 2.2.0
-								 *
-								 * @param string $html  The HTML output for the li element.
-								 * @param string $key   Meta key.
-								 * @param string $value Meta value.
-								 */
-								echo apply_filters( 'the_meta_key', "<li><span class='post-meta-key'>$key:</span> $value</li>\n", $key, $value );
-							}
-							echo "</ul>\n";
-						}
+						$this->the_meta( $inserted_page->ID );
 						break;
 
 					default: // Display is either invalid, or contains a template file to use.
@@ -704,7 +803,7 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 							);
 							if ( strlen( $template ) > 0 && $path_in_theme_or_childtheme_or_compat ) {
 								include $template; // Execute the template code.
-							} else { // Couldn't find template, so fall back to printing a link to the page.
+							} else { // Bad path, so fall back to printing a link to the page.
 								the_post();
 								?><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
 								<?php
@@ -734,12 +833,32 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 						'post_status' => $attributes['public'] ? array( 'publish', 'private' ) : array( 'publish' ),
 					);
 				}
+
 				// We save the previous query state here instead of using
 				// wp_reset_query() because wp_reset_query() only has a single stack
 				// variable ($GLOBALS['wp_the_query']). This allows us to support
 				// pages inserted into other pages (multiple nested pages).
 				$old_query = $GLOBALS['wp_query'];
 				$posts = query_posts( $args );
+
+				// Prevent unprivileged users from inserting private posts from others.
+				if ( have_posts() ) {
+					$can_read = true;
+					$parent_post_author_id = intval( get_the_author_meta( 'ID' ) );
+					foreach ( $posts as $post ) {
+						if ( is_object( $post ) && 'publish' !== $post->post_status ) {
+							$post_type = get_post_type_object( $post->post_type );
+							if ( ! user_can( $parent_post_author_id, $post_type->cap->read_post, $post->ID ) ) {
+								$can_read = false;
+							}
+						}
+					}
+					if ( ! $can_read ) {
+						// Force an empty query so we don't show any posts.
+						$posts = query_posts( array( 'post__in' => array( 0 ) ) );
+					}
+				}
+
 				if ( have_posts() ) {
 					// Start output buffering so we can save the output to string.
 					ob_start();
@@ -750,6 +869,7 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 					// Note: Temporarily set the global $post->ID to the inserted page ID,
 					// since both builders rely on the id to load the appropriate styles.
 					if (
+						class_exists( 'UAGB_Post_Assets' ) ||
 						class_exists( 'FLBuilder' ) ||
 						class_exists( 'SiteOrigin_Panels' ) ||
 						class_exists( '\Elementor\Post_CSS_File' ) ||
@@ -763,9 +883,19 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 						if ( is_null( $post ) ) {
 							$old_post_id = null;
 							$post = $inserted_page; // phpcs:ignore WordPress.WP.GlobalVariablesOverride
+						} elseif ( is_int( $post ) ) {
+							$old_post_id = $post;
+							$post = $inserted_page->ID;
 						} else {
 							$old_post_id = $post->ID;
 							$post->ID = $inserted_page->ID;
+						}
+
+						// Enqueue assets for Ultimate Addons for Gutenberg.
+						// See: https://ultimategutenberg.com/docs/assets-api-third-party-plugins/.
+						if ( class_exists( 'UAGB_Post_Assets' ) ) {
+							$post_assets_instance = new UAGB_Post_Assets( $inserted_page->ID );
+							$post_assets_instance->enqueue_scripts();
 						}
 
 						if ( class_exists( 'FLBuilder' ) ) {
@@ -784,6 +914,10 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 
 						// Enqueue custom style from WPBakery Page Builder (Visual Composer).
 						if ( defined( 'VCV_VERSION' ) ) {
+							wp_enqueue_style( 'vcv:assets:front:style' );
+							wp_enqueue_script( 'vcv:assets:runtime:script' );
+							wp_enqueue_script( 'vcv:assets:front:script' );
+
 							$bundle_url = get_post_meta( $inserted_page->ID, 'vcvSourceCssFileUrl', true );
 							if ( $bundle_url ) {
 								$version = get_post_meta( $inserted_page->ID, 'vcvSourceCssFileHash', true );
@@ -802,7 +936,7 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 									// Enqueue custom css/js stored in vcvSourceAssetsFiles postmeta.
 									$vc = new \VisualComposer\Helpers\AssetsEnqueue;
 									if ( method_exists( $vc, 'enqueueAssets' ) ) {
-										$vc->enqueueAssets($inserted_page->ID);
+										$vc->enqueueAssets( $inserted_page->ID );
 									}
 									// Enqueue custom CSS stored in vcvSourceCssFileUrl postmeta.
 									$upload_dir = wp_upload_dir();
@@ -839,8 +973,14 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 							}
 						}
 
+						// GoodLayers page builder content (retrieved from post meta).
+						// See: https://docs.goodlayers.com/add-page-builder-in-product/.
+						do_action( 'gdlr_core_print_page_builder' );
+
 						if ( is_null( $old_post_id ) ) {
 							$post = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+						} elseif ( is_int( $post ) ) {
+							$post = $old_post_id;
 						} else {
 							$post->ID = $old_post_id;
 						}
@@ -865,6 +1005,36 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 							echo "<$title_tag class='insert-page-title'>";
 							the_title();
 							echo "</$title_tag>";
+							break;
+						case 'title-content':
+							// Title.
+							the_post();
+							$title_tag = $attributes['inline'] ? 'span' : 'h1';
+							echo "<$title_tag class='insert-page-title'>";
+							the_title();
+							echo "</$title_tag>";
+							// Content.
+							// If Elementor is installed, try to render the page with it. If there is no Elementor content, fall back to normal rendering.
+							if ( class_exists( '\Elementor\Plugin' ) ) {
+								$elementor_content = \Elementor\Plugin::$instance->frontend->get_builder_content( $inserted_page->ID );
+								if ( strlen( $elementor_content ) > 0 ) {
+									echo $elementor_content;
+									break;
+								}
+							}
+							// Render the content normally.
+							if ( $attributes['should_apply_the_content_filter'] ) {
+								the_content();
+							} else {
+								echo get_the_content();
+							}
+							// Render any <!--nextpage--> pagination links.
+							wp_link_pages(
+								array(
+									'before' => '<div class="page-links">' . __( 'Pages:', 'insert-pages' ),
+									'after'  => '</div>',
+								)
+							);
 							break;
 						case 'link':
 							the_post();
@@ -906,13 +1076,16 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 								echo get_the_content();
 							}
 							// Render any <!--nextpage--> pagination links.
-							wp_link_pages( array(
-								'before' => '<div class="page-links">' . __( 'Pages:', 'twentynineteen' ),
-								'after'  => '</div>',
-							) );
+							wp_link_pages(
+								array(
+									'before' => '<div class="page-links">' . __( 'Pages:', 'insert-pages' ),
+									'after'  => '</div>',
+								)
+							);
 							break;
 						case 'post-thumbnail':
-							?><a href="<?php echo esc_url( get_permalink( $inserted_page->ID ) ); ?>"><?php echo get_the_post_thumbnail( $inserted_page->ID ); ?></a>
+							$size = empty( $attributes['size'] ) ? 'post-thumbnail' : $attributes['size'];
+							?><a href="<?php echo esc_url( get_permalink( $inserted_page->ID ) ); ?>"><?php echo get_the_post_thumbnail( $inserted_page->ID, $size ); ?></a>
 							<?php
 							break;
 						case 'all':
@@ -926,10 +1099,10 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 							} else {
 								echo get_the_content();
 							}
-							the_meta();
+							$this->the_meta();
 							// Render any <!--nextpage--> pagination links.
 							wp_link_pages( array(
-								'before' => '<div class="page-links">' . __( 'Pages:', 'twentynineteen' ),
+								'before' => '<div class="page-links">' . __( 'Pages:', 'insert-pages' ),
 								'after'  => '</div>',
 							) );
 							break;
@@ -991,6 +1164,7 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 			// Unset any querystring params included in the shortcode.
 			$_GET = $original_get;
 			$_REQUEST = $original_request;
+			$GLOBALS['wp']->query_vars = $original_wp_query_vars;
 
 			// Loop detection: remove the page from the stack (so we can still insert
 			// the same page multiple times on another page, but prevent it from being
@@ -1013,7 +1187,6 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 				}
 			}
 
-
 			return $content;
 		}
 
@@ -1026,8 +1199,14 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 		 * @return string             Content to replace shortcode.
 		 */
 		public function insert_pages_wrap_content( $content, $posts, $attributes ) {
-			$maybe_id = isset( $attributes['id'] ) && strlen( $attributes['id'] ) > 0 ? ' id="' . esc_attr( $attributes['id'] ) . '"' : '';
-			return "<{$attributes['wrapper_tag']} data-post-id='{$attributes['page']}' class='insert-page insert-page-{$attributes['page']} {$attributes['class']}'$maybe_id>{$content}</{$attributes['wrapper_tag']}>";
+			return sprintf(
+				'<%1$s data-post-id="%2$s" class="insert-page insert-page-%2$s %3$s"%4$s>%5$s</%1$s>',
+				esc_attr( $attributes['wrapper_tag'] ),
+				esc_attr( $attributes['page'] ),
+				esc_attr( $attributes['class'] ),
+				empty( $attributes['id'] ) ? '' : ' id="' . esc_attr( $attributes['id'] ) . '"',
+				$content
+			);
 		}
 
 		/**
@@ -1037,7 +1216,7 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 		 * @return array          TinyMCE buttons with Insert Pages button.
 		 */
 		public function insert_pages_handle_filter_mce_buttons( $buttons ) {
-			if ( ! in_array( 'wpInsertPages_button', $buttons, true ) ) {
+			if ( self::$is_admin_initialized && ! in_array( 'wpInsertPages_button', $buttons, true ) ) {
 				array_push( $buttons, 'wpInsertPages_button' );
 			}
 			return $buttons;
@@ -1050,7 +1229,7 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 		 * @return array          TinyMCE plugins with Insert Pages plugin.
 		 */
 		public function insert_pages_handle_filter_mce_external_plugins( $plugins ) {
-			if ( ! array_key_exists( 'wpInsertPages', $plugins ) ) {
+			if ( self::$is_admin_initialized && ! array_key_exists( 'wpInsertPages', $plugins ) ) {
 				$plugins['wpInsertPages'] = plugins_url( '/js/wpinsertpages_plugin.js', __FILE__ );
 			}
 			return $plugins;
@@ -1140,47 +1319,71 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 		}
 
 		/**
-		 * Modified from /wp-admin/includes/internal-linking.php, function wp_link_dialog()
+		 * Modified from /wp-includes/class-wp-editor.php, function
+		 * wp_link_dialog().
+		 *
 		 * Dialog for internal linking.
 		 *
 		 * @since 3.1.0
 		 */
 		public function insert_pages_wp_tinymce_dialog() {
-			// If wp_editor() is being called outside of an admin context,
-			// required dependencies for Insert Pages will be missing (e.g.,
-			// wp-admin/includes/template.php will not be loaded, admin_head
-			// action will not be fired). If that's the case, just skip loading
-			// the Insert Pages tinymce button.
-			if ( ! is_admin() || ! function_exists( 'page_template_dropdown' ) ) {
+			// Don't run if required scripts and styles weren't enqueued.
+			if ( ! self::$is_admin_initialized ) {
 				return;
 			}
 
-			// Get user's previously selected display and template to restore (if any).
-			$tinymce_state = get_user_meta( get_current_user_id(), 'insert_pages_tinymce_state', true );
-			if ( empty( $tinymce_state ) ) {
-					$tinymce_state = array(
-						'format'   => 'title',
-						'template' => 'all',
-					);
+			// Run once.
+			if ( self::$link_dialog_printed ) {
+				return;
 			}
+
+			self::$link_dialog_printed = true;
+
+			$formats = array(
+				'title'          => __( 'Title', 'insert-pages' ),
+				'title-content'  => __( 'Title and content', 'insert-pages' ),
+				'link'           => __( 'Link', 'insert-pages' ),
+				'excerpt'        => __( 'Excerpt with title', 'insert-pages' ),
+				'excerpt-only'   => __( 'Excerpt only (no title)', 'insert-pages' ),
+				'content'        => __( 'Content', 'insert-pages' ),
+				'post-thumbnail' => __( 'Post Thumbnail', 'insert-pages' ),
+				'all'            => __( 'All (includes custom fields)', 'insert-pages' ),
+				'template'       => __( 'Use a custom template', 'insert-pages' ) . ' &raquo;',
+			);
+
+			$templates = array(
+				'all' => __( 'Default Template', 'insert-pages' ),
+			);
+			foreach ( wp_get_theme()->get_page_templates() as $file => $name ) {
+				$templates[ $file ] = $name;
+			}
+
+			$sizes = function_exists( 'wp_get_registered_image_subsizes' ) ? array_keys( wp_get_registered_image_subsizes() ) : get_intermediate_image_sizes();
+
+			/**
+			 * Filter the available templates shown in the template dropdown.
+			 *
+			 * @param array $templates Array of template names keyed by their filename.
+			 */
+			$templates = apply_filters( 'insert_pages_available_templates', $templates );
+
+			// Get default values for the TinyMCE dialog fields. Note: can be
+			// overridden by the `insert_pages_tinymce_state` filter.
+			$tinymce_state = $this->get_tinymce_state();
 
 			// Get ID of post currently being edited.
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$post_id = isset( $_REQUEST['post'] ) && intval( $_REQUEST['post'] ) > 0 ? intval( $_REQUEST['post'] ) : '';
 
 			// display: none is required here, see #WP27605.
-			?><div id="wp-insertpage-backdrop" style="display: none"></div>
-			<div id="wp-insertpage-wrap" class="wp-core-ui<?php
-			if ( 1 === intval( get_user_setting( 'wpinsertpage', 0 ) ) ) :
-				?> options-panel-visible<?php
-			endif; ?>" style="display: none">
+			?>
+			<div id="wp-insertpage-backdrop" style="display: none"></div>
+			<div id="wp-insertpage-wrap" class="wp-core-ui<?php echo 1 === intval( get_user_setting( 'wpinsertpage', 0 ) ) ? ' options-panel-visible' : ''; ?><?php echo empty( $tinymce_state['hide_querystring'] ) ? '' : ' querystring-hidden'; ?><?php echo empty( $tinymce_state['hide_public'] ) ? '' : ' public-hidden'; ?>" style="display: none;" role="dialog" aria-labelledby="insertpage-modal-title">
 			<form id="wp-insertpage" tabindex="-1">
 			<?php wp_nonce_field( 'internal-inserting', '_ajax_inserting_nonce', false ); ?>
 			<input type="hidden" id="insertpage-parent-page-id" value="<?php echo esc_attr( $post_id ); ?>" />
-			<div id="insertpage-modal-title">
-				<?php esc_html_e( 'Insert page', 'insert-pages' ); ?>
-				<div id="wp-insertpage-close" tabindex="0"></div>
-			</div>
+			<h1 id="insertpage-modal-title"><?php esc_html_e( 'Insert page', 'insert-pages' ); ?></h1>
+			<button type="button" id="wp-insertpage-close"><span class="screen-reader-text"><?php esc_html_e( 'Close', 'insert-pages' ); ?></span></button>
 			<div id="insertpage-selector">
 				<div id="insertpage-search-panel">
 					<div class="insertpage-search-wrapper">
@@ -1190,14 +1393,17 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 							<span class="spinner"></span>
 						</label>
 					</div>
-					<div id="insertpage-search-results" class="query-results">
+					<div id="insertpage-search-results" class="query-results" tabindex="0">
 						<ul></ul>
 						<div class="river-waiting">
 							<span class="spinner"></span>
 						</div>
 					</div>
-					<div id="insertpage-most-recent-results" class="query-results">
-						<div class="query-notice"><em><?php esc_html_e( 'No search term specified. Showing recent items.', 'insert-pages' ); ?></em></div>
+					<div id="insertpage-most-recent-results" class="query-results" tabindex="0">
+						<div class="query-notice" id="insertpage-query-notice-message">
+							<em class="query-notice-default"><?php esc_html_e( 'No search term specified. Showing recent items.', 'insert-pages' ); ?></em>
+							<em class="query-notice-hint screen-reader-text"><?php esc_html_e( 'Search or use up and down arrow keys to select an item.', 'insert-pages' ); ?></em>
+						</div>
 						<ul></ul>
 						<div class="river-waiting">
 							<span class="spinner"></span>
@@ -1216,54 +1422,55 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 					<div class="insertpage-format">
 						<label for="insertpage-format-select">
 							<?php esc_html_e( 'Display', 'insert-pages' ); ?>
-							<select name="insertpage-format-select" id="insertpage-format-select">
-								<option value='title' <?php selected( $tinymce_state['format'], 'title' ); ?>><?php esc_html_e( 'Title', 'insert-pages' ); ?></option>
-								<option value='link' <?php selected( $tinymce_state['format'], 'link' ); ?>><?php esc_html_e( 'Link', 'insert-pages' ); ?></option>
-								<option value='excerpt' <?php selected( $tinymce_state['format'], 'excerpt' ); ?>><?php esc_html_e( 'Excerpt with title', 'insert-pages' ); ?></option>
-								<option value='excerpt-only' <?php selected( $tinymce_state['format'], 'excerpt-only' ); ?>><?php esc_html_e( 'Excerpt only (no title)', 'insert-pages' ); ?></option>
-								<option value='content' <?php selected( $tinymce_state['format'], 'content' ); ?>><?php esc_html_e( 'Content', 'insert-pages' ); ?></option>
-								<option value='post-thumbnail' <?php selected( $tinymce_state['format'], 'post-thumbnail' ); ?>><?php esc_html_e( 'Post Thumbnail', 'insert-pages' ); ?></option>
-								<option value='all' <?php selected( $tinymce_state['format'], 'all' ); ?>><?php esc_html_e( 'All (includes custom fields)', 'insert-pages' ); ?></option>
-								<option value='template' <?php selected( $tinymce_state['format'], 'template' ); ?>><?php esc_html_e( 'Use a custom template', 'insert-pages' ); ?> &raquo;</option>
-							</select>
-							<select name="insertpage-template-select" id="insertpage-template-select" disabled="true">
-								<option value='all' <?php selected( $tinymce_state['template'], 'all' ); ?>><?php esc_html_e( 'Default Template', 'insert-pages' ); ?></option>
-								<?php page_template_dropdown( $tinymce_state['template'] ); ?>
-							</select>
 						</label>
+						<select name="insertpage-format-select" id="insertpage-format-select">
+							<?php foreach ( $formats as $format => $label ) : ?>
+								<option value='<?php echo esc_attr( $format ); ?>' <?php selected( $tinymce_state['format'], $format ); ?>><?php echo esc_html( $label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<select name="insertpage-template-select" id="insertpage-template-select" disabled="true">
+							<?php foreach ( $templates as $template => $label ) : ?>
+								<option value='<?php echo esc_attr( $template ); ?>' <?php selected( $tinymce_state['template'], $template ); ?>><?php echo esc_html( $label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<select name="insertpage-size-select" id="insertpage-size-select" disabled="true">
+							<?php foreach ( $sizes as $size ) : ?>
+								<option value='<?php echo esc_attr( $size ); ?>' <?php selected( $tinymce_state['size'], $size ); ?>><?php echo esc_html( $size ); ?></option>
+							<?php endforeach; ?>
+						</select>
 					</div>
 					<div class="insertpage-extra">
 						<label for="insertpage-extra-classes">
-							<?php esc_html_e( 'Extra Classes', 'insert-pages' ); ?>:
-							<input id="insertpage-extra-classes" type="text" autocomplete="off" />
+							<?php esc_html_e( 'Extra Classes', 'insert-pages' ); ?>
+							<input id="insertpage-extra-classes" type="text" autocomplete="off" value="<?php echo empty( $tinymce_state['class'] ) ? '' : esc_attr( $tinymce_state['class'] ); ?>" />
 						</label>
 						<label for="insertpage-extra-id">
-							<?php esc_html_e( 'ID', 'insert-pages' ); ?>:
-							<input id="insertpage-extra-id" type="text" autocomplete="off" />
+							<?php esc_html_e( 'ID', 'insert-pages' ); ?>
+							<input id="insertpage-extra-id" type="text" autocomplete="off" value="<?php echo empty( $tinymce_state['id'] ) ? '' : esc_attr( $tinymce_state['id'] ); ?>" />
 						</label>
 						<label for="insertpage-extra-inline">
 							<?php esc_html_e( 'Inline?', 'insert-pages' ); ?>
-							<input id="insertpage-extra-inline" type="checkbox" />
+							<input id="insertpage-extra-inline" type="checkbox" <?php checked( $tinymce_state['inline'] ); ?> />
 						</label>
-						<br />
-						<label for="insertpage-extra-querystring">
+						<br class="<?php echo empty( $tinymce_state['hide_querystring'] ) ? '' : 'hidden'; ?>" />
+						<label for="insertpage-extra-querystring" class="<?php echo empty( $tinymce_state['hide_querystring'] ) ? '' : 'hidden'; ?>">
 							<?php esc_html_e( 'Querystring', 'insert-pages' ); ?>
-							<input id="insertpage-extra-querystring" type="text" autocomplete="off" />
+							<input id="insertpage-extra-querystring" type="text" autocomplete="off" value="<?php echo empty( $tinymce_state['querystring'] ) ? '' : esc_attr( $tinymce_state['querystring'] ); ?>" />
 						</label>
-						<br />
-						<label for="insertpage-extra-public">
-							<input id="insertpage-extra-public" type="checkbox" />
+						<br class="<?php echo empty( $tinymce_state['hide_public'] ) ? '' : 'hidden'; ?>" />
+						<label for="insertpage-extra-public" class="<?php echo empty( $tinymce_state['hide_public'] ) ? '' : 'hidden'; ?>">
+							<input id="insertpage-extra-public" type="checkbox" <?php checked( $tinymce_state['public'] ); ?> />
 							<?php esc_html_e( 'Anonymous users can see this inserted even if its status is private', 'insert-pages' ); ?>
 						</label>
 					</div>
 				</div>
 			</div>
 			<div class="submitbox">
+				<div id="wp-insertpage-cancel">
+					<button type="button" class="button"><?php esc_html_e( 'Cancel', 'insert-pages' ); ?></button>
+				</div>
 				<div id="wp-insertpage-update">
 					<input type="submit" value="<?php esc_attr_e( 'Insert Page', 'insert-pages' ); ?>" class="button button-primary" id="wp-insertpage-submit" name="wp-insertpage-submit">
-				</div>
-				<div id="wp-insertpage-cancel">
-					<a class="submitdelete deletion" href="#"><?php esc_html_e( 'Cancel', 'insert-pages' ); ?></a>
 				</div>
 			</div>
 			</form>
@@ -1282,6 +1489,16 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 		public function insert_pages_insert_page_callback() {
 			check_ajax_referer( 'internal-inserting', '_ajax_inserting_nonce' );
 			$args = array();
+
+			// If a URL is provided, translate it to a post ID and search on that.
+			if ( ! empty( $_POST['search'] ) && filter_var( wp_unslash( $_POST['search'] ), FILTER_VALIDATE_URL ) ) {
+				$post_id = url_to_postid( sanitize_url( wp_unslash( $_POST['search'] ) ) );
+				if ( ! empty( $post_id ) ) {
+					$_POST['search'] = $post_id;
+					$_POST['type'] = 'post_id';
+				}
+			}
+
 			if ( isset( $_POST['search'] ) ) {
 				$args['s'] = wp_unslash( $_POST['search'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 			}
@@ -1374,15 +1591,23 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 
 			$query = array(
 				'post_type' => $post_types,
-				'suppress_filters' => true,
 				'update_post_term_cache' => false,
 				'update_post_meta_cache' => false,
 				'post_status' => array( 'publish', 'private' ),
 				'order' => 'DESC',
 				'orderby' => 'post_date',
 				'posts_per_page' => 20,
-				'post__not_in' => array( $args['pageID'] ),
 			);
+
+			// Show non-admins only their own posts if the option is enabled.
+			$options = get_option( 'wpip_settings' );
+			if (
+				! empty( $options['wpip_classic_editor_hide_others_posts'] ) &&
+				'enabled' === $options['wpip_classic_editor_hide_others_posts'] &&
+				! current_user_can( 'edit_others_posts' )
+			) {
+				$query['author'] = get_current_user_id();
+			}
 
 			$args['pagenum'] = isset( $args['pagenum'] ) ? absint( $args['pagenum'] ) : 1;
 			$query['offset'] = $args['pagenum'] > 1 ? $query['posts_per_page'] * ( $args['pagenum'] - 1 ) : 0;
@@ -1413,6 +1638,13 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 			// Build results.
 			$results = array();
 			foreach ( $posts as $post ) {
+				// Prevent unprivileged users (e.g., Contributors) from seeing and
+				// inserting other user's private posts.
+				$post_type = get_post_type_object( $post->post_type );
+				if ( 'publish' !== $post->post_status && ! current_user_can( $post_type->cap->read_post, $post->ID ) ) {
+					continue;
+				}
+
 				if ( 'post' === $post->post_type ) {
 					$info = mysql2date( 'Y/m/d', $post->post_date );
 				} else {
@@ -1434,12 +1666,16 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 		/**
 		 * Add Insert Page quicktag button to Text editor.
 		 *
+		 * @hook admin_print_footer_scripts
+		 *
 		 * @return void
 		 */
 		public function insert_pages_add_quicktags() {
 			if ( wp_script_is( 'quicktags' ) ) : ?>
 				<script type="text/javascript">
-					QTags.addButton( 'ed_insert_page', '[insert page]', "[insert page='your-page-slug' display='title|link|excerpt|excerpt-only|content|post-thumbnail|all']\n", '', '', 'Insert Page', 999 );
+					window.onload = function() {
+						QTags.addButton( 'ed_insert_page', '[insert page]', "[insert page='your-page-slug' display='title|link|excerpt|excerpt-only|content|post-thumbnail|all']\n", '', '', 'Insert Page', 999 );
+					}
 				</script>
 				<?php
 			endif;
@@ -1461,11 +1697,59 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 					'customize_changeset',
 					'oembed_cache',
 					// Exclude Flamingo messages (created via Contact Form 7 submissions).
-					// See: https://wordpress.org/support/topic/plugin-hacked-14/
+					// See: https://wordpress.org/support/topic/plugin-hacked-14/.
 					'flamingo_inbound',
 				),
 				true
 			);
+		}
+
+		/**
+		 * Fetch the default values for the TinyMCE modal fields.
+		 */
+		private function get_tinymce_state() {
+			// Get user's previously selected display and template to restore (if any).
+			$tinymce_state = get_user_meta( get_current_user_id(), 'insert_pages_tinymce_state', true );
+			if ( empty( $tinymce_state ) ) {
+				$tinymce_state = array();
+			}
+
+			// Merge user's format and template defaults with global defaults.
+			$tinymce_state = wp_parse_args(
+				$tinymce_state,
+				array(
+					'format'           => 'title',
+					'template'         => 'all',
+					'class'            => '',
+					'id'               => '',
+					'querystring'      => '',
+					'size'             => '',
+					'inline'           => false,
+					'public'           => false,
+					'hide_querystring' => false,
+					'hide_public'      => false,
+				)
+			);
+
+			/**
+			 * Filter the TinyMCE dialog field defaults.
+			 *
+			 * @param array $tinymce_state Array of field defaults for the TinyMCE modal.
+			 *  'format'           (string) Display format. Default 'title'.
+			 *  'template'         (string) Custom template. Default 'all'.
+			 *  'class'            (string) HTML wrapper class. Default ''.
+			 *  'id'               (string) HTML wrapper id. Default ''.
+			 *  'querystring'      (string) Querystring params. Default ''.
+			 *  'size'             (string) Image size when using format='thumbnail'.
+			 *  'inline'           (bool)   Use <span> element for wrapper. Default false.
+			 *  'public'           (bool)   Whether anonymous users can see this page if
+			 *                              its status is Private. Default false.
+			 *  'hide_querystring' (bool)   Skip rendering querystring field. Default false.
+			 *  'hide_public'      (bool)   Skip rendering public field. Default false.
+			 */
+			$tinymce_state = apply_filters( 'insert_pages_tinymce_state', $tinymce_state );
+
+			return $tinymce_state;
 		}
 
 		/**
@@ -1477,6 +1761,60 @@ if ( ! class_exists( 'InsertPagesPlugin' ) ) {
 			register_widget( 'InsertPagesWidget' );
 		}
 
+		/**
+		 * Render post meta as an unordered list.
+		 *
+		 * Note: This function sanitizes postmeta value via wp_kses_post(); the
+		 * core WordPress function the_meta() does not.
+		 *
+		 * @see https://developer.wordpress.org/reference/functions/the_meta/
+		 *
+		 * @param  int $post_id Post ID.
+		 */
+		public function the_meta( $post_id = 0 ) {
+			if ( empty( $post_id ) ) {
+				$post_id = get_the_ID();
+			}
+
+			$keys = get_post_custom_keys( $post_id );
+			if ( $keys ) {
+				$li_html = '';
+				foreach ( (array) $keys as $key ) {
+					$keyt = trim( $key );
+					if ( is_protected_meta( $keyt, 'post' ) ) {
+						continue;
+					}
+
+					$values = array_map( 'trim', get_post_custom_values( $key, $post_id ) );
+					$value  = implode( ', ', $values );
+
+					// Sanitize post meta values.
+					$value = wp_kses_post( $value );
+
+					$html = sprintf(
+						"<li><span class='post-meta-key'>%s</span> %s</li>\n",
+						/* translators: %s: Post custom field name. */
+						sprintf( _x( '%s:', 'Post custom field name', 'insert-pages' ), $key ),
+						$value
+					);
+
+					/**
+					 * Filters the HTML output of the li element in the post custom fields list.
+					 *
+					 * @since 2.2.0
+					 *
+					 * @param string $html  The HTML output for the li element.
+					 * @param string $key   Meta key.
+					 * @param string $value Meta value.
+					 */
+					$li_html .= apply_filters( 'the_meta_key', $html, $key, $value );
+				}
+
+				if ( $li_html ) {
+					echo "<ul class='post-meta'>\n{$li_html}</ul>\n";
+				}
+			}
+		}
 	}
 }
 
@@ -1488,7 +1826,7 @@ if ( class_exists( 'InsertPagesPlugin' ) ) {
 // Actions and Filters handled by InsertPagesPlugin class.
 if ( isset( $insert_pages_plugin ) ) {
 	// Include the code that generates the options page.
-	require_once dirname( __FILE__ ) . '/options.php';
+	require_once __DIR__ . '/options.php';
 
 	// Get options set in WordPress dashboard (Settings > Insert Pages).
 	$options = get_option( 'wpip_settings' );
@@ -1532,6 +1870,6 @@ if ( isset( $insert_pages_plugin ) ) {
 	}
 
 	// Register Insert Pages shortcode widget.
-	require_once dirname( __FILE__ ) . '/widget.php';
+	require_once __DIR__ . '/widget.php';
 	add_action( 'widgets_init', array( $insert_pages_plugin, 'insert_pages_widgets_init' ) );
 }

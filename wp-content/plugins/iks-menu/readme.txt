@@ -1,35 +1,39 @@
-=== Iks Menu - WordPress Category Accordion Menu ===
+=== Iks Menu - WordPress Category Accordion Menu & FAQs ===
 Contributors: iksstudio, freemius
-Tags: accordion menu, category menu, category widget, woocommerce menu, taxonomies menu
+Tags: accordion menu, category menu, category widget, woocommerce menu, accordion faqs, taxonomies menu, faq, question, answer
 Requires at least: 4.4.0
-Tested up to: 5.5
+Tested up to: 6.6
 Requires PHP: 5.4
-Stable tag: 1.8.6
+Stable tag: 1.12.1
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Super customizable WordPress plugin for displaying custom menus or taxonomy/category terms as accordion menu (with widgets and images support).
+Super customizable WordPress plugin for displaying custom menus, taxonomy/category terms and FAQs as accordion menu (with images support).
 
 == Description ==
 
-Iks Menu is a WordPress plugin that provides powerful customizable system and has loads of settings for creating WordPress accordion menus.
+Iks Menu is a WordPress plugin that provides powerful customizable system and has loads of settings for creating WordPress accordion menus and FAQs.
 
->[All previews](http://iks-menu.ru/previews)|[WooCommerce sidebar menu](http://iks-menu.ru/product-category/computers/laptops/)|[User-friendly documentation with screenshots](https://docs.iks-menu.ru/#/README)
+* [Showcase: Skins & Animations](https://iks-menu.com/previews)
+* [Showcase: FAQs](https://iks-menu.com/faqs)
+* [Showcase: WooCommerce Categories Sidebar Menu](https://iks-menu.com/product-category/computers/laptops/)
+* [Documentation: User-friendly with screenshots](https://docs.iks-menu.com/#/README)
 
-Iks Menu is a best choice for sidebar menu. This plugin allows you to select custom WordPress menus or any taxonomy (categories, post tags, WooCommerce product category, etc.) as a source for accordion menus.
-It also provides images support both for custom menus and taxonomies (also supports WooCommerce categories images).
+Iks Menu is the best choice for sidebar menu and not only. This plugin allows you to select custom WordPress menus, any taxonomy (categories, post tags, WooCommerce product category, etc.) and automatically created FAQs post type as a source for accordion menus.
+It also provides images support both for custom menus, taxonomies (also supports WooCommerce categories images) and FAQs.
 You can show your menu using WordPress widgets, shortcode or PHP code.
 
-And you do not need to learn coding to use Iks Menu! Just set all the settings using a specially designed super fast live editor with instant changes and no pages reloading! It will speed up your developing process.
+And you do not need to learn coding to use Iks Menu! Just set all the settings using a specially designed super-fast live editor with instant changes and no pages reloading! It will speed up your developing process.
 Iks Menu has more than 15 starter skins (6 FREE) - so it’s super easy to use for beginners and very customizable for advanced users.
 
 = Plans =
-Iks Menu has 2 plans: FREE and PRO ([Pricing and Features](http://iks-menu.ru/pricing)).
+Iks Menu has 2 plans: FREE and PRO ([Buy PRO plan here](https://iks-menu.com/pricing)).
 
 = FREE Version Features =
 * Supports Taxonomies (Categories, Tags, WooCommerce products, any other)
 * Supports Custom WordPress Menus (created in "Appearance" > "Menus")
-* Supports images for all taxonomies and for custom WordPress menus
+* Supports FAQs with Groups (created in special custom FAQs post type)
+* Supports images for all sources of menu
 * Supports showing posts for a taxonomy source
 * Fast and usable menu editor with instant preview!
 * Customize appearance for any part of menu (colors, fonts, margins, paddings, heights and widths without any coding)
@@ -37,6 +41,7 @@ Iks Menu has 2 plans: FREE and PRO ([Pricing and Features](http://iks-menu.ru/pr
 * Supports exporting and importing settings to reuse it again (all settings or just for appearance)
 * Provides various unique settings for your menus
 * Provides 6 free awesome looking skins out of the box: start using skins with clean design right now with just one click.
+* Supports keyboard accessibility: "Tab" & "Enter" navigation + "Focus" state for all elements in menu
 * ... Just take a look at screenshots to see all features!
 
 = PRO Version Features =
@@ -45,10 +50,10 @@ Iks Menu has 2 plans: FREE and PRO ([Pricing and Features](http://iks-menu.ru/pr
 * Expand and collapse animations for submenus
 * Ability to display Posts count
 * "Custom styles" setting
-* Setting to use parents as sub-menu toggles
+* Setting to use parent-elements as sub-menu toggles
 * Toggle: 50+ icons and 5+ animations for expanding
 * 20+ skins
-* ... [Take a look at pricing](http://iks-menu.ru/pricing)
+* ... [Take a look at pricing](https://iks-menu.com/pricing)
 
 = Settings =
 Using taxonomy menu you can configure the next settings:
@@ -65,7 +70,7 @@ Using taxonomy menu you can configure the next settings:
 * Childless - True to limit results to terms that have no children. This parameter has no effect on non-hierarchical taxonomies.
 
 = Usage =
-3 variants of how to use plugin. You'll see menu publishing guide inside the plugin.
+3 variants of how to use Iks Menu (plugin includes user-friendly publishing guide inside the plugin)
 
 * Widget – Use it directly in widget area
 * Shortcode – Use it anywhere with shortcode
@@ -74,11 +79,12 @@ Using taxonomy menu you can configure the next settings:
 = Help =
 * Get help anytime 24/7 - Ask your question and we will help you anyway
 * See documentation for plugin - Super detailed docs for better understanding of how plugin works
-* Does not suit for you? - Suggest a new features for plugin and we will provide it soon
+* FAQ (Answers to popular questions) - [See special chapter in documentation](https://docs.iks-menu.com/#/faq)
+* Does not suit for you? - Suggest a new features for plugin and we will provide it as soon as possible
 
 == Installation ==
 
-Check installation process with screenshots [in official documentation](https://docs.iks-menu.ru/#/install).
+Check installation process with screenshots [in official documentation](https://docs.iks-menu.com/#/install).
 
 = Automatic installation =
 
@@ -93,7 +99,7 @@ Manual installation method requires downloading the Iks Menu plugin and uploadin
 == Screenshots ==
 
 1. Plugin's admin page
-2. "Data" tab - settings for managing data of your accordion menu
+2. "Data" tab - settings for managing source and data of your accordion menu
 3. "Display" tab - settings for customizing your accordion menu's appearance
 4. "Toggle" tab - for customizing appearance of toggle
 5. "Menu" > "Common" - settings for controlling the behavior of the menu
@@ -102,7 +108,7 @@ Manual installation method requires downloading the Iks Menu plugin and uploadin
 8. "Manage" tab - for exporting and importing settings for reuse
 9. "Skins" tab - for applying ready designs to your menu
 10. "Publish" modal - for copying shortcode, PHP code or go to widgets
-11. Super detailed documentation ([Just take a look :)](https://docs.iks-menu.ru/#/README))
+11. Super detailed documentation ([Just take a look :)](https://docs.iks-menu.com/#/README))
 
 == Changelog ==
 
@@ -116,6 +122,85 @@ Manual installation method requires downloading the Iks Menu plugin and uploadin
 * Loading menus by AJAX
 * Group skins by tags (like flat, white, colored, etc.)
 * Translate plugin into other languages
+
+= 1.12.1 - 2024-10-18 =
+* Fixed: Bug with function redeclare
+
+= 1.12.0 - 2024-10-18 =
+* Added: New setting "Include type"
+* Added: Freemius SDK was updated to the latest version
+
+= 1.11.3 - 2024-06-08 =
+* Added: Freemius SDK was updated to the latest version
+
+= 1.11.2 - 2023-07-05 =
+* Added: Freemius SDK was updated to the latest version
+
+= 1.11.1 - 2023-06-16 =
+* Plugin website domain changed to https://iks-menu.com
+* Added: Freemius SDK was updated to the latest version
+
+= 1.11.0 - 2023-04-06 =
+* Added: New source type "FAQs" and related settings
+* Added: New setting "Gap" at "Display" > "Container" tab
+* Added: New skins #20, #21, #22
+* Fixed: Color Pickers were laggy
+
+= 1.10.1 - 2023-04-05 =
+* Fixed: Freemius files
+
+= 1.10.0 - 2023-04-05 =
+* Added: New setting "Show current terms tree"
+* Added: New setting "Disable empty or hashtag links"
+* Added: Freemius SDK was updated to the latest version
+* Fixed: an error when trying to install the PRO version with the FREE version enabled
+
+= 1.9.8 - 2022-07-19 =
+* Added: New setting "Posts Count: Calculation type"
+
+= 1.9.7 - 2022-06-01 =
+* Fixed: PHP sprintf error in Freemius (languages updated)
+
+= 1.9.6 - 2022-05-31 =
+* Fixed: PHP 8.1 error
+
+= 1.9.5 - 2022-03-15 =
+* Fixed: Custom Menu images weren't displayed
+
+= 1.9.4 - 2022-03-13 =
+* Fixed: Posts images weren't displayed
+
+= 1.9.3 - 2022-03-12 =
+* Fixed: Crash when installing FREE version of plugin
+* Fixed: Revert Freemius Pricing page
+
+= 1.9.2 - 2022-03-11 =
+* Added: Freemius SDK was updated to the latest version
+* Fixed: Rare bug of incorrect displaying menu items when some posts and terms have the same IDs
+* Fixed: Remove duplication of style tags on page
+
+= 1.9.1 - 2021-12-30 =
+* Added: New settings to set posts "orderby" and "order" parameters
+* Added: New setting to hide zero "Posts count"
+* Fixed: Iks Menu didn't work inside Elementor's popups
+* Fixed: Sometimes skins were loaded with an error
+
+= 1.9.0 - 2021-02-20 =
+* Added: New setting "Icon Tag" for Toggle
+* Added: Freemius SDK was updated to the latest version
+
+= 1.8.9 - 2021-01-03 =
+* Fixed: Keyboard accessibility "freeze" bug
+* Fixed: https for loading Skins
+* Fixed: DELETE method was changed to POST due to problems of some users
+
+= 1.8.8 - 2020-11-13 =
+* Added: Keyboard accessibility: "Tab" & "Enter" navigation + "Focus" state for all elements in menu
+* Added: Some optimizations for loading posts when terms are specified in the "Include terms" setting
+
+= 1.8.7 - 2020-11-05 =
+* Fixed: Some problems with detecting current term
+* Added: Freemius SDK was updated to the latest version
 
 = 1.8.6 - 2020-10-16 =
 * Added: Ability to use hooks for adding custom content (PRO only)

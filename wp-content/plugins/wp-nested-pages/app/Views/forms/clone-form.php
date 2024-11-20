@@ -39,7 +39,7 @@
 			if ( is_super_admin() || current_user_can( $post_type_object->cap->edit_others_posts ) ) :
 				$users_opt = [
 					'hide_if_only_one_author' => false,
-					'who' => 'authors',
+					'capability' => 'edit_posts',
 					'name' => 'post_author',
 					'id' => 'post_author',
 					'class'=> 'authors',
@@ -55,6 +55,15 @@
 				echo $authors_dropdown;
 			endif;
 		?>
+
+		<?php if ( $this->post_type->hierarchical ) : ?>
+		<div class="form-control">
+			<label>
+			<input type="checkbox" data-clone-children value="true" />
+			<?php _e( 'Clone Children', 'wp-nested-pages' ); ?></label>
+		</div>
+		<?php endif; ?>
+
 		</div><!-- .modal-body -->
 
 	

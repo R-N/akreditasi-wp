@@ -1,9 +1,9 @@
-=== Outerbridge Nested Shortcodes ===
+=== Nested Shortcodes by Outerbridge ===
 Contributors: outerbridge
-Author URI: http://outerbridge.co.uk/
+Author URI: https://outerbridge.co.uk/
 Tags: shortcodes, nested, do_shortcode, the_content, text_widget
 Requires at least: 4.0
-Tested up to: 5.4
+Tested up to: 6.0
 Stable tag: trunk
 
 A small plugin which allows you to use nest shortcodes (i.e. a shortcode within an enclosing shortcode) by implementing a simple do_shortcode filter
@@ -11,7 +11,7 @@ A small plugin which allows you to use nest shortcodes (i.e. a shortcode within 
 
 == Description ==
 
-A small plugin which allows you to use nested shortcodes (i.e. a shortcode within an enclosing shortcode) by implementing a simple "do_shortcode" filter as per the WordPress Codex to content and widgets - see http://codex.wordpress.org/Shortcode_API#Nested_Shortcodes and http://codex.wordpress.org/Function_Reference/do_shortcode
+A small plugin which allows you to use nested shortcodes (i.e. a shortcode within an enclosing shortcode) by implementing a simple "do_shortcode" filter as per the WordPress Codex to content and widgets - see [Shortcode_API](https://codex.wordpress.org/Shortcode_API#Nested_Shortcodes) and [do_shortcode](https://developer.wordpress.org/reference/functions/do_shortcode/)
 
 
 == Installation ==
@@ -25,6 +25,10 @@ A small plugin which allows you to use nested shortcodes (i.e. a shortcode withi
 
 == Frequently Asked Questions ==
 
+= Are there any limitations? =
+
+Yes.  You can see the limitations [here](https://codex.wordpress.org/Shortcode_API#Limitations)
+
 = Where do I get help with this plugin? =
 
 Email us and we'll do our best to help you out.
@@ -35,6 +39,9 @@ You bet!  We'd love to hear from you, so please get in touch.
 
 
 == Changelog ==
+
+= 1.4 =
+- (01 Sep 2022) Tested and stable up to WP6.0
 
 = 1.3 =
 - (29 Aug 2014) Tested and stable up to WP4.0
@@ -53,6 +60,9 @@ You bet!  We'd love to hear from you, so please get in touch.
 
 
 == Upgrade Notice ==
+
+= 1.4 =
+- Tested and stable up to WP6.0
 
 = 1.3 =
 - Tested and stable up to WP4.0

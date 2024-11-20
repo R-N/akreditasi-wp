@@ -2,8 +2,8 @@
 Contributors: catchplugins, catchthemes, sakinshrestha, pratikshrestha, maheshmaharjan, dreamsapana
 Donate link: https://catchplugins.com/plugins/to-top/
 Tags: to top, scroll up, arrow, button, icon, link to top, scroll, back to top, scroll to top, scroll top, scroll up, simple scroll to top, simple back to top, smooth scroll
-Requires at least: 4.8
-Tested up to: 5.5
+Requires at least: 5.9
+Tested up to: 6.5
 Stable tag: trunk
 License: GNU General Public License, version 3 (GPLv3)
 License URI: http://www.gnu.org/licenses/gpl-3.0.txt
@@ -57,7 +57,36 @@ You'll then see To Top dashboard from which you can enable or disable the button
 
 == Changelog ==
 
-= 2.2 (Released: Aug 19, 2020) ==
+= 2.5.4 (Released: April 09, 2024) =
+* Compatibility check up to version 6.5
+
+= 2.5.3 (Released: November 15, 2023) =
+* Compatibility check up to version 6.4
+
+= 2.5.2 (Released: December 14, 2022) =
+* Compatibility check up to version 6.1
+
+= 2.5.1 (Released: September 20, 2022) =
+* Update: Depreciated JS code
+
+= 2.5 (Released: June 16, 2022) =
+* Compatibility check up to version 6.0
+
+= 2.4 (Released: February 24, 2022) =
+* Compatibility check up to version 5.9
+
+= 2.3 (Released: September 18, 2021) =
+* Bug Fixed: Security issue on ajax calls
+
+= 2.2.2 (Released: August 05, 2021) =
+* Added: aria-hidden attribute (Requested by flberger)
+* Added: async attribute to script tag (Requested by llubder)
+* Compatibility check up to version 5.8
+
+= 2.2.1 (Released: March 07, 2021) =
+* Compatibility check up to version 5.7
+
+= 2.2 (Released: Aug 19, 2020) =
 * Bug Fixed: Issue in add new theme page (Reported by: derek13)
 
 = 2.1 (Released: March 17, 2020) =

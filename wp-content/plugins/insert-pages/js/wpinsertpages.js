@@ -1,69 +1,119 @@
-// Modified from WordPress Advanced Link dialog, wp-includes/js/wplink.js
-/* global ajaxurl, tinymce, wpLinkL10n, setUserSetting, wpActiveEditor */
-var wpInsertPages;
+/**
+ * Modified from WordPress Advanced Link dialog.
+ *
+ * @output wp-includes/js/wplink.js
+ */
 
-(function ( $ ) {
-	var inputs = {}, rivers = {}, editor, searchTimer, RiverInsertPages, QueryInsertPages;
+ /* global wpInsertPages */
 
-	wpInsertPages = {
+( function( $, wpInsertPagesL10n, wp ) {
+	var editor, searchTimer, RiverInsertPages, QueryInsertPages, correctedURL,
+		inputs = {},
+		rivers = {},
+		isTouch = ( 'ontouchend' in document );
+
+	window.wpInsertPages = {
 		timeToTriggerRiverInsertPages: 150,
 		minRiverInsertPagesAJAXDuration: 200,
 		riverBottomThreshold: 5,
 		keySensitivity: 100,
 		lastSearch: '',
 		textarea: '',
+		modalOpen: false,
 
-		init : function() {
+		init: function() {
 			inputs.wrap = $( '#wp-insertpage-wrap' );
 			inputs.dialog = $( '#wp-insertpage' );
 			inputs.backdrop = $( '#wp-insertpage-backdrop' );
 			inputs.submit = $('#wp-insertpage-submit' );
 			inputs.close = $( '#wp-insertpage-close' );
-			// Page info
+
+			// Input.
 			inputs.slug = $( '#insertpage-slug-field' );
 			inputs.pageID = $( '#insertpage-page-id' );
 			inputs.parentPageID = $( '#insertpage-parent-page-id' );
-			// Format field (title, link, content, all, choose a custom template ->)
+			inputs.search = $( '#insertpage-search-field' );
+
+			// Custom template select field.
+			inputs.template = $( '#insertpage-template-select' );
+
+			// Custom post thumbnail size select field.
+			inputs.size = $( '#insertpage-size-select' );
+
+			// Custom format field (title, link, content, all, choose a custom template ->).
 			inputs.format = $( '#insertpage-format-select' );
-			// Extra fields (wrapper classes, inline checkbox, "visible to all" checkbox)
+
+			// Custom extra fields (wrapper classes, inline checkbox, "visible to all" checkbox).
 			inputs.extraClasses = $( '#insertpage-extra-classes' );
 			inputs.extraID = $( '#insertpage-extra-id' );
 			inputs.extraInline = $( '#insertpage-extra-inline' );
 			inputs.extraPublic = $( '#insertpage-extra-public' );
 			inputs.extraQuerystring = $( '#insertpage-extra-querystring' );
-			// Custom template select field
-			inputs.template = $( '#insertpage-template-select' );
-			inputs.search = $( '#insertpage-search-field' );
-			// Build RiverInsertPagess
+
+			// Build rivers.
 			rivers.search = new RiverInsertPages( $( '#insertpage-search-results' ) );
 			rivers.recent = new RiverInsertPages( $( '#insertpage-most-recent-results' ) );
 			rivers.elements = inputs.dialog.find( '.query-results' );
 
-			// Bind event handlers
-			inputs.dialog.keydown( wpInsertPages.keydown );
-			inputs.dialog.keyup( wpInsertPages.keyup );
-			inputs.submit.click( function( event ){
+			// Get search notice text.
+			inputs.queryNotice = $( '#insertpage-query-notice-message' );
+			inputs.queryNoticeTextDefault = inputs.queryNotice.find( '.query-notice-default' );
+			inputs.queryNoticeTextHint = inputs.queryNotice.find( '.query-notice-hint' );
+
+			// Bind event handlers.
+			inputs.dialog.on( 'keydown', wpInsertPages.keydown );
+			inputs.dialog.on( 'keyup', wpInsertPages.keyup );
+			inputs.submit.on( 'click', function( event ) {
 				event.preventDefault();
 				wpInsertPages.update();
 			});
-			inputs.close.add( inputs.backdrop ).add( '#wp-insertpage-cancel a' ).click( function( event ) {
+
+			inputs.close.add( inputs.backdrop ).add( '#wp-insertpage-cancel button' ).on( 'click', function( event ) {
 				event.preventDefault();
 				wpInsertPages.close();
 			});
 
-			$( '#insertpage-options-toggle' ).click( wpInsertPages.toggleInternalLinking );
+			// Custom hide/show options toggle.
+			$( '#insertpage-options-toggle' ).on( 'click', wpInsertPages.toggleInternalLinking );
 
 			rivers.elements.on('river-select', wpInsertPages.updateFields );
 
-			inputs.format.change( function() {
+			// Display 'hint' message when search field or 'query-results' box are focused.
+			inputs.search.on( 'focus.wplink', function() {
+				inputs.queryNoticeTextDefault.hide();
+				inputs.queryNoticeTextHint.removeClass( 'screen-reader-text' ).show();
+			} ).on( 'blur.wplink', function() {
+				inputs.queryNoticeTextDefault.show();
+				inputs.queryNoticeTextHint.addClass( 'screen-reader-text' ).hide();
+			} );
+
+			inputs.search.on( 'keyup input', function() {
+				var self = this; // Custom reference to field.
+				window.clearTimeout( searchTimer );
+				searchTimer = window.setTimeout( function() {
+					wpInsertPages.searchInternalLinks.call( self );
+				}, 500 );
+			});
+
+			// Custom: enable template dropdown if "Custom Template" is chosen as the display.
+			inputs.format.on( 'change', function() {
 				if ( inputs.format.val() == 'template' ) {
+					inputs.size.hide();
+					inputs.template.show();
 					inputs.template.removeAttr( 'disabled' );
 					inputs.template.focus();
+				} else if ( inputs.format.val() == 'post-thumbnail' ) {
+					inputs.template.hide();
+					inputs.size.show();
+					inputs.size.removeAttr( 'disabled' );
+					inputs.size.focus();
 				} else {
+					inputs.template.show();
 					inputs.template.attr( 'disabled', 'disabled' );
+					inputs.size.hide();
+					inputs.size.attr( 'disabled', 'disabled' );
 				}
-
-				// Save last selected template for this user.
+				// Save last selected display for this user.
 				$.post( ajaxurl, {
 					action : 'insertpage_save_presets',
 					format : inputs.format.val(),
@@ -71,8 +121,8 @@ var wpInsertPages;
 				}, function (r) {}, 'json' );
 			});
 
-			inputs.template.change( function() {
-				// Save last selected template for this user.
+			// Custom: save last selected template for this user.
+			inputs.template.on( 'change', function() {
 				$.post( ajaxurl, {
 					action : 'insertpage_save_presets',
 					template : inputs.template.val(),
@@ -80,19 +130,19 @@ var wpInsertPages;
 				}, function (r) {}, 'json' );
 			});
 
-			// Set search type to plaintext if someone types in the search field.
-			// (Might have been set to 'slug' or 'id' if editing a current shortcode.)
-			inputs.search.keydown( function () {
-				inputs.search.data( 'type', 'text' );
+			// Custom: save last selected thumbnail size for this user.
+			inputs.size.on( 'change', function() {
+				$.post( ajaxurl, {
+					action : 'insertpage_save_presets',
+					size : inputs.size.val(),
+					'_ajax_inserting_nonce' : $('#_ajax_inserting_nonce').val(),
+				}, function (r) {}, 'json' );
 			});
 
-			inputs.search.keyup( function() {
-				var self = this;
-
-				window.clearTimeout( searchTimer );
-				searchTimer = window.setTimeout( function() {
-					wpInsertPages.searchInternalLinks.call( self );
-				}, 500 );
+			// Set search type to plaintext if someone types in the search field.
+			// Might have been set to 'slug' or 'id' if editing a current shortcode.
+			inputs.search.on( 'keydown', function () {
+				inputs.search.data( 'type', 'text' );
 			});
 
 			/* for this to work, inputs.slug needs to populate inputs.pageID with id when it changes
@@ -107,7 +157,12 @@ var wpInsertPages;
 		},
 
 		open: function( editorId ) {
-			var ed, node, bookmark, cursorPosition = -1;
+			var ed,
+				node, bookmark, cursorPosition = -1,
+				$body = $( document.body );
+
+			$body.addClass( 'modal-open' );
+			wpInsertPages.modalOpen = true;
 
 			wpInsertPages.range = null;
 
@@ -121,25 +176,24 @@ var wpInsertPages;
 
 			this.textarea = $( '#' + window.wpActiveEditor ).get( 0 );
 
-			if ( typeof tinymce !== 'undefined' ) {
-				ed = tinymce.get( wpActiveEditor );
+			if ( typeof window.tinymce !== 'undefined' ) {
+				// Make sure the link wrapper is the last element in the body,
+				// or the inline editor toolbar may show above the backdrop.
+				$body.append( inputs.backdrop, inputs.wrap );
+
+				ed = window.tinymce.get( window.wpActiveEditor );
 
 				if ( ed && ! ed.isHidden() ) {
 					editor = ed;
 
-					// Get cursor state (used later to determine if we're in an existing shortcode)
+					// Custom: get cursor state (used later to determine if we're in an existing shortcode)
 					node = editor.selection.getNode();
 					bookmark = editor.selection.getBookmark( 0 );
 					unencodedText = node.innerHTML.replace( /&amp;/g, '&' );
 					cursorPosition = unencodedText.indexOf( '<span data-mce-type="bookmark"' );
 					editor.selection.moveToBookmark( bookmark );
-
 				} else {
 					editor = null;
-				}
-
-				if ( editor && tinymce.isIE ) {
-					editor.windowManager.bookmark = editor.selection.getBookmark();
 				}
 			}
 
@@ -163,15 +217,26 @@ var wpInsertPages;
 			rivers.search.refresh();
 			rivers.recent.refresh();
 
-			if ( wpInsertPages.isMCE() )
+			if ( wpInsertPages.isMCE() ) {
 				wpInsertPages.mceRefresh( cursorPosition );
-			else
+			} else {
 				wpInsertPages.setDefaultValues();
+			}
 
-			// Focus the Slug field and highlight its contents.
-			//     If this is moved above the selection changes,
-			//     IE will show a flashing cursor over the dialog.
-			inputs.slug.focus()[0].select();
+			if ( isTouch ) {
+				// Close the onscreen keyboard.
+				inputs.url.trigger( 'focus' ).trigger( 'blur' );
+			} else {
+				/**
+				 * Focus the Slug field and highlight its contents.
+				 * If this is moved above the selection changes,
+				 * IE will show a flashing cursor over the dialog.
+				 */
+				window.setTimeout( function() {
+					inputs.slug[0].select();
+					inputs.slug.trigger( 'focus' );
+				} );
+			}
 
 			// Load the most recent results if this is the first time opening the panel.
 			if ( ! rivers.recent.ul.children().length )
@@ -183,7 +248,7 @@ var wpInsertPages;
 
 			// Get the existing shortcode the cursor is in (or get the entire node if cursor not in one)
 			shortcode = '';
-			content = editor.selection.getNode().innerHTML.replace( /&amp;/g, '&' );
+			content = editor.selection.getNode().innerHTML.replace( /&amp;/g, '&' ).replace( /&nbsp;/g, ' ' );
 			if ( content.indexOf( '[insert page=' ) >= 0 ) {
 				// Find occurrences of shortcode in current node and see if the cursor
 				// position is inside one of them.
@@ -233,21 +298,30 @@ var wpInsertPages;
 
 					inputs.slug.val( matches[1] );
 					inputs.search.val( matches[1] );
-					inputs.search.keyup();
+					inputs.search.trigger( 'keyup' );
 				}
 
 				// Update display dropdown to match the selected shortcode.
 				regexp = /display=['"]([^['"]*)['"]/;
 				matches = regexp.exec( shortcode );
 				if ( matches && matches.length > 1 ) {
-					if ( ['title', 'link', 'excerpt', 'excerpt-only', 'content', 'post-thumbnail', 'all', ].indexOf( matches[1] ) >= 0 ) {
+					if ( ['title', 'title-content', 'link', 'excerpt', 'excerpt-only', 'content', 'post-thumbnail', 'all', ].indexOf( matches[1] ) >= 0 ) {
 						inputs.format.val( matches[1] );
 						inputs.template.val( 'all' );
 					} else {
 						inputs.format.val( 'template' );
 						inputs.template.val( matches[1] );
 					}
-					inputs.format.change();
+					inputs.format.trigger( 'change' );
+				}
+
+				// Update thumbnail size dropdown to match the selected shortcode.
+				regexp = /size=['"]([^['"]*)['"]/;
+				matches = regexp.exec( shortcode );
+				if ( matches && matches.length > 1 ) {
+					inputs.size.val( matches[1] );
+				} else {
+					inputs.extraClasses.val( wpInsertPagesL10n.hasOwnProperty( 'tinymce_state' ) ? wpInsertPagesL10n.tinymce_state.size : '' );
 				}
 
 				// Update extra classes.
@@ -256,7 +330,7 @@ var wpInsertPages;
 				if ( matches && matches.length > 1 ) {
 					inputs.extraClasses.val( matches[1] );
 				} else {
-					inputs.extraClasses.val( '' );
+					inputs.extraClasses.val( wpInsertPagesL10n.hasOwnProperty( 'tinymce_state' ) ? wpInsertPagesL10n.tinymce_state.class : '' );
 				}
 
 				// Update extra ID.
@@ -265,7 +339,7 @@ var wpInsertPages;
 				if ( matches && matches.length > 1 ) {
 					inputs.extraID.val( matches[1] );
 				} else {
-					inputs.extraID.val( '' );
+					inputs.extraID.val( wpInsertPagesL10n.hasOwnProperty( 'tinymce_state' ) ? wpInsertPagesL10n.tinymce_state.id : '' );
 				}
 
 				// Update extra inline (i.e., use span instead of div for wrapper).
@@ -274,7 +348,7 @@ var wpInsertPages;
 				if ( matches && matches.length > 0 ) {
 					inputs.extraInline.attr( 'checked', true );
 				} else {
-					inputs.extraInline.attr( 'checked', false );
+					inputs.extraInline.attr( 'checked', wpInsertPagesL10n.hasOwnProperty( 'tinymce_state' ) ? wpInsertPagesL10n.tinymce_state.inline : false );
 				}
 
 				// If this is a private page, reveal the checkbox "Visible to everyone?"
@@ -283,7 +357,7 @@ var wpInsertPages;
 				if ( matches && matches.length > 0 ) {
 					inputs.extraPublic.attr( 'checked', true );
 				} else {
-					inputs.extraPublic.attr( 'checked', false );
+					inputs.extraPublic.attr( 'checked', wpInsertPagesL10n.hasOwnProperty( 'tinymce_state' ) ? wpInsertPagesL10n.tinymce_state.public : false );
 				}
 
 				// Update extra querystring.
@@ -294,7 +368,7 @@ var wpInsertPages;
 					// closing bracket will terminate the shortcode).
 					inputs.extraQuerystring.val( matches[1].replace( /&amp;/g, '&' ) );
 				} else {
-					inputs.extraQuerystring.val( '' );
+					inputs.extraQuerystring.val( wpInsertPagesL10n.hasOwnProperty( 'tinymce_state' ) ? wpInsertPagesL10n.tinymce_state.querystring : '' );
 				}
 
 				// Update save prompt.
@@ -306,44 +380,27 @@ var wpInsertPages;
 			}
 		},
 
-		setDefaultValues : function() {
-			// Set URL and description to defaults.
-			// Leave the new tab setting as-is.
-			// Leave the display and template inputs as-is (use values in user meta).
-			inputs.slug.val('');
-			inputs.pageID.val('');
-			inputs.extraClasses.val('');
-			inputs.extraID.val( '' );
-			inputs.extraInline.attr( 'checked', false );
-			inputs.search.val( '' );
-			inputs.search.data( 'type', 'text' );
-			inputs.search.keyup();
+		close: function( reset ) {
+			$( document.body ).removeClass( 'modal-open' );
+			wpInsertPages.modalOpen = false;
 
-			// inputs.format.val('title');
-			// inputs.format.change();
-			// inputs.template.val('all');
-			if ( inputs.format.val() == 'template' ) {
-				inputs.template.removeAttr( 'disabled' );
-				inputs.template.focus();
-			} else {
-				inputs.template.attr( 'disabled', 'disabled' );
-			}
-		},
+			if ( reset !== 'noReset' ) {
+				if ( ! wpInsertPages.isMCE() ) {
+					wpInsertPages.textarea.focus();
 
-		close: function() {
-			if ( ! wpInsertPages.isMCE() ) {
-				wpInsertPages.textarea.focus();
-
-				if ( wpInsertPages.range ) {
-					wpInsertPages.range.moveToBookmark( wpInsertPages.range.getBookmark() );
-					wpInsertPages.range.select();
+					if ( wpInsertPages.range ) {
+						wpInsertPages.range.moveToBookmark( wpInsertPages.range.getBookmark() );
+						wpInsertPages.range.select();
+					}
+				} else {
+					editor.focus();
 				}
-			} else {
-				editor.focus();
 			}
 
 			inputs.backdrop.hide();
 			inputs.wrap.hide();
+
+			$( document ).trigger( 'wpinsertpages-close', inputs.wrap );
 		},
 
 		getAttrs: function() {
@@ -356,10 +413,11 @@ var wpInsertPages;
 				inline: inputs.extraInline.is( ':checked' ),
 				public: inputs.extraPublic.is( ':checked' ),
 				querystring: inputs.extraQuerystring.val(),
+				size: inputs.size.val(),
 			};
 		},
 
-		update : function() {
+		update: function() {
 			var link,
 				attrs = wpInsertPages.getAttrs(),
 				b;
@@ -385,6 +443,7 @@ var wpInsertPages;
 			editor.selection.setContent("[insert " +
 				"page='" + attrs.page +"' " +
 				"display='" + attrs.display + "'" +
+				( attrs['display'] == 'post-thumbnail' && attrs['size'].length > 0 ? " size='" + attrs['size'] + "'" : "" ) +
 				( attrs['class'].length > 0 ? " class='" + attrs['class'] + "'" : "" ) +
 				( attrs['id'].length > 0 ? " id='" + attrs['id'] + "'" : "" ) +
 				( attrs.inline ? " inline" : "" ) +
@@ -397,7 +456,7 @@ var wpInsertPages;
 			editor.execCommand("mceEndUndoLevel");
 		},
 
-		updateFields : function( e, li, originalEvent ) {
+		updateFields: function( e, li, originalEvent ) {
 			if ( wpInsertPagesL10n.format === 'post_id' ) {
 				inputs.slug.val( li.children('.item-id').val() );
 			} else {
@@ -408,7 +467,44 @@ var wpInsertPages;
 				inputs.slug.focus();
 		},
 
-		searchInternalLinks : function() {
+		setDefaultValues: function() {
+			// Set inserted page slug/ID and search term to defaults.
+			inputs.slug.val('');
+			inputs.pageID.val('');
+			inputs.search.val( '' );
+			inputs.search.data( 'type', 'text' );
+			inputs.search.keyup();
+
+			// Restore field defaults from initial defaults.
+			// inputs.format.val('title'); // Leave at last-selected value.
+			// inputs.template.val('all'); // Leave at last-selected value.
+			inputs.extraClasses.val( wpInsertPagesL10n.hasOwnProperty( 'tinymce_state' ) ? wpInsertPagesL10n.tinymce_state.class : '' );
+			inputs.extraID.val( wpInsertPagesL10n.hasOwnProperty( 'tinymce_state' ) ? wpInsertPagesL10n.tinymce_state.id : '' );
+			inputs.extraQuerystring.val( wpInsertPagesL10n.hasOwnProperty( 'tinymce_state' ) ? wpInsertPagesL10n.tinymce_state.querystring : '' );
+			inputs.extraInline.attr( 'checked', wpInsertPagesL10n.hasOwnProperty( 'tinymce_state' ) ? wpInsertPagesL10n.tinymce_state.inline : false );
+			inputs.extraPublic.attr( 'checked', wpInsertPagesL10n.hasOwnProperty( 'tinymce_state' ) ? wpInsertPagesL10n.tinymce_state.public : false );
+
+			// Enable template dropdown if display format is set to 'template'.
+			if ( inputs.format.val() == 'template' ) {
+				inputs.template.removeAttr( 'disabled' );
+				inputs.template.show();
+				inputs.size.hide();
+			} else {
+				inputs.template.attr( 'disabled', 'disabled' );
+			}
+
+			// Enable size dropdown if display format is set to 'post-thumbnail'.
+			if ( inputs.format.val() == 'post-thumbnail' ) {
+				inputs.size.removeAttr( 'disabled' );
+				inputs.size.show();
+				inputs.template.hide();
+			} else {
+				inputs.size.attr( 'disabled', 'disabled' );
+				inputs.size.hide();
+			}
+		},
+
+		searchInternalLinks: function() {
 			var t = $(this), waiting,
 				search = t.val(),
 				type = t.data( 'type' );
@@ -422,11 +518,11 @@ var wpInsertPages;
 					return;
 
 				wpInsertPages.lastSearch = search;
-				waiting = t.parent().find( '.spinner' ).show();
+				waiting = t.parent().find( '.spinner' ).addClass( 'is-active' );
 
 				rivers.search.change( search, type );
 				rivers.search.ajax( function() {
-					waiting.hide();
+					waiting.removeClass( 'is-active' );
 				});
 			} else {
 				rivers.search.hide();
@@ -434,16 +530,16 @@ var wpInsertPages;
 			}
 		},
 
-		next : function() {
+		next: function() {
 			rivers.search.next();
 			rivers.recent.next();
 		},
-		prev : function() {
+		prev: function() {
 			rivers.search.prev();
 			rivers.recent.prev();
 		},
 
-		keydown : function( event ) {
+		keydown: function( event ) {
 			var fn, key = $.ui.keyCode;
 
 			switch( event.which ) {
@@ -460,12 +556,14 @@ var wpInsertPages;
 			}
 			event.preventDefault();
 		},
+
 		keyup: function( event ) {
 			var key = $.ui.keyCode;
 
 			switch( event.which ) {
 				case key.ESCAPE:
-					wpInsertPages.cancel();
+					wpInsertPages.close();
+					event.stopImmediatePropagation();
 					break;
 				case key.UP:
 				case key.DOWN:
@@ -477,7 +575,7 @@ var wpInsertPages;
 			event.preventDefault();
 		},
 
-		delayedCallback : function( func, delay ) {
+		delayedCallback: function( func, delay ) {
 			var timeoutTriggered, funcTriggered, funcArgs, funcContext;
 
 			if ( ! delay )
@@ -500,7 +598,7 @@ var wpInsertPages;
 			};
 		},
 
-		toggleInternalLinking : function( event ) {
+		toggleInternalLinking: function( event ) {
 			var visible = inputs.wrap.hasClass( 'options-panel-visible');
 
 			inputs.wrap.toggleClass( 'options-panel-visible', ! visible );
@@ -520,7 +618,7 @@ var wpInsertPages;
 		this.change( search, type );
 		this.refresh();
 
-		$( '#wp-insertpage .query-results, #wp-insertpage #link-selector' ).scroll( function() {
+		$( '#wp-insertpage .query-results, #wp-insertpage #link-selector' ).on( 'scroll', function() {
 			self.maybeLoad();
 		});
 		element.on( 'click', 'li', function( event ) {
@@ -531,7 +629,7 @@ var wpInsertPages;
 	$.extend( RiverInsertPages.prototype, {
 		refresh: function() {
 			this.deselect();
-			this.visible = this.element.is(':visible');
+			this.visible = this.element.is( ':visible' );
 		},
 		show: function() {
 			if ( ! this.visible ) {
@@ -559,18 +657,18 @@ var wpInsertPages;
 			liTop = li.position().top;
 			elTop = this.element.scrollTop();
 
-			if ( liTop < 0 ) { // Make first visible element
+			if ( liTop < 0 ) { // Make first visible element.
 				this.element.scrollTop( elTop + liTop );
-			} else if ( liTop + liHeight > elHeight ) { // Make last visible element
+			} else if ( liTop + liHeight > elHeight ) { // Make last visible element.
 				this.element.scrollTop( elTop + liTop - elHeight + liHeight );
 			}
 
 			// Trigger the river-select event
-			this.element.trigger('river-select', [ li, event, this ]);
+			this.element.trigger( 'river-select', [ li, event, this ] );
 		},
 		deselect: function() {
 			if ( this.selected )
-				this.selected.removeClass('selected');
+				this.selected.removeClass( 'selected' );
 			this.selected = false;
 		},
 		prev: function() {
@@ -579,7 +677,7 @@ var wpInsertPages;
 
 			var to;
 			if ( this.selected ) {
-				to = this.selected.prev('li');
+				to = this.selected.prev( 'li' );
 				if ( to.length )
 					this.select( to );
 			}
@@ -588,7 +686,7 @@ var wpInsertPages;
 			if ( ! this.visible )
 				return;
 
-			var to = this.selected ? this.selected.next('li') : $('li:not(.unselectable):first', this.element);
+			var to = this.selected ? this.selected.next( 'li' ) : $( 'li:not(.unselectable):first', this.element );
 			if ( to.length )
 				this.select( to );
 		},
@@ -609,17 +707,15 @@ var wpInsertPages;
 
 			this._search = search;
 			this.query = new QueryInsertPages( search, type );
-			this.element.scrollTop(0);
+			this.element.scrollTop( 0 );
 		},
 		process: function( results, params ) {
 			var list = '', alt = true, classes = '',
 				firstPage = params.page == 1;
 
-			if ( !results ) {
+			if ( ! results ) {
 				if ( firstPage ) {
-					list += '<li class="unselectable"><span class="item-title"><em>'
-					+ wpInsertPagesL10n.noMatchesFound
-					+ '</em></span></li>';
+					list += '<li class="unselectable"><span class="item-title"><em>' + wpInsertPagesL10n.noMatchesFound + '</em></span></li>';
 				}
 			} else {
 				$.each( results, function() {
@@ -645,21 +741,21 @@ var wpInsertPages;
 				el = this.element,
 				bottom = el.scrollTop() + el.height();
 
-			if ( ! this.query.ready() || bottom < this.ul.height() - wpInsertPages.riverBottomThreshold )
+			if ( ! this.query.ready() || bottom < this.contentHeight.height() - wpInsertPages.riverBottomThreshold )
 				return;
 
-			setTimeout(function() {
+			setTimeout( function() {
 				var newTop = el.scrollTop(),
 					newBottom = newTop + el.height();
 
-				if ( ! self.query.ready() || newBottom < self.ul.height() - wpInsertPages.riverBottomThreshold )
+				if ( ! self.query.ready() || newBottom < self.contentHeight.height() - wpInsertPages.riverBottomThreshold )
 					return;
 
-				self.waiting.show();
+				self.waiting.addClass( 'is-active' );
 				el.scrollTop( newTop + self.waiting.outerHeight() );
 
 				self.ajax( function() {
-					self.waiting.hide();
+					self.waiting.removeClass( 'is-active' );
 				});
 			}, wpInsertPages.timeToTriggerRiverInsertPages );
 		}
@@ -675,7 +771,7 @@ var wpInsertPages;
 
 	$.extend( QueryInsertPages.prototype, {
 		ready: function() {
-			return !( this.querying || this.allLoaded );
+			return ! ( this.querying || this.allLoaded );
 		},
 		ajax: function( callback ) {
 			var self = this,
@@ -689,18 +785,18 @@ var wpInsertPages;
 			if ( this.search )
 				query.search = this.search;
 
-			query.pageID = inputs.pageID.val();
-
 			this.querying = true;
-			$.post( ajaxurl, query, function(r) {
+
+			// query.pageID = inputs.pageID.val(); // Remove?
+
+			$.post( window.ajaxurl, query, function( r ) {
 				self.page++;
 				self.querying = false;
-				self.allLoaded = !r;
+				self.allLoaded = ! r;
 				callback( r, query );
-			}, "json" );
+			}, 'json' );
 		}
 	});
 
 	$( document ).ready( wpInsertPages.init );
-
-})( jQuery );
+})( jQuery, window.wpInsertPagesL10n, window.wp );

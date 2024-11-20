@@ -34,6 +34,17 @@ final class CEI_Core {
 	}
 
 	/**
+	 * Check to see if the current user is allowed to import.
+	 *
+	 * @since 0.9.6
+	 * @return bool
+	 */
+	static public function can_import()
+	{
+		return apply_filters( 'cei_allow_unsafe_imports', current_user_can( 'install_plugins' ) );
+	}
+
+	/**
 	 * Check to see if we need to do an export or import.
 	 * This should be called by the customize_register action.
 	 *
@@ -109,10 +120,24 @@ final class CEI_Core {
 	{
 		require_once CEI_PLUGIN_DIR . 'classes/class-cei-control.php';
 
+		$description = "<p class='cei-description'>";
+
+		$description .= __( 'Assistant makes tasks like this easier!', 'customizer-export-import' );
+
+		$description .= sprintf( '<br /><a href="%1$s" class="external-link" target="_blank">%2$s<span class="screen-reader-text"> %3$s</span></a>',
+			esc_url( __( 'https://assistant.pro/' ) ),
+			__( 'Get started with a Free Account', 'customizer-export-import' ),
+			/* translators: Accessibility text. */
+			__( '(opens in a new tab)', 'customizer-export-import' )
+		);
+
+		$description .= '</p>';
+
 		// Add the export/import section.
 		$wp_customize->add_section( 'cei-section', array(
 			'title'	   => __( 'Export/Import', 'customizer-export-import' ),
-			'priority' => 10000000
+			'priority' => 10000000,
+			'description' => $description,
 		));
 
 		// Add the export/import setting.
@@ -217,6 +242,11 @@ final class CEI_Core {
 	 */
 	static private function _import( $wp_customize )
 	{
+		// Make sure the current user can import.
+		if ( ! self::can_import() ) {
+			return;
+		}
+
 		// Make sure we have a valid nonce.
 		if ( ! wp_verify_nonce( $_REQUEST['cei-import'], 'cei-importing' ) ) {
 			return;
@@ -235,24 +265,33 @@ final class CEI_Core {
 		global $cei_error;
 
 		// Setup internal vars.
-		$cei_error	 = false;
-		$template	 = get_template();
-		$overrides   = array( 'test_form' => false, 'test_type' => false, 'mimes' => array('dat' => 'text/plain') );
-		$file        = wp_handle_upload( $_FILES['cei-import-file'], $overrides );
+		$cei_error = false;
+		$template  = get_template();
+
+		$validate = wp_check_filetype( $_FILES['cei-import-file']['name'], array( 'dat' => 'application/octet-stream' ) );
+		if ( 'application/octet-stream' !== $validate['type'] ) {
+			$cei_error = __( 'File type is not allowed', 'customizer-export-import' );
+			unlink( $_FILES['cei-import-file']['tmp_name'] );
+			return;
+		}
+
+		$overrides = array( 'test_form' => false, 'test_type' => false, 'mimes' => array( 'dat' => 'application/octet-stream' ) );
+		$file      = wp_handle_upload( $_FILES['cei-import-file'], $overrides );
 
 		// Make sure we have an uploaded file.
 		if ( isset( $file['error'] ) ) {
 			$cei_error = $file['error'];
 			return;
 		}
+
 		if ( ! file_exists( $file['file'] ) ) {
 			$cei_error = __( 'Error importing settings! Please try again.', 'customizer-export-import' );
 			return;
 		}
-
+		
 		// Get the upload data.
 		$raw  = file_get_contents( $file['file'] );
-		$data = @unserialize( $raw );
+		$data = @unserialize( $raw, array( 'allowed_classes' => false ) );
 
 		// Remove the uploaded file.
 		unlink( $file['file'] );
@@ -311,6 +350,11 @@ final class CEI_Core {
 
 		// Call the customize_save_after action.
 		do_action( 'customize_save_after', $wp_customize );
+	}
+	
+	public static function add_mime_for_upload( $mimes ) {
+		$mimes['dat'] = 'application/dat';
+		return $mimes;
 	}
 
 	/**

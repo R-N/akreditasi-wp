@@ -19,7 +19,7 @@
 function relevanssi_indexing_tab() {
 	global $wpdb, $relevanssi_variables;
 
-	$index_post_types      = get_option( 'relevanssi_index_post_types' );
+	$index_post_types      = get_option( 'relevanssi_index_post_types', array() );
 	$index_taxonomies_list = get_option( 'relevanssi_index_taxonomies_list' );
 	$index_comments        = get_option( 'relevanssi_index_comments' );
 	$index_fields          = get_option( 'relevanssi_index_fields' );
@@ -92,6 +92,11 @@ function relevanssi_indexing_tab() {
 	$docs_count  = get_option( 'relevanssi_doc_count', 0 );
 	$terms_count = get_option( 'relevanssi_terms_count', 0 );
 	$lowest_doc  = $wpdb->get_var( 'SELECT doc FROM ' . $relevanssi_variables['relevanssi_table'] . ' WHERE doc > 0 ORDER BY doc ASC LIMIT 1' );  // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared
+	if ( null === $lowest_doc ) {
+		// The database table is empty or doesn't exist.
+		$lowest_doc = 0;
+		relevanssi_create_database_tables( 0 );
+	}
 
 	if ( RELEVANSSI_PREMIUM ) {
 		$user_count    = get_option( 'relevanssi_user_count', 0 );
@@ -104,7 +109,7 @@ function relevanssi_indexing_tab() {
 	?>
 	<div id="indexing_tab">
 
-	<table class="form-table" role="presentation">
+	<table class="form-table" role="presentation" id="indexing_controls">
 	<tr>
 		<td scope="row">
 			<input type='submit' name='submit' value='<?php esc_attr_e( 'Save the options', 'relevanssi' ); ?>' class='button button-primary' /><br /><br />
@@ -132,7 +137,7 @@ function relevanssi_indexing_tab() {
 		</td>
 	</tr>
 	<tr>
-		<th scope="row"><?php esc_html_e( 'State of the index', 'relevanssi' ); ?></td>
+		<th scope="row"><?php esc_html_e( 'State of the index', 'relevanssi' ); ?></th>
 		<td id="stateoftheindex"><p><?php echo esc_html( $docs_count ); ?> <?php echo esc_html( _n( 'document in the index.', 'documents in the index.', $docs_count, 'relevanssi' ) ); ?>
 	<?php if ( RELEVANSSI_PREMIUM ) : ?>
 		<br /><?php echo esc_html( $user_count ); ?> <?php echo esc_html( _n( 'user in the index.', 'users in the index.', $user_count, 'relevanssi' ) ); ?><br />
@@ -157,12 +162,13 @@ function relevanssi_indexing_tab() {
 	}
 	?>
 
+	<div id="indexing_options">
 	<h2 id="indexing"><?php esc_html_e( 'Indexing options', 'relevanssi' ); ?></h2>
 
 	<p><?php esc_html_e( 'Any changes to the settings on this page require reindexing before they take effect.', 'relevanssi' ); ?></p>
 
-	<table class="form-table" role="presentation">
-	<tr>
+	<table class="form-table" role="presentation" id="indexing_settings">
+	<tr id="row_index_post_types">
 		<th scope="row"><?php esc_html_e( 'Post types', 'relevanssi' ); ?></th>
 		<td>
 
@@ -254,7 +260,7 @@ function relevanssi_indexing_tab() {
 		</td>
 	</tr>
 
-	<tr>
+	<tr id="row_index_taxonomies">
 		<th scope="row">
 			<?php esc_html_e( 'Taxonomies', 'relevanssi' ); ?>
 		</th>
@@ -315,7 +321,7 @@ function relevanssi_indexing_tab() {
 		</td>
 	</tr>
 
-	<tr>
+	<tr id="row_index_comments">
 		<th scope="row">
 			<label for='relevanssi_index_comments'><?php esc_html_e( 'Comments', 'relevanssi' ); ?></label>
 		</th>
@@ -329,7 +335,7 @@ function relevanssi_indexing_tab() {
 		</td>
 	</tr>
 
-	<tr>
+	<tr id="row_index_custom_fields">
 		<th scope="row">
 			<label for='relevanssi_index_fields_select'><?php esc_html_e( 'Custom fields', 'relevanssi' ); ?></label>
 		</th>
@@ -375,7 +381,23 @@ function relevanssi_indexing_tab() {
 		</td>
 	</tr>
 
-	<tr>
+	<?php if ( 'selected' === $fields_select_all || 'selected' === $fields_select_visible ) : ?>
+	<tr id="row_list_custom_fields">
+		<th scope="row">
+			<?php esc_html_e( 'List custom fields', 'relevanssi' ); ?>
+		</th>
+		<td>
+			<button type="button" class="button button-primary" id="list_custom_fields"><?php esc_html_e( 'List custom fields', 'relevanssi' ); ?></button>
+			<p class="description"><?php esc_html_e( 'Click the button above to see the list of indexed custom fields.', 'relevanssi' ); ?></p>
+			<div id="relevanssi_custom_field_list"></div>
+			<?php if ( class_exists( 'acf', false ) ) : ?>
+				<p class="description"><?php esc_html_e( 'Fields excluded from ACF settings and with filter functions are included here.', 'relevanssi' ); ?></p>
+			<?php endif; ?>
+		</td>
+	</tr>
+	<?php endif; ?>
+
+	<tr id="row_index_author_name">
 		<th scope="row">
 			<?php esc_html_e( 'Author display names', 'relevanssi' ); ?>
 		</th>
@@ -388,7 +410,7 @@ function relevanssi_indexing_tab() {
 		</td>
 	</tr>
 
-	<tr>
+	<tr id="row_index_excerpts">
 		<th scope="row">
 			<?php esc_html_e( 'Excerpts', 'relevanssi' ); ?>
 		</th>
@@ -405,7 +427,9 @@ function relevanssi_indexing_tab() {
 	</tr>
 
 	</table>
+	</div>
 
+	<div id="indexing_shortcodes">
 	<h2><?php esc_html_e( 'Shortcodes', 'relevanssi' ); ?></h2>
 
 	<table class="form-table" role="presentation">
@@ -427,37 +451,23 @@ function relevanssi_indexing_tab() {
 	</tr>
 
 	<?php
-	if ( function_exists( 'relevanssi_form_disable_shortcodes' ) ) {
-		relevanssi_form_disable_shortcodes();
-	}
+		do_action( 'relevanssi_indexing_tab_shortcodes' );
 	?>
 
 	</table>
+	</div>
 
 	<?php
-	if ( function_exists( 'relevanssi_form_index_users' ) ) {
-		relevanssi_form_index_users();
-	}
-	if ( function_exists( 'relevanssi_form_index_synonyms' ) ) {
-		relevanssi_form_index_synonyms();
-	}
-	if ( function_exists( 'relevanssi_form_index_taxonomies' ) ) {
-		relevanssi_form_index_taxonomies();
-	}
-	if ( function_exists( 'relevanssi_form_index_post_type_archives' ) ) {
-		relevanssi_form_index_post_type_archives();
-	}
-	if ( function_exists( 'relevanssi_form_index_pdf_parent' ) ) {
-		relevanssi_form_index_pdf_parent();
-	}
+		do_action( 'relevanssi_indexing_tab' );
 	?>
 
+	<div id="advanced_indexing_settings">
 	<h2><?php esc_html_e( 'Advanced indexing settings', 'relevanssi' ); ?></h2>
 
 	<p><button type="button" id="show_advanced_indexing"><?php esc_html_e( 'Show advanced settings', 'relevanssi' ); ?></button></p>
 
 	<table class="form-table screen-reader-text" id="advanced_indexing" role="presentation">
-	<tr>
+	<tr id="row_min_word_length">
 		<th scope="row">
 			<label for='relevanssi_min_word_length'><?php esc_html_e( 'Minimum word length', 'relevanssi' ); ?></label>
 		</th>
@@ -468,11 +478,12 @@ function relevanssi_indexing_tab() {
 			<p class="description"><?php printf( esc_html__( 'To enable one-letter searches, you need to add a filter function on the filter hook %1$s that returns %2$s.', 'relevanssi' ), '<code>relevanssi_block_one_letter_searches</code>', '<code>false</code>' ); ?></p>
 		</td>
 	</tr>
-	<tr>
+	<tbody id="punctuation_control">
+	<tr id="row_punctuation_control_label">
 		<th scope="row"><?php esc_html_e( 'Punctuation control', 'relevanssi' ); ?></th>
 		<td><p class="description"><?php esc_html_e( 'Here you can adjust how the punctuation is controlled. For more information, see help. Remember that any changes here require reindexing, otherwise searches will fail to find posts they should.', 'relevanssi' ); ?></p></td>
 	</tr>
-	<tr>
+	<tr id="row_punctuation_hyphens">
 		<th scope="row">
 			<label for='relevanssi_punct_hyphens'><?php esc_html_e( 'Hyphens and dashes', 'relevanssi' ); ?></label>
 		</th>
@@ -486,7 +497,7 @@ function relevanssi_indexing_tab() {
 
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_punctuation_quotes">
 		<th scope="row">
 			<label for='relevanssi_punct_quotes'><?php esc_html_e( 'Apostrophes and quotes', 'relevanssi' ); ?></label>
 		</th>
@@ -499,7 +510,7 @@ function relevanssi_indexing_tab() {
 
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_punctuation_ampersands">
 		<th scope="row">
 			<label for='relevanssi_punct_ampersands'><?php esc_html_e( 'Ampersands', 'relevanssi' ); ?></label>
 		</th>
@@ -513,7 +524,7 @@ function relevanssi_indexing_tab() {
 
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_punctuation_decimals">
 		<th scope="row">
 			<label for='relevanssi_punct_decimals'><?php esc_html_e( 'Decimal separators', 'relevanssi' ); ?></label>
 		</th>
@@ -527,22 +538,16 @@ function relevanssi_indexing_tab() {
 
 		</td>
 	</tr>
+	</tbody>
 	<?php
-	if ( function_exists( 'relevanssi_form_thousands_separator' ) ) {
-		relevanssi_form_thousands_separator();
-	}
-	if ( function_exists( 'relevanssi_form_mysql_columns' ) ) {
-		relevanssi_form_mysql_columns();
-	}
-	if ( function_exists( 'relevanssi_form_internal_links' ) ) {
-		relevanssi_form_internal_links();
-	}
+	do_action( 'relevanssi_indexing_tab_advanced' );
 	?>
 
 	</table>
 
 	<p><button type="button" style="display: none" id="hide_advanced_indexing"><?php esc_html_e( 'Hide advanced settings', 'relevanssi' ); ?></button></p>
 
+	</div>
 	</div>
 	<?php
 }

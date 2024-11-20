@@ -31,7 +31,7 @@ if ( ! class_exists( 'OGF_Notifications' ) ) :
 		/**
 		 * Time limit.
 		 *
-		 * @var string $time_limit
+		 * @var int $time_limit
 		 */
 		private $time_limit;
 
@@ -52,7 +52,7 @@ if ( ! class_exists( 'OGF_Notifications' ) ) :
 		/**
 		 * Class constructor.
 		 *
-		 * @param string $args Arguments.
+		 * @param array $args Arguments.
 		 */
 		public function __construct( $args ) {
 			$this->slug         = $args['slug'];
@@ -72,27 +72,30 @@ if ( ! class_exists( 'OGF_Notifications' ) ) :
 		/**
 		 * Seconds to words.
 		 *
-		 * @param string $seconds Seconds in time.
+		 * @param int $seconds Seconds in time.
+		 * @return string
 		 */
 		public function seconds_to_words( $seconds ) {
 			// Get the years.
-			$years = ( intval( $seconds ) / YEAR_IN_SECONDS ) % 100;
+			$years = absint( $seconds / YEAR_IN_SECONDS ) % 100;
 			if ( $years > 0 ) {
 				/* translators: Number of years */
 				return sprintf( _n( 'a year', '%s years', $years, 'olympus-google-fonts' ), $years );
 			}
 			// Get the weeks.
-			$weeks = ( intval( $seconds ) / WEEK_IN_SECONDS ) % 52;
+			$weeks = absint( intval( $seconds ) / WEEK_IN_SECONDS ) % 52;
 			if ( $weeks > 1 ) {
 				/* translators: Number of weeks */
-				return sprintf( __( 'a week', '%s weeks', $weeks, 'olympus-google-fonts' ), $weeks );
+				return sprintf( _n( 'a week', '%s weeks', $weeks, 'olympus-google-fonts' ), $weeks );
 			}
 			// Get the days.
-			$days = ( intval( $seconds ) / DAY_IN_SECONDS ) % 7;
+			$days = absint( intval( $seconds ) / DAY_IN_SECONDS ) % 7;
 			if ( $days > 1 ) {
 				/* translators: Number of days */
-				return sprintf( __( '%s days', 'olympus-google-fonts' ), $days );
+				return sprintf( _n( '%s day', '%s days', $days, 'olympus-google-fonts' ), $days );
 			}
+
+			return sprintf( _n( '%s second', '%s seconds', $seconds, 'olympus-google-fonts' ), intval( $seconds ) );
 		}
 
 		/**
@@ -180,7 +183,7 @@ if ( ! class_exists( 'OGF_Notifications' ) ) :
 				.notice.ogf-notice {
 					padding: 20px !important;
 				}
-				.notice.ogf-noticee .ogf-notice-inner {
+				.notice.ogf-notice .ogf-notice-inner {
 					display: block;
 				}
 				.notice.ogf-notice .ogf-notice-inner .ogf-notice-content {
@@ -209,8 +212,8 @@ if ( ! class_exists( 'OGF_Notifications' ) ) :
 		 * Output review content.
 		 */
 		public function review() {
-			$no_bug_url = wp_nonce_url( admin_url( '?' . $this->nobug_option . '=true' ), 'ogf-notification-nounce' );
-			$time = $this->seconds_to_words( time() - get_site_option( $this->date_option ) );
+			$no_bug_url = wp_nonce_url( admin_url( '?' . $this->nobug_option . '=true' ), 'ogf-notification-nonce' );
+			$time       = $this->seconds_to_words( time() - get_site_option( $this->date_option ) );
 			?>
 			<div class="notice updated ogf-notice">
 				<div class="ogf-notice-inner">
@@ -240,14 +243,13 @@ if ( ! class_exists( 'OGF_Notifications' ) ) :
 		 */
 		public function set_no_bug() {
 			// Bail out if not on correct page.
-			if ( ! isset( $_GET['_wpnonce'] ) || ( ! wp_verify_nonce( $_GET['_wpnonce'], 'ogf-notification-nounce' ) || ! is_admin() || ! isset( $_GET[ $this->nobug_option ] ) || ! current_user_can( 'manage_options' ) ) ) {
+			if ( ! isset( $_GET['_wpnonce'] ) || ( ! wp_verify_nonce( $_GET['_wpnonce'], 'ogf-notification-nonce' ) || ! is_admin() || ! isset( $_GET[ $this->nobug_option ] ) || ! current_user_can( 'manage_options' ) ) ) {
 				return;
 			}
 			add_site_option( $this->nobug_option, true );
 		}
 	}
 endif;
-
 
 /*
 * Instantiate the OGF_Notifications class.

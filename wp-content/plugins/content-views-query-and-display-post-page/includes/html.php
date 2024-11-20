@@ -212,7 +212,7 @@ if ( !class_exists( 'PT_CV_Html' ) ) {
 				if ( !$content ) {
 					// Get HTML content of view type, with specific style
 					$file_path = apply_filters( PT_CV_PREFIX_ . 'view_type_file', $view_type_dir . '/' . 'html' . '/' . $style . '.' . 'php' );
-
+					
 					if ( file_exists( $file_path ) ) {
 						ob_start();
 						// Include, not include_once
@@ -301,6 +301,17 @@ if ( !class_exists( 'PT_CV_Html' ) ) {
 
 					break;
 
+				case 'onebig':
+					PT_CV_Html_ViewType::onebig_wrapper( $content_items, $content );
+
+					break;
+
+				case 'overlaygrid':
+				case 'blockgrid':
+					PT_CV_Html_ViewType::overlaygrid_wrapper( $content_items, $content );
+
+					break;
+
 				default :
 					foreach ( $content_items as $post_id => $content_item ) {
 						$content[] = PT_CV_Html::content_item_wrap( $content_item, '', $post_id );
@@ -374,10 +385,20 @@ if ( !class_exists( 'PT_CV_Html' ) ) {
 
 					break;
 
+				case 'readmore':
+					$html = self::_field_readmore( $post, $fargs );
+
+					break;
+
 				case 'meta-fields':
 					if ( !empty( $fargs[ 'meta-fields' ] ) ) {
 						$html = self::_field_meta( $post, $fargs[ 'meta-fields' ] );
 					}
+
+					break;
+
+				case 'taxoterm':
+					$html = self::_field_taxonomy( $post );
 
 					break;
 
@@ -434,9 +455,7 @@ if ( !class_exists( 'PT_CV_Html' ) ) {
 
 					// Read more button
 					if ( apply_filters( PT_CV_PREFIX_ . 'field_content_readmore_enable', 1, $fargs[ 'content' ] ) ) {
-						$readmore_text	 = self::get_readmore_text( $fargs[ 'content' ] );
-						$btn_class		 = PT_CV_PREFIX . 'readmore ' . apply_filters( PT_CV_PREFIX_ . 'field_content_readmore_class', 'btn btn-success', $fargs );
-						$readmore_btn	 = self::_field_href( $post, $readmore_text, $btn_class );
+						$readmore_btn	 = self::_field_readmore( $post, $fargs, 'content' );
 						$tail .= apply_filters( PT_CV_PREFIX_ . 'field_content_readmore_seperated', '<br/>', $fargs );
 					}
 
@@ -480,6 +499,27 @@ if ( !class_exists( 'PT_CV_Html' ) ) {
 			return $html;
 		}
 
+		static function _field_readmore( $post, $fargs, $from = false ) {
+			if ( $from === 'content' && ContentViews_Block::is_pure_block() ) {
+				return '';
+			}
+
+			// Fix duplicated readmore for one others layout
+			$view_type = PT_CV_Functions::get_global_variable( 'view_type' );
+			if ( !$from && $view_type === 'one_others' ) {
+				return '';
+			}
+
+			if ( empty( $fargs[ 'content' ] ) ) {
+				$fargs[ 'content' ] = PT_CV_Functions::settings_values_by_prefix( PT_CV_PREFIX . 'field-excerpt-' );
+			}
+
+			$readmore_text	 = self::get_readmore_text( $fargs[ 'content' ] );
+			$btn_class		 = PT_CV_PREFIX . 'readmore ' . apply_filters( PT_CV_PREFIX_ . 'field_content_readmore_class', 'btn btn-success', $fargs );
+			$btn_html		 = self::_field_href( $post, wp_kses_post( $readmore_text ), $btn_class );
+			return strpos( $btn_class, 'textlink' ) !== false ? $btn_html : '<div class="' . PT_CV_PREFIX . 'rmwrap">' . $btn_html . '</div>';
+		}
+
 		/**
 		 * Output link to item
 		 */
@@ -511,14 +551,16 @@ if ( !class_exists( 'PT_CV_Html' ) ) {
 			$fargs = $_fargs[ 'thumbnail' ];
 
 			// Thumbnail class
+			$float				 = '';
 			$thumbnail_position	 = 'default';
 			$thumbnail_class	 = array();
 			$thumbnail_class[]	 = PT_CV_PREFIX . 'thumbnail';
 			$thumbnail_class[]	 = isset( $fargs[ 'style' ] ) ? $fargs[ 'style' ] : '';
 			if ( $layout_format === '2-col' ) {
 				$thumbnail_position	 = isset( $fargs[ 'position' ] ) ? $fargs[ 'position' ] : 'left';
-				$thumbnail_class[]	 = 'pull-' . $thumbnail_position;
+				$thumbnail_class[]	 = $float				 = 'pull-' . $thumbnail_position;
 			}
+			$thumbnail_class[]	 = $extra = isset( $fargs[ 'extra_class' ] ) ? $fargs[ 'extra_class' ] : '';
 			$gargs = array(
 				'class' => apply_filters( PT_CV_PREFIX_ . 'field_thumbnail_class', implode( ' ', array_filter( $thumbnail_class ) ) ),
 			);
@@ -551,8 +593,68 @@ if ( !class_exists( 'PT_CV_Html' ) ) {
 			// Maybe add custom wrap for image
 			$html = apply_filters( PT_CV_PREFIX_ . 'field_thumbnail_image_html', $html );
 
-			return apply_filters( PT_CV_PREFIX_ . 'field_thumbnail_nolink', false ) ? $html :
-				self::_field_href( $post, $html, implode( ' ', array( PT_CV_PREFIX . 'href-thumbnail', PT_CV_PREFIX . 'thumb-' . $thumbnail_position ) ) );
+			if ( apply_filters( PT_CV_PREFIX_ . 'field_thumbnail_nolink', false ) ) {
+				return $html;
+			} else {
+				$output = self::_field_href( $post, $html, implode( ' ', array( PT_CV_PREFIX . 'href-thumbnail', PT_CV_PREFIX . 'thumb-' . $thumbnail_position ) ) );
+
+				$taxo_output = self::_taxonomy_output( $post, true );
+				if ( $taxo_output || ContentViews_Block::is_block() ) {
+					$float	.= ' ' . str_replace( PT_CV_PREFIX . 'thumbnailsm', 'miniwrap', $extra );
+					$output = '<div class="' . PT_CV_PREFIX . 'thumb-wrapper ' . $float . '">' . $output . $taxo_output . '</div>';
+				}
+
+				return $output;
+			}
+		}
+
+		// for Block
+		static function _field_taxonomy( $post ) {
+			return self::_taxonomy_output( $post );
+		}
+
+		static function _taxonomy_output( $post, $for_thumb = false ) {
+			if ( !PT_CV_Functions::setting_value( PT_CV_PREFIX . "show-field-taxoterm" ) ) {
+				return '';
+			}
+
+			$other_fields = PT_CV_Functions::get_global_variable( 'fields_others' );
+			if ( $other_fields && !in_array( 'taxoterm', $other_fields ) ) {
+				return '';
+			}
+
+			$position	 = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'taxo-position' );
+			$html		 = PT_CV_Functions::get_global_variable( 'taxoterm_output_' . $post->ID );
+			if ( !$html ) {
+				$meta	 = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'topmeta-which' );
+				switch ( $meta ) {
+					case 'mtt_author':
+						$mtt = sprintf( '<a href="%s">%s</a>', get_the_author_link(), get_the_author() );
+						break;
+
+					case 'mtt_date':
+						$date_format = apply_filters( PT_CV_PREFIX_ . 'field_meta_date_format', get_option( 'date_format' ), $post );
+						$date		 = apply_filters( PT_CV_PREFIX_ . 'field_meta_date_final', mysql2date( $date_format, $post->post_date ), get_the_time( 'U' ) );
+						$mtt		 = sprintf( '<span>%s</span>', $date );
+						break;
+
+					default:
+						$taxo	 = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'taxo-which' );
+						$mtt	 = PT_CV_Functions::post_terms( $post, $taxo, '' );
+						break;
+				}
+
+				$html = sprintf( '<div class="%s">%s</div>', PT_CV_PREFIX . 'taxoterm' . ' ' . esc_attr( $position ), $mtt );
+				PT_CV_Functions::set_global_variable( 'taxoterm_output_' . $post->ID, $html );
+			}
+
+			if ( ($for_thumb && strpos( $position, 'over' ) === false) || (!$for_thumb && strpos( $position, 'over' ) !== false) ) {
+				$return = '';
+			} else {
+				$return = $html;
+			}
+
+			return $return;
 		}
 
 		/**
@@ -577,7 +679,7 @@ if ( !class_exists( 'PT_CV_Html' ) ) {
 					case 'date':
 						$date_class	 = apply_filters( PT_CV_PREFIX_ . 'field_meta_class', 'entry-date', 'date' );
 						$prefix_text = apply_filters( PT_CV_PREFIX_ . 'field_meta_prefix_text', '', 'date' );
-						$date_format = apply_filters( PT_CV_PREFIX_ . 'field_meta_date_format', get_option( 'date_format' ) );
+						$date_format = apply_filters( PT_CV_PREFIX_ . 'field_meta_date_format', get_option( 'date_format' ), $post );
 						$date		 = apply_filters( PT_CV_PREFIX_ . 'field_meta_date_final', mysql2date( $date_format, $post->post_date ), get_the_time( 'U' ) );
 
 						$html[ 'date' ] = sprintf( '<span class="%s">%s <time datetime="%s">%s</time></span>', esc_attr( $date_class ), $prefix_text, esc_attr( get_the_date( 'c' ) ), esc_html( $date ) );
@@ -612,7 +714,20 @@ if ( !class_exists( 'PT_CV_Html' ) ) {
 						$author_class	 = apply_filters( PT_CV_PREFIX_ . 'field_meta_class', 'author', 'author' );
 						$prefix_text	 = apply_filters( PT_CV_PREFIX_ . 'field_meta_prefix_text', '', 'author' );
 
-						$author_html		 = sprintf( '<span class="%s">%s <a href="%s" rel="author">%s</a></span>', esc_attr( $author_class ), $prefix_text, esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) ), get_the_author() );
+						$author_info = get_the_author();
+
+						$text = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'authorPrefix' );
+						if ( !empty( $text ) ) {
+							$author_info = wp_kses_post( $text ) . ' ' . $author_info;
+						}
+
+						if ( PT_CV_Functions::setting_value( PT_CV_PREFIX . 'authorAvatar' ) ) {
+							$author_id	 = get_the_author_meta( 'ID' );
+							$avatar		 = get_avatar( $author_id, apply_filters( PT_CV_PREFIX_ . 'author_avatar_size', 30 ) );
+							$author_info = $avatar . $author_info;
+						}
+
+						$author_html		 = sprintf( '<span class="%s">%s <a href="%s" rel="author">%s</a></span>', esc_attr( $author_class ), wp_kses_post( $prefix_text ), esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) ), $author_info );
 						$html[ 'author' ]	 = apply_filters( PT_CV_PREFIX_ . 'field_meta_author_html', $author_html, $post );
 						break;
 
@@ -646,11 +761,18 @@ if ( !class_exists( 'PT_CV_Html' ) ) {
 				return '';
 			}
 
-			$seperator	 = isset( $seperator ) ? $seperator : apply_filters( PT_CV_PREFIX_ . 'field_meta_seperator', ' / ' );
+			$separator = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'metaSeparator' );
+			if ( $separator === NULL ) {
+				$separator = ' / ';
+			} else {
+				$separator = " $separator ";
+			}
+
+			$seperator	 = isset( $seperator ) ? $seperator : apply_filters( PT_CV_PREFIX_ . 'field_meta_seperator', $separator );
 			$class		 = apply_filters( PT_CV_PREFIX_ . 'field_meta_fields_class', PT_CV_PREFIX . 'meta-fields' );
 			$tag		 = apply_filters( PT_CV_PREFIX_ . 'field_meta_fields_tag', 'div' );
 			$wrapper	 = sprintf( '<%1$s class="%2$s">%3$s</%1$s>', tag_escape( $tag ), esc_attr( $class ), '%s' );
-			$meta_html	 = implode( $seperator, (array) apply_filters( PT_CV_PREFIX_ . 'meta_field_html', $meta_html ) );
+			$meta_html	 = implode( empty( $seperator ) ? $seperator : "<span>" . wp_kses_post( $seperator ) . "</span>", (array) apply_filters( PT_CV_PREFIX_ . 'meta_field_html', $meta_html ) );
 			$html		 = !empty( $meta_html ) ? sprintf( $wrapper, $meta_html ) : '';
 
 			return $html;
@@ -682,8 +804,9 @@ if ( !class_exists( 'PT_CV_Html' ) ) {
 			$style			 = isset( $dargs[ 'pagination-settings' ][ 'style' ] ) ? $dargs[ 'pagination-settings' ][ 'style' ] : 'regular';
 
 			if ( $type == 'normal' || $style == 'regular' ) {
+				$extra_data		 = apply_filters( PT_CV_PREFIX_ . 'pagination_data', '' );
 				$ul_class		 = implode( ' ', array( PT_CV_PREFIX . 'pagination', PT_CV_PREFIX . $type, 'pagination' ) );
-				$pagination_btn	 = sprintf( '<ul class="%s" data-totalpages="%s" data-currentpage="%s" data-sid="%s" data-unid="%s">%s</ul>', $ul_class, esc_attr( $max_num_pages ), esc_attr( $current_page ), esc_attr( $sid ), esc_attr( $cv_unique_id ), PT_CV_Functions::pagination_links( $max_num_pages, $current_page ) );
+				$pagination_btn	 = sprintf( '<ul class="%s" data-totalpages="%s" data-currentpage="%s" data-sid="%s" data-unid="%s" %s>%s</ul>', esc_attr( $ul_class ), esc_attr( $max_num_pages ), esc_attr( $current_page ), esc_attr( $sid ), esc_attr( $cv_unique_id ), $extra_data, PT_CV_Functions::pagination_links( $max_num_pages, $current_page ) );
 			} else {
 				$pagination_btn = apply_filters( PT_CV_PREFIX_ . 'btn_more_html', $pagination_btn, $max_num_pages, $sid );
 			}
@@ -867,7 +990,7 @@ if ( !class_exists( 'PT_CV_Html' ) ) {
 		static function get_readmore_text( $args ) {
 			$result = '';
 			if ( !empty( $args[ 'readmore-text' ] ) ) {
-				$result = stripslashes( cv_sanitize_tag_content( $args[ 'readmore-text' ] ) );
+				$result = stripslashes( cv_sanitize_tag_content( apply_filters( PT_CV_PREFIX_ . 'maybe_translate', $args[ 'readmore-text' ], 'read more text' ) ) );
 				// CV translation
 				if ( $result === 'Read More' ) {
 					$result = __( 'Read More', 'content-views-query-and-display-post-page' );
@@ -888,9 +1011,24 @@ if ( !class_exists( 'PT_CV_Html' ) ) {
 
 			global $cv_pagination_bases;
 			if ( !empty( $cv_pagination_bases ) ) {
-				echo "<script id='" . PT_CV_PREFIX . "append-scripts'>if( PT_CV_PAGINATION ) { PT_CV_PAGINATION.links = $cv_pagination_bases; }
+				echo "<script id='" . PT_CV_PREFIX . "append-scripts'>if( typeof PT_CV_PAGINATION !== 'undefined' ) { PT_CV_PAGINATION.links = $cv_pagination_bases; }
             </script>";
 			}
+		}
+
+		// From Pro
+		static function image_output( $width, $height, $attr ) {
+			$hwstring	 = image_hwstring( $width, $height );
+			$attr		 = apply_filters( 'cvp_get_attachment_image_attributes', $attr, null, null );
+			$attr		 = array_map( 'esc_attr', $attr );
+
+			$found_image = rtrim( "<img $hwstring" );
+			foreach ( $attr as $name => $value ) {
+				$found_image .= " $name=" . '"' . $value . '"';
+			}
+			$found_image .= ' />';
+
+			return $found_image;
 		}
 
 	}

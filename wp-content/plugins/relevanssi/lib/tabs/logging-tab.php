@@ -14,10 +14,9 @@
  * Prints out the logging tab in Relevanssi settings.
  *
  * @global $wpdb                 The WordPress database interface.
- * @global $relevanssi_variables The global Relevanssi variables array.
  */
 function relevanssi_logging_tab() {
-	global $wpdb, $relevanssi_variables;
+	global $wpdb;
 
 	$log_queries         = get_option( 'relevanssi_log_queries' );
 	$log_queries         = relevanssi_check( $log_queries );
@@ -26,9 +25,11 @@ function relevanssi_logging_tab() {
 	$omit_from_logs      = get_option( 'relevanssi_omit_from_logs' );
 	$trim_logs           = get_option( 'relevanssi_trim_logs' );
 
+	wp_nonce_field( 'relevanssi_export_logs', '_relevanssi_export_nonce', true, true );
+
 	?>
 	<table class="form-table" role="presentation">
-	<tr>
+	<tr id="row_enable_logs">
 		<th scope="row">
 			<?php esc_html_e( 'Enable logs', 'relevanssi' ); ?>
 		</th>
@@ -52,7 +53,7 @@ function relevanssi_logging_tab() {
 		</p>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_log_user_ip">
 		<th scope="row">
 			<?php esc_html_e( 'Log user IP', 'relevanssi' ); ?>
 		</th>
@@ -67,7 +68,7 @@ function relevanssi_logging_tab() {
 		<p class="description"><?php esc_html_e( "If enabled, Relevanssi will log user's IP adress with the queries. Note that this may be illegal where you live, and in EU will create a person registry that falls under the GDPR.", 'relevanssi' ); ?></p>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_exclude_users">
 		<th scope="row">
 			<label for='relevanssi_omit_from_logs'><?php esc_html_e( 'Exclude users', 'relevanssi' ); ?></label>
 		</th>
@@ -81,7 +82,7 @@ function relevanssi_logging_tab() {
 		relevanssi_form_hide_branding();
 	}
 	?>
-	<tr>
+	<tr id="row_trim_logs">
 		<th scope="row">
 			<label for='relevanssi_trim_logs'><?php esc_html_e( 'Trim logs', 'relevanssi' ); ?></label>
 		</th>
@@ -96,14 +97,14 @@ function relevanssi_logging_tab() {
 			} else {
 				echo '<p class="description">';
 				// Translators: %d is the setting for no trim (probably 0).
-				printf( esc_html__( ' Set to %d for no trimming.', 'relevanssi' ), 0 );
+				printf( esc_html__( 'Set to %d for no trimming.', 'relevanssi' ), 0 );
 				echo '</p>';
 			}
 			?>
 		</td>
 	</tr>
 
-	<tr>
+	<tr id="row_export_logs">
 		<th scope="row">
 			<?php esc_html_e( 'Export logs', 'relevanssi' ); ?>
 		</th>
@@ -115,4 +116,15 @@ function relevanssi_logging_tab() {
 
 	</table>
 	<?php
+
+	if ( function_exists( 'relevanssi_click_tracking_interface' ) ) {
+		relevanssi_click_tracking_interface();
+	} else {
+		?>
+		<div id="click_tracking_ad">
+		<h3><?php esc_html_e( 'Click tracking', 'relevanssi' ); ?></h3>
+		<p><?php esc_html_e( 'Relevanssi Premium has a click tracking feature where you can track which posts are clicked from the search results. That way you can tell what is your most interesting content and how the search is actually used to access posts.', 'relevanssi' ); ?></p>
+		</div>
+		<?php
+	}
 }

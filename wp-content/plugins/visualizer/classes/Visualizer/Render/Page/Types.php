@@ -53,6 +53,7 @@ class Visualizer_Render_Page_Types extends Visualizer_Render_Page {
 	 */
 	protected function _renderContent() {
 		echo '<div id="type-picker">';
+		echo '<div id="chart-select">' . $this->render_chart_selection() . '</div>';
 		foreach ( $this->types as $type => $array ) {
 			// add classes to each box that identifies the libraries this chart type supports.
 			$lib_classes = '';
@@ -61,8 +62,12 @@ class Visualizer_Render_Page_Types extends Visualizer_Render_Page {
 			}
 			echo '<div class="type-box type-box-', $type, $lib_classes, '">';
 			if ( ! $array['enabled'] ) {
-				echo "<a class='pro-upsell' href='" . Visualizer_Plugin::PRO_TEASER_URL . "' target='_blank'>";
+				$demo_url = isset( $array['demo_url'] ) ? $array['demo_url'] : '';
+				echo '<div class="pro-upsell">';
 				echo "<span class='visualizder-pro-label'>" . __( 'PREMIUM', 'visualizer' ) . '</span>';
+				echo '<div class="pro-upsell-overlay">';
+				echo '<div class="pro-upsell-action"><a href="' . esc_url( $demo_url ) . '" target="_blank" class="button button-secondary">' . __( 'View Demo', 'visualizer' ) . '</a><a href="' . tsdk_utmify( Visualizer_Plugin::PRO_TEASER_URL, 'procharts', 'Addnewcharts' ) . '" target="_blank" class="button button-primary">' . __( 'Upgrade Now', 'visualizer' ) . '</a></div>';
+				echo '</div>';
 			}
 			echo '<label class="type-label', $type === $this->type ? ' type-label-selected' : '', '">';
 			echo '<span>' . $array['name'] . '</span>';
@@ -71,7 +76,7 @@ class Visualizer_Render_Page_Types extends Visualizer_Render_Page {
 			}
 			echo '</label>';
 			if ( ! $array['enabled'] ) {
-				echo '</a>';
+				echo '</div>';
 			}
 			echo '</div>';
 		}
@@ -97,13 +102,11 @@ class Visualizer_Render_Page_Types extends Visualizer_Render_Page {
 	}
 
 	/**
-	 * Renders toolbar content.
+	 * Render the chart select component.
 	 *
-	 * @since 1.0.0
-	 *
-	 * @access protected
+	 * @return string
 	 */
-	protected function _renderToolbar() {
+	private function render_chart_selection() {
 		$chart_types = Visualizer_Module_Admin::_getChartTypesLocalized( true, false, false, 'types' );
 		$type_vs_library = array();
 
@@ -118,20 +121,28 @@ class Visualizer_Render_Page_Types extends Visualizer_Render_Page {
 
 		$libraries = array_unique( $libraries );
 
+		$select = '';
 		if ( ! empty( $libraries ) ) {
-			?>
-		<select name="chart-library" class="viz-select-library" data-type-vs-library="<?php echo esc_attr( json_encode( $type_vs_library ) ); ?>">
-			<option value=""><?php esc_html_e( 'Use Library', 'visualizer' ); ?></option>
-			<?php
+			$select .= '<label for="chart-library">' . __( 'Select Library for charts', 'visualizer' ) . '</label>';
+			$select .= '<select name="chart-library" class="viz-select-library" data-type-vs-library="' . esc_attr( json_encode( $type_vs_library ) ) . '">';
 			foreach ( $libraries as $library ) {
-				?>
-			<option value="<?php echo $this->_removeSpaceFromLibrary( $library ); ?>"><?php echo $library; ?></option>
-				<?php
+				$select .= '<option value="' . $this->_removeSpaceFromLibrary( $library ) . '">' . $library . '</option>';
 			}
-			?>
-		</select>
-			<?php
+
+			$select .= '</select>';
 		}
+		return $select;
+	}
+
+	/**
+	 * Renders toolbar content.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @access protected
+	 */
+	protected function _renderToolbar() {
+		// $this->render_chart_selection();
 		?>
 		<input type="submit" class="button button-primary button-large push-right" value="<?php esc_attr_e( 'Next', 'visualizer' ); ?>">
 		<input type="button" class="button button-secondary button-large push-right viz-abort" value="<?php esc_attr_e( 'Cancel', 'visualizer' ); ?>">

@@ -1,5 +1,16 @@
 <?php
-	$is_pro = Visualizer_Module::is_pro();
+/**
+ * Docs page template
+ */
+$is_pro = Visualizer_Module::is_pro();
+
+if (
+	$_SERVER['REQUEST_METHOD'] === 'POST' &&
+	isset( $_POST['_wpnonce']) &&
+	wp_verify_nonce( $_POST['_wpnonce'], 'visualizer-feature-usage')
+) {
+	update_option( 'visualizer_logger_flag', isset( $_POST['visualizer_logger_flag']) ? 'yes' : 'no');
+}
 ?>
 	<div class="pro-feature">
 		<div class="pro-feature-inner">
@@ -20,7 +31,7 @@
 				</ul>
 
 				<?php if ( ! $is_pro ) { ?>
-				<p>We have many more features and charts, and offer email & chat support if you purchase our <a href="<?php echo Visualizer_Plugin::PRO_TEASER_URL; ?>" target="_blank">Pro Version</a>.</p>
+				<p>We have many more features and charts, and offer email & chat support if you purchase our <a href="<?php echo tsdk_utmify( Visualizer_Plugin::PRO_TEASER_URL, 'docscard' ); ?>" target="_blank">Pro Version</a>.</p>
 				<?php } ?>
 
 				<p>Ready to begin? Let's <a href="<?php echo admin_url( 'admin.php?page=' . Visualizer_Plugin::NAME . '&vaction=addnew' ); ?>">create a chart</a> or <a href="<?php echo VISUALIZER_DEMO_URL; ?>" target="_blank">view a demo</a>!
@@ -49,6 +60,22 @@
 	</div>
 	<div class="clear"></div>
 
+	<div class="pro-feature">
+		<div class="pro-feature-inner">
+			<div class="pro-feature-features">
+				<h2>Feature Usage</h2>
+				<form method="post">
+					<?php wp_nonce_field( 'visualizer-feature-usage' ); ?>
+					<p>
+						<input type="checkbox" id="visualizer_feature_usage" name="visualizer_logger_flag" value="1" <?php checked( get_option( 'visualizer_logger_flag' ), 'yes' ); ?> />
+						<label for="visualizer_feature_usage">Help us improve Visualizer by sending us anonymous usage data. This will help us understand how you use the plugin and what features are most important to you.</label>
+					</p>
+					<p><input type="submit" class="button button-primary" value="Save" /></p>
+				</form>
+			</div>
+		</div>
+	</div>
+	<div class="clear"></div>
 
 	<div class="pro-feature">
 		<div class="pro-feature-inner">

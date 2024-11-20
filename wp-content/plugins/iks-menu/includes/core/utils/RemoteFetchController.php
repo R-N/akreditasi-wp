@@ -15,9 +15,11 @@ namespace IksStudio\IKSM_CORE\utils;
 class RemoteFetchController {
 
 	private $server = null;
+	private $domainIgnoreSSL = false;
 
-	protected function __construct( $server ) {
-		$this->server = $server;
+	protected function __construct( $server, $domainIgnore = false ) {
+		$this->server          = $server;
+		$this->domainIgnoreSSL = $domainIgnore;
 	}
 
 	/**
@@ -39,13 +41,20 @@ class RemoteFetchController {
 		}
 		curl_setopt( $curl, CURLOPT_RETURNTRANSFER, 1 );
 		curl_setopt( $curl, CURLOPT_HEADER, 0 );
-		$out = curl_exec( $curl );
+		if ( $this->domainIgnoreSSL ) {
+			curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+		}
+		$out       = curl_exec( $curl );
+		$errorCurl = "";
+		if ( ! $out ) {
+			$errorCurl = curl_error( $curl );
+		}
 		curl_close( $curl );
 
 		return [
 			"success" => ! ! $out,
 			"data"    => $out,
-			"error"   => $out === false ? "An error occurred while fetching" : null,
+			"error"   => $out === false ? ( $errorCurl ) : null
 		];
 	}
 

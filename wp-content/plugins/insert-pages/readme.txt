@@ -1,9 +1,8 @@
 === Insert Pages ===
 Contributors: figureone, the_magician
 Tags: insert, pages, shortcode, embed
-Requires at least: 3.0.1
-Tested up to: 5.5.1
-Stable tag: trunk
+Tested up to: 6.7
+Stable tag: 3.9.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -110,6 +109,86 @@ Just one! The plugin prevents you from embedding a page in itself, but you can t
 3. Insert Pages shortcode example.
 
 == Changelog ==
+
+= 3.9.1 =
+* Additional fixes for error in some Woocommerce contexts.
+* Fix for legacy widgets with custom css from builder plugins having the css escaped and printed.
+
+= 3.9.0 =
+* Fix error in some Woocommerce contexts. Props @osositno for the [report](https://wordpress.org/support/topic/fatal-error-4761)!
+* Fix block layout styles not appearing in the block editor inside an insert page block. Props @davidpotter for the [report](https://wordpress.org/support/topic/block-properties-not-always-honored-in-the-gutenberg-editor/)!
+* Fix issues reported by Plugin Check, including securing output data (escaping).
+* Minor fixes to adhere to WordPress Coding Standards.
+
+= 3.8.1 =
+* Fix WPML compatibility: inserted pages will now match the language of the parent page.
+
+= 3.8 =
+* Add `display='title-content'` to render both Title and Content in the same shortcode or block. Props dregad for the [request](https://github.com/dregad)!
+* Update block dev dependencies and rebuild block.
+* Fix: Verify search param exists before checking.
+* Tested up to WordPress 6.5.
+
+= 3.7.7 =
+* Update block dev dependencies and rebuild block.
+* Tested up to WordPress 6.2.
+* Update readme.
+
+= 3.7.6 =
+* Allow full URLs in insert page shortcode. Props @woodhall2k for the suggestion.
+
+= 3.7.5 =
+* Security: fix improper escaping of class attribute. Lower-privileged users like Contributors can potentially insert javascript into the Insert Pages shortcode that can run when an Administrator previews their post, creating a vector for cross-site scripting. We recommend updating to this version immediately. Props @wpscan for the report.
+* Add size attribute to change post-thumbnail size. Example: `[insert page='sample-page' display='post-thumbnail' size='large']`
+* Fix for shortcodes with extra spaces breaking classic editor toolbar button highlight.
+* Don’t reparse querystring during a rest request (gutenberg block refresh). Props @robbymacdonell for finding the bug!
+* Support GoodLayers page builder. Props @rehanahmed38 for the request.
+* Update gutenberg block dev dependencies.
+
+= 3.7.4 =
+* Fixes quicktag button missing in WordPress 6.0 (also fixes "QTags is not defined) javascript error while editing posts).
+* Add Simple WP Membership integration (content protected with Simple WP Membership will only be shown to authorized users or admins when inserted).
+
+= 3.7.3 =
+* Fix missing Visual Composer script/style enqueues.
+* Tested up to WordPress 6.0.
+* Bump gutenberg npm development dependencies.
+
+= 3.7.2 =
+* Add custom CSS/JS enqueue for inserted pages with blocks from the Ultimate Addons for Gutenberg plugin.
+* Default to "normal" insert method instead of "legacy."
+* Bump gutenberg development dependencies.
+
+= 3.7.1 =
+* Fix Insert Pages block styles affecting other blocks. Props @drsdre for the report!
+* Fix gutenberg block deprecation notices.
+* Tested up to WordPress 5.9.
+
+= 3.7.0 =
+* Security: Prevent unprivileged users from inserting private posts by others.
+* Security: Filter out possible XSS in post meta using wp_kses_post() when using display=all.
+* New Setting: Only show Authors and Contributors their own content in the TinyMCE Insert Pages popup.
+
+= 3.6.1 =
+* Fix TinyMCE dialog not closing properly. Props @astaryne for the report!
+
+= 3.6.0 =
+* Add `insert_pages_tinymce_state` filter to set TinyMCE modal field defaults. [Details](https://wordpress.org/support/topic/customise-modal-content/)
+* Add `insert_pages_available_templates` filter to customize the list of allowed custom templates. [Details](https://wordpress.org/support/topic/customise-modal-content/)
+* Update TinyMCE plugin to match changes in current wp-link dialog in core.
+* Fix TinyMCE modal height on mobile.
+* Ensure scripts/styles are loaded before adding TinyMCE plugin.
+
+= 3.5.10 =
+* Allow Insert Pages TinyMCE widget to run in a front-end wp_editor().
+
+= 3.5.9 =
+* Fix jQuery deprecation notices in WordPress 5.7.
+* Tested up to WordPress 5.7.
+
+= 3.5.8 =
+* Allow adding query vars for the inserted page (for example, to insert a specific tab of the WooCommerce My Account page: `[insert page=‘my-account’ display=‘content’ querystring=‘pagename=my-account&downloads’]`).
+* Tested up to WordPress 5.6.1.
 
 = 3.5.7 =
 * Prevent Flamingo (Contact Forms 7 plugin) inbound messages with the same slug as an existing inserted page from showing up.
@@ -428,8 +507,11 @@ add_action( 'init', 'theme_init' );`
 
 == Upgrade Notice ==
 
+= 3.7.0 =
+If you insert private pages/posts, please review the post authors of the pages containing the inserted page and confirm they have the capability to read the private content. This upgrade enforces private page visibility based on the role of the author of the page that inserts any private content.
+
 = 3.2.4 =
-Security notice: this update fixes a potential directory traversal attack where a WordPress user with Editor role or higher could include any php file by specifying it as a custom template in the Insert Pages shortcode. This vulnerability is limited because the attacker already needs to be an Editor or higher on your WordPress site. Example: [insert page='your-page' display='../../../../../../../../xampp/apache/logs/access.log']
+Security: fixes a directory traversal attack where an Editor role or higher could include any php file by specifying it as a custom template in the Insert Pages shortcode. Example: [insert page='your-page' display='../../../../../../../../xampp/apache/logs/access.log']
 
 = 2.3 =
 Warning: If you apply CSS rules to #insertPages_Content, this update will require you to modify those styles. The element id "insertPages_Content" was removed so multiple pages can be embedded on a single page. You may apply styles instead to the "insert-page" class.

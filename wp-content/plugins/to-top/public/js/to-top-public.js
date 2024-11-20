@@ -49,16 +49,15 @@
 
         if ("undefined" != typeof to_top_options.enable_hide_small_device && "1" == to_top_options.enable_hide_small_device) {
             if ($(window).width() > to_top_options.small_device_max_width) {
-                $(window).scroll(fnScroll);
-                $(document).scroll(fnScroll);
+                $(window).on( "scroll", fnScroll);
+                $(document).on( "scroll", fnScroll);
             }
         }else{
-            $(window).scroll(fnScroll);
-            $(document).scroll(fnScroll);
+            $(window).on( "scroll", fnScroll);
+            $(document).on( "scroll", fnScroll);
         }
 
-        container
-            .hover(function() {
+        container.on( "hover", function() {
                 clearTimeout(hideEventID);
                 mouse_over = true;
                 $(this).css("opacity", 1);
@@ -67,7 +66,7 @@
                 mouse_over = false;
                 fnHideEvent();
             })
-            .click(function() {
+            .on( "click", function() {
                 $("html, body").animate({
                     scrollTop: 0
                 }, 400);

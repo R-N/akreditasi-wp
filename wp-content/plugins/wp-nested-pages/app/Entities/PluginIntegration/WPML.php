@@ -130,7 +130,8 @@ class WPML
 			$translations = $this->getAllTranslations($post['id']);
 			foreach ( $translations as $lang_code => $post_info ) :
 				$translation_post_id = $post_info->element_id;
-				$translated_parent = $this->getAllTranslations($post_parent)[$lang_code]->element_id;
+				$parent_translations = $this->getAllTranslations($post_parent);
+				$translated_parent = ( isset($parent_translations[$lang_code]) ) ? $parent_translations[$lang_code]->element_id : 0;
 				$query = "UPDATE $wpdb->posts SET menu_order = '$order', post_parent = '$translated_parent' WHERE ID = '$translation_post_id'";
 				$wpdb->query( $query );
 			endforeach;
@@ -175,11 +176,8 @@ class WPML
 	public function translatedPostCount($language_code = '', $post_type = '')
 	{
 		global $wpdb;
-
-		$default_language_code = $this->getDefaultLanguage();
 		$post_type = 'post_' . $post_type;
-
-		$query = $wpdb->prepare("SELECT COUNT( {$wpdb->prefix}posts.ID ) FROM {$wpdb->prefix}posts LEFT JOIN {$wpdb->prefix}icl_translations ON {$wpdb->prefix}posts.ID = {$wpdb->prefix}icl_translations.element_id WHERE {$wpdb->prefix}icl_translations.language_code = '%s' AND {$wpdb->prefix}icl_translations.source_language_code = '%s' AND {$wpdb->prefix}icl_translations.element_type = '%s'", $language_code, $default_language_code, $post_type);
+		$query = $wpdb->prepare("SELECT COUNT( {$wpdb->prefix}posts.ID ) FROM {$wpdb->prefix}posts LEFT JOIN {$wpdb->prefix}icl_translations ON {$wpdb->prefix}posts.ID = {$wpdb->prefix}icl_translations.element_id WHERE {$wpdb->prefix}icl_translations.language_code = '%s' AND {$wpdb->prefix}icl_translations.element_type = '%s'", $language_code, $post_type);
 
 		return $wpdb->get_var( $query );
 	}
@@ -191,7 +189,7 @@ class WPML
 	{
 		global $wpdb;
 		$default_language_code = $this->getDefaultLanguage();
-		$query = $wpdb->prepare("SELECT COUNT(p.ID) FROM {$wpdb->prefix}posts AS p LEFT JOIN {$wpdb->prefix}icl_translations AS t ON t.element_id = p.ID WHERE p.post_type = '%s' AND p.post_status = 'publish' AND t.language_code = '%s'", $post_type, $default_language_code);
+		$query = $wpdb->prepare("SELECT COUNT(DISTINCT p.ID) FROM {$wpdb->prefix}posts AS p LEFT JOIN {$wpdb->prefix}icl_translations AS t ON t.element_id = p.ID AND t.element_type = CONCAT('post_', p.post_type) WHERE p.post_type = '%s' AND t.language_code = '%s' AND p.post_status != 'draft'", $post_type, $default_language_code);
 		return $wpdb->get_var( $query );
 	}
 

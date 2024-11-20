@@ -12,52 +12,48 @@
  */
 namespace IksStudio\IKSM_CORE\skins;
 
-use  IksStudio\IKSM_CORE\Plugin ;
-use  IksStudio\IKSM_CORE\utils\RemoteFetchController ;
-use  IksStudio\IKSM_CORE\utils\Utils ;
-class SkinsManager extends RemoteFetchController
-{
+use IksStudio\IKSM_CORE\Plugin;
+use IksStudio\IKSM_CORE\utils\RemoteFetchController;
+use IksStudio\IKSM_CORE\utils\Utils;
+class SkinsManager extends RemoteFetchController {
     /**
      * @var string|null
      */
-    private  $server = null ;
+    private $server = null;
+
     /**
      * SkinsManager constructor.
      *
      */
-    public function __construct()
-    {
+    public function __construct() {
         $servers = Plugin::$skins_servers;
         $this->server = ( Utils::is_production() ? $servers['prod'] : $servers['dev'] );
-        parent::__construct( $this->server );
+        parent::__construct( $this->server, true );
     }
-    
+
     /**
      * @param $id number id of skin
      *
      * @return array
      */
-    public function get_skin( $id )
-    {
+    public function get_skin( $id ) {
         $request = [
             "id" => $id,
         ];
         return $this->fetch( $request );
     }
-    
+
     /**
      * @param $tag string tag to filter skins
      *
      * @return array skins
      */
-    public function get_skins( $tag = null )
-    {
+    public function get_skins( $tag = null ) {
         $response = $this->fetch( [
             "data"           => "1",
             "tag"            => $tag,
             "plugin_version" => Plugin::$version,
         ] );
-        
         if ( $response["success"] ) {
             $data = Utils::safe_json_parse( $response["data"] );
             $skins = Utils::get( $data, "skins" );
@@ -70,15 +66,13 @@ class SkinsManager extends RemoteFetchController
             $response["data"] = $skins;
             $response["recommended_version"] = Utils::get( $data, "recommended_version" );
         }
-        
         return $response;
     }
-    
+
     /**
      * @return array tags
      */
-    public function get_tags()
-    {
+    public function get_tags() {
         return $this->fetch( [
             "tags" => "1",
         ] );

@@ -3,7 +3,7 @@
  * Plugin Name: Embed Any Document
  * Plugin URI: http://awsm.in/embed-any-documents
  * Description: Embed Any Document WordPress plugin lets you upload and embed your documents easily in your WordPress website without any additional browser plugins like Flash or Acrobat reader. The plugin lets you choose between Google Docs Viewer and Microsoft Office Online to display your documents.
- * Version: 2.6.1
+ * Version: 2.7.4
  * Author: Awsm Innovations
  * Author URI: https://awsm.in
  * License: GPL V3
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'AWSM_EMBED_VERSION' ) ) {
-	define( 'AWSM_EMBED_VERSION', '2.6.1' );
+	define( 'AWSM_EMBED_VERSION', '2.7.4' );
 }
 
 /**
@@ -174,12 +174,14 @@ class Awsm_embed {
 	 */
 	public function embed_helper() {
 		$script_deps = array( 'jquery' );
+
 		if ( function_exists( 'get_current_screen' ) ) {
 			$screen = get_current_screen();
-			if ( method_exists( $screen, 'is_block_editor' ) && $screen->is_block_editor() ) {
+			if ( ! empty( $screen ) && method_exists( $screen, 'is_block_editor' ) && $screen->is_block_editor() ) {
 				$script_deps[] = 'wp-blocks';
 			}
 		}
+
 		wp_enqueue_script( 'ead_media_button', plugins_url( 'js/embed.min.js', $this->plugin_file ), $script_deps, $this->plugin_version, true );
 		wp_enqueue_style( 'ead_media_button', plugins_url( 'css/embed.min.css', $this->plugin_file ), false, $this->plugin_version, 'all' );
 		wp_localize_script(
@@ -474,7 +476,7 @@ class Awsm_embed {
 			}
 
 			$iframe_src = '';
-			switch ( $shortcode_atts['viewer'] ) {
+			switch ( $viewer ) {
 				case 'google':
 					$embedsrc   = '//docs.google.com/viewer?url=%1$s&embedded=true&hl=%2$s';
 					$iframe_src = sprintf( $embedsrc, rawurlencode( $url ), esc_attr( $shortcode_atts['language'] ) );
@@ -584,6 +586,30 @@ class Awsm_embed {
 		register_setting( 'ead-settings-group', 'ead_mediainsert' );
 	}
 
+    /**
+	 * Register Privacy Policy Content
+	 */
+	public function register_privacy_policy_content() {
+		if ( ! function_exists( 'wp_add_privacy_policy_content' ) ) {
+			return;
+		}
+
+		$content = __( 'The third party tools we are using to display your documents easily may use cookies or similar technologies for technical purposes.These third-party services may set their own cookies on your device to provide additional functionality or integrate certain features.The use of third-party cookies is subject to the respective third party privacy and cookie policies.', 'embed-any-document' );
+
+		wp_add_privacy_policy_content(
+			'Embed Any Document',
+			wp_kses_post( wpautop( $content, false ) )
+		);
+	}
+
+    /**
+	 * Admin init functions
+	 */
+	public function admin_init_functions(){
+		$this->register_eadsettings();
+		$this->register_privacy_policy_content();
+	}
+
 	/**
 	 * Admin Functions init
 	 */
@@ -591,10 +617,11 @@ class Awsm_embed {
 		if ( is_admin() ) {
 			add_action( 'wp_enqueue_media', array( $this, 'embed_helper' ) );
 			add_action( 'admin_menu', array( $this, 'admin_menu' ) );
-			add_action( 'admin_init', array( $this, 'register_eadsettings' ) );
+			add_action( 'admin_init', array( $this, 'admin_init_functions' ) );
 			add_action( 'admin_footer', array( $this, 'embedpopup' ) );
 			add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'settingslink' ) );
 			add_filter( 'upload_mimes', array( $this, 'additional_mimes' ) );
+			add_filter( 'wp_handle_upload_prefilter', array( $this, 'wp_handle_upload_file_validation' ), 100, 2 );
 		}
 	}
 
@@ -605,13 +632,43 @@ class Awsm_embed {
 	 * @return array An array with additional mime types added.
 	 */
 	public function additional_mimes( $mimes ) {
-		return array_merge(
-			$mimes,
-			array(
-				'svg' => 'image/svg+xml',
-				'ai'  => 'application/postscript',
-			)
-		);
+		/**
+		 * Filter to enable additional mimes.
+		 *
+		 * @since 2.7.2
+		 *
+		 * @param bool $enable_additional_mimes Enable additional mimes or not.
+		 */
+		$enable_additional_mimes = apply_filters( 'awsm_ead_enable_additional_mimes', false );
+
+		if ( $enable_additional_mimes ) {
+			$mimes = array_merge(
+				$mimes,
+				array(
+					'svg' => 'image/svg+xml',
+					'ai'  => 'application/postscript',
+				)
+			);
+		}
+		return $mimes;
+	}
+
+	/**
+	 * Handle required file validation before upload.
+	 *
+	 * @param array $file Single element of $_FILES.
+	 *
+	 * @return array.
+	 */
+	public function wp_handle_upload_file_validation( $file ) {
+		$validate = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'] );
+		if ( $validate['type'] === 'image/svg+xml' && $validate['ext'] === 'svg' ) {
+			$svg_file = file_get_contents( $file['tmp_name'] );
+			if ( strpos( $svg_file, '<script' ) !== false ) {
+				$file['error'] = esc_html__( 'Unsupported file content detected. Sorry, you are not allowed to upload this file.', 'embed-any-document' );
+			}
+		}
+		return $file;
 	}
 
 	/**
@@ -620,12 +677,12 @@ class Awsm_embed {
 	 * @param string $provider Service provider.
 	 */
 	public function providerlink( $provider ) {
-		$link      = 'http://goo.gl/wJTQlc';
+		$link      = 'http://embedanydocument.com/plus-cc';
 		$id        = '';
 		$configure = '<span class="overlay"><strong>' . esc_html__( 'Buy Pro Version', 'embed-any-document' ) . '</strong><i></i></span>';
 		$target    = 'target="_blank"';
 		/* translators: %1$s: Service provider */
-		echo '<a href="' . esc_url( $link ) . '" id="' . esc_attr( $id ) . '" ' . $target . '><span><img src="' . esc_url( $this->plugin_url ) . 'images/icon-' . esc_attr( strtolower( $provider ) ) . '.png" alt="' . esc_attr( sprintf( __( 'Add From %1$s', 'embed-any-document' ), $provider ) ) . '" />' . esc_html( sprintf( __( 'Add From %1$s', 'embed-any-document' ), $provider ) ) . $configure . '</span></a>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<a href="' . esc_url( $link ) . '" id="' . esc_attr( $id ) . '" ' . $target . '><span><img src="' . esc_url( $this->plugin_url ) . 'images/icon-' . esc_attr( strtolower( $provider ) ) . '.svg" alt="' . esc_attr( sprintf( __( 'Add From %1$s', 'embed-any-document' ), $provider ) ) . '" />' . esc_html( sprintf( __( 'Add From %1$s', 'embed-any-document' ), $provider ) ) . $configure . '</span></a>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
 	/**
@@ -778,9 +835,16 @@ class Awsm_embed {
 			'ppsx'            => 'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
 			// iWork formats.
 			'pages'           => 'application/vnd.apple.pages',
-			// Additional Mime Types.
-			'svg'             => 'image/svg+xml',
 		);
+
+		/**
+		 * Filter valid mime types.
+		 *
+		 * @since 2.7.2
+		 *
+		 * @param array $mimetypes Valid mime types.
+		 */
+		$mimetypes = apply_filters( 'awsm_ead_valid_mime_types', $mimetypes );
 
 		return $mimetypes;
 	}
@@ -824,8 +888,27 @@ class Awsm_embed {
 	 * @return string Comma-separated extenstions list.
 	 */
 	public function validextensions( $list = 'all' ) {
-		$extensions['all'] = array( '.css', '.js', '.pdf', '.ai', '.tif', '.tiff', '.doc', '.txt', '.asc', '.c', '.cc', '.h', '.pot', '.pps', '.ppt', '.xla', '.xls', '.xlt', '.xlw', '.docx', '.dotx', '.dotm', '.xlsx', '.xlsm', '.pptx', '.pages', '.svg', '.ppsx' );
-		$extensions['ms']  = array( '.doc', '.pot', '.pps', '.ppt', '.xla', '.xls', '.xlt', '.xlw', '.docx', '.dotx', '.dotm', '.xlsx', '.xlsm', '.pptx', '.ppsx' );
+		$all_valid_extensions = array( '.css', '.js', '.pdf', '.tif', '.tiff', '.doc', '.txt', '.asc', '.c', '.cc', '.h', '.pot', '.pps', '.ppt', '.xla', '.xls', '.xlt', '.xlw', '.docx', '.dotx', '.dotm', '.xlsx', '.xlsm', '.pptx', '.pages', '.ppsx' );
+		/**
+		 * Filter all allowed extensions.
+		 *
+		 * @since 2.7.2
+		 *
+		 * @param array $all_valid_extensions All allowed extensions.
+		 */
+		$all_valid_extensions = apply_filters( 'awsm_ead_all_allowed_extensions', $all_valid_extensions );
+		$extensions['all']    = $all_valid_extensions;
+
+		$ms_valid_extensions = array( '.doc', '.pot', '.pps', '.ppt', '.xla', '.xls', '.xlt', '.xlw', '.docx', '.dotx', '.dotm', '.xlsx', '.xlsm', '.pptx', '.ppsx' );
+		/**
+		 * Filter Microsoft allowed extensions.
+		 *
+		 * @since 2.7.2
+		 *
+		 * @param array $ms_valid_extensions Microsoft allowed extensions.
+		 */
+		$ms_valid_extensions = apply_filters( 'awsm_ead_ms_allowed_extensions', $ms_valid_extensions );
+		$extensions['ms']    = $ms_valid_extensions;
 
 		return implode( ',', $extensions[ $list ] );
 	}

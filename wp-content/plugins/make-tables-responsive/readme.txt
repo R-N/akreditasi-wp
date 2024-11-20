@@ -2,9 +2,9 @@
 Contributors: nnikolov
 Tags: tables, responsive, mobile
 Requires at least: 3.5
-Tested up to: 5.5.1
+Tested up to: 6.7
 Requires PHP: 5.3.6
-Stable tag: 1.5.3
+Stable tag: 1.8.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,7 +24,7 @@ Automatically makes the HTML tables in your WordPress posts, pages, and widgets 
 
 = Features =
 
-* Affect post/page content and/or text/HTML widgets
+* Affect post/page content, excerpts, category descriptions, and text/HTML widgets
 * Choose affected screen size
 * Choose the cell background and border color for even and odd rows
 * Disable for tables by HTML class or ID
@@ -67,6 +67,49 @@ If the plugin sees any tables that it does not support, it will skip them, leavi
 4. The global settings tab.
 
 == Changelog ==
+
+= 1.8.0 - 1 April 2024 =
+* Recommended action: Check if your non-English or special characters are still showing correctly in the tables after this update. New encoding function is used.
+* Fixed: Deprecation notice in PHP 8.2. PHP Deprecated: mb_convert_encoding(): Handling HTML entities via mbstring is deprecated.
+
+= 1.7.0 - 31 October 2023 =
+* Added: Option to affect output created by a shortcode callback (filter do_shortcode_tag). Enable this if your site content does not go through the default the_content filter. For example Oxygen Builder works like that.
+* Fixed: Styling code displayed as normal text in sites using Oxygen Builder.
+* Updated: Language file.
+
+= 1.6.1 - 23 September 2023 =
+* Fixed: Apostrophe character shown as its HTML entity in the column name of the mobile table in some cases (probably when wptexturize is disabled).
+
+= 1.6.0 - 25 June 2023 =
+* Added: Option to enable the plugin for the excerpt.
+* Added: Option to enable the plugin for the category descriptions.
+* Updated: Language file.
+
+= 1.5.10 - 15 March 2023 =
+* Fixed: The disable by parent class would not work if there were multiple exact same tables on the page and only some had the parent class.
+
+= 1.5.9 - 14 March 2023 =
+* Added: A global option to exclude all tables without a header section (a thead tag).
+* Fixed: We now hide all admin dashboard notices on the plugin settings page, because they can break the layout and take up space.
+* Updated: Language file.
+
+= 1.5.8 - 19 July 2022 =
+* Added: An option for multi-row tables, to enable the effects of the plugin only for tables with at least X columns.
+
+= 1.5.7 - 24 October 2021 =
+* Added: An option to align the content of the right side of the responsive table to the left.
+* Updated: Language file.
+
+= 1.5.6 - 23 August 2021 =
+* Added: An option to exclude tables by parent element class. Useful for tables created in the block editor (they add their additional classes to the parent figure HTML element).
+* Updated: Language file.
+
+= 1.5.5 - 4 May 2021 =
+* Added: An option to show a vertical separator line between the two columns in the multi-row table layout.
+* Updated: Language file.
+
+= 1.5.4 - 19 April 2021 =
+* Fixed: A fatal PHP error caused by division by zero in some situations.
 
 = 1.5.3 - 6 August 2020 =
 * Fixed: A fatal PHP error when Multibyte String is not supported by the server. Now it shows an error in the admin notice area instead.

@@ -69,7 +69,14 @@ if ( !class_exists( 'PT_CV_Plugin' ) ) {
 
 			self::$options	 = get_option( PT_CV_OPTION_NAME );
 			?>
-			<form method="post" action="options.php" class="cvform">
+			<style>
+				#wpcontent {padding-left: 0}
+				.wrap { margin: 30px auto; padding: 0 30px; max-width: 93%; }
+				.cv-admin-section { background: #fff; border-radius: 5px; box-shadow: 0 0 15px #ededed; padding: 20px 30px; margin: 10px auto; }
+				
+			</style>
+			<div class="cv-admin-section">
+			<form method="post" action="options.php">
 				<?php
 				// This prints out all hidden setting fields
 				settings_fields( PT_CV_OPTION_NAME . '_group' );
@@ -77,6 +84,7 @@ if ( !class_exists( 'PT_CV_Plugin' ) ) {
 				submit_button();
 				?>
 			</form>
+			</div>
 			<?php
 			$text			 = ob_get_clean();
 
@@ -103,6 +111,15 @@ if ( !class_exists( 'PT_CV_Plugin' ) ) {
 
 			// Filter Frontend assets option
 			$frontend_assets_fields = apply_filters( PT_CV_PREFIX_ . 'frontend_assets_fields', $frontend_assets_fields );
+
+			$frontend_assets_fields[] = array(
+				'id'	 => 'hide_shortcode_feature',
+				'title'	 => __( 'Classic Editor', 'content-views-query-and-display-post-page' ),
+			);
+			$frontend_assets_fields[] = array(
+				'id'	 => 'hide_toolbar_button',
+				'title'	 => __( 'Block Editor', 'content-views-query-and-display-post-page' ),
+			);
 
 			// Add classes to find callback function for extra options
 			$defined_in_class = (array) apply_filters( PT_CV_PREFIX_ . 'defined_in_class', array() );
@@ -146,6 +163,22 @@ if ( !class_exists( 'PT_CV_Plugin' ) ) {
 
 			add_settings_field(
 				$field_info[ 'id' ], $field_info[ 'title' ], array( $class, 'field_callback_' . $field_info[ 'id' ] ), PT_CV_DOMAIN, $section
+			);
+		}
+
+		public static function field_callback_hide_shortcode_feature() {
+			$field_name = 'hide_shortcode_feature';
+
+			PT_CV_Plugin::_field_print(
+				$field_name, 'checkbox', __( "Hide Content Views sub-menus relate to View (shortcode)", 'content-views-query-and-display-post-page' ), "<span style='color: red'>" . __( "CAUTION: please do NOT select this option if you use our View shortcode. Otherwise, you can't create/edit any View anymore.", 'content-views-query-and-display-post-page' ) . "</span>"
+			);
+		}
+
+		public static function field_callback_hide_toolbar_button() {
+			$field_name = 'hide_toolbar_button';
+
+			PT_CV_Plugin::_field_print(
+				$field_name, 'checkbox', __( "Hide 'Content Views Library' button at the top toolbar in the Block Editor", 'content-views-query-and-display-post-page' ), ''
 			);
 		}
 

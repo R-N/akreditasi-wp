@@ -59,7 +59,7 @@ abstract class Visualizer_Render_Sidebar_Google extends Visualizer_Render_Sideba
 		parent::__construct( $data );
 
 		$this->_legendPositions = array(
-			''       => '',
+			''       => esc_html__( 'Default', 'visualizer' ),
 			'left'  => esc_html__( 'Left of the chart', 'visualizer' ),
 			'right'  => esc_html__( 'Right of the chart', 'visualizer' ),
 			'top'    => esc_html__( 'Above the chart', 'visualizer' ),
@@ -67,8 +67,13 @@ abstract class Visualizer_Render_Sidebar_Google extends Visualizer_Render_Sideba
 			'none'   => esc_html__( 'Omit the legend', 'visualizer' ),
 		);
 
-		if ( ! in_array( $this->get_chart_type( false ), array( 'Pie' ), true ) ) {
+		$chart_type = $this->get_chart_type( false );
+		if ( ! in_array( $chart_type, array( 'Pie' ), true ) ) {
 			$this->_legendPositions['in']  = esc_html__( 'Inside the chart', 'visualizer' );
+		}
+
+		if ( in_array( $chart_type, array( 'Bubble' ), true ) ) {
+			unset( $this->_legendPositions['left'] );
 		}
 
 		$this->_alignments = array(
@@ -96,11 +101,13 @@ abstract class Visualizer_Render_Sidebar_Google extends Visualizer_Render_Sideba
 	 */
 	function load_google_assets( $deps, $is_frontend ) {
 		wp_register_script( 'google-jsapi', '//www.gstatic.com/charts/loader.js', array(), null, true );
+		wp_register_script( 'dom-to-image', VISUALIZER_ABSURL . 'js/lib/dom-to-image.min.js', array(), null, true );
 		wp_register_script(
 			'visualizer-render-google-lib',
 			VISUALIZER_ABSURL . 'js/render-google.js',
 			array(
 				'google-jsapi',
+				'dom-to-image',
 			),
 			Visualizer_Plugin::VERSION,
 			true
@@ -143,6 +150,7 @@ abstract class Visualizer_Render_Sidebar_Google extends Visualizer_Render_Sideba
 				'scope' => esc_html__( 'Scope', 'visualizer' ),
 				'style' => esc_html__( 'Style', 'visualizer' ),
 				'tooltip' => esc_html__( 'Tooltip', 'visualizer' ),
+				'interval' => esc_html__( 'Interval', 'visualizer' ),
 			),
 			sprintf( esc_html__( 'Determines whether the series has to be used for a special role as mentioned in %1$shere%2$s. You can view a few examples %3$shere%4$s.', 'visualizer' ), '<a href="https://developers.google.com/chart/interactive/docs/roles#what-roles-are-available" target="_blank">', '</a>', '<a href="https://docs.themeisle.com/article/1160-roles-for-series-visualizer" target="_blank">', '</a>' )
 		);
@@ -203,7 +211,7 @@ abstract class Visualizer_Render_Sidebar_Google extends Visualizer_Render_Sideba
 				self::_renderSelectItem(
 					esc_html__( 'Position', 'visualizer' ),
 					'legend[position]',
-					$this->legend['position'],
+					isset( $this->legend['position'] ) ? $this->legend['position'] : '',
 					$this->_legendPositions,
 					esc_html__( 'Determines where to place the legend, compared to the chart area.', 'visualizer' )
 				);
@@ -211,7 +219,7 @@ abstract class Visualizer_Render_Sidebar_Google extends Visualizer_Render_Sideba
 				self::_renderSelectItem(
 					esc_html__( 'Alignment', 'visualizer' ),
 					'legend[alignment]',
-					$this->legend['alignment'],
+					isset( $this->legend['alignment'] ) ? $this->legend['alignment'] : '',
 					$this->_alignments,
 					esc_html__( 'Determines the alignment of the legend.', 'visualizer' )
 				);
@@ -229,6 +237,22 @@ abstract class Visualizer_Render_Sidebar_Google extends Visualizer_Render_Sideba
 			self::_renderSectionEnd();
 
 			$this->_renderAnimationSettings();
+			self::_renderSectionStart( esc_html__( 'License & Creator', 'visualizer' ), false );
+			self::_renderTextItem(
+				esc_html__( 'License', 'visualizer' ),
+				'license',
+				$this->license,
+				''
+			);
+			self::_renderTextItem(
+				esc_html__( 'Creator', 'visualizer' ),
+				'creator',
+				$this->creator,
+				''
+			);
+			self::_renderSectionEnd();
+
+			self::_renderChartImageSettings();
 
 			do_action( 'visualizer_chart_settings', get_class( $this ), $this->_data, 'general', array( 'generic' => true ) );
 
@@ -294,7 +318,7 @@ abstract class Visualizer_Render_Sidebar_Google extends Visualizer_Render_Sideba
 			'tooltip[trigger]',
 			isset( $this->tooltip['trigger'] ) ? $this->tooltip['trigger'] : null,
 			array(
-				''          => '',
+				''          => esc_html__( 'Default', 'visualizer' ),
 				'focus'     => esc_html__( 'The tooltip will be displayed when the user hovers over an element', 'visualizer' ),
 				'selection' => esc_html__( 'The tooltip will be displayed when the user selects an element', 'visualizer' ),
 				'none'      => esc_html__( 'The tooltip will not be displayed', 'visualizer' ),
@@ -388,10 +412,12 @@ abstract class Visualizer_Render_Sidebar_Google extends Visualizer_Render_Sideba
 					echo '<table class="viz-section-table" cellspacing="0" cellpadding="0" border="0">';
 						echo '<tr>';
 							echo '<td class="viz-section-table-column">';
-								echo '<input type="text" name="chartArea[left]" class="control-text" value="', $this->chartArea['left'] || $this->chartArea['left'] === '0' ? esc_attr( $this->chartArea['left'] ) : '', '" placeholder="20%">';
+								$chartarea_left = isset( $this->chartArea['left'] ) ? $this->chartArea['left'] : '';
+								echo '<input type="text" name="chartArea[left]" class="control-text" value="', $chartarea_left || '0' === $chartarea_left ? esc_attr( $chartarea_left ) : '', '" placeholder="20%">';
 							echo '</td>';
 							echo '<td class="viz-section-table-column">';
-								echo '<input type="text" name="chartArea[top]" class="control-text" value="', $this->chartArea['top'] || $this->chartArea['top'] === '0' ? esc_attr( $this->chartArea['top'] ) : '', '" placeholder="20%">';
+								$chartarea_top = isset( $this->chartArea['top'] ) ? $this->chartArea['top'] : '';
+								echo '<input type="text" name="chartArea[top]" class="control-text" value="', $chartarea_top || '0' === $chartarea_top ? esc_attr( $chartarea_top ) : '', '" placeholder="20%">';
 							echo '</td>';
 						echo '</tr>';
 					echo '</table>';

@@ -14,6 +14,8 @@ if ( !defined( 'ABSPATH' ) ) {
 
 class PT_Content_Views_Admin {
 
+	public $plugin_slug;
+
 	/**
 	 * Instance of this class.
 	 *
@@ -281,6 +283,10 @@ class PT_Content_Views_Admin {
 			// WP Email Users plugin caused: click on tabs doesn't work
 			wp_dequeue_script( 'wp-email-user-script' );
 
+			// hybrid-composer: click on tabs doesn't work, affect style
+			wp_dequeue_script( 'hc-script' );
+			wp_dequeue_style( 'hc-admin-style' );
+
 			// Remove style of theme Jobcareer, plugin WP Jobhunt
 			wp_dequeue_style( 'cs_admin_styles_css' );
 			wp_dequeue_style( 'jobcareer_admin_styles_css' );
@@ -296,6 +302,10 @@ class PT_Content_Views_Admin {
 			wp_dequeue_style( 'es-admin-style' );
 
 			wp_dequeue_script( 'badgeos-shortcodes-embed' );
+
+			wp_dequeue_style( 'wp-radio-admin' );
+
+			wp_dequeue_style( 'adrotate-admin-stylesheet' );
 
 			do_action( PT_CV_PREFIX_ . 'remove_unwanted_assets' );
 		}
@@ -328,29 +338,38 @@ class PT_Content_Views_Admin {
 		$user_role = current_user_can( 'administrator' ) ? 'administrator' : PT_CV_Functions::get_option_value( 'access_role', 'administrator' );
 
 		$this->plugin_screen_hook_suffix = add_menu_page(
-			__( 'Content Views Settings', 'content-views-query-and-display-post-page' ), _x( 'Content Views', 'Plugin name. Do not translate', 'content-views-query-and-display-post-page' ), $user_role, $this->plugin_slug, array( $this, 'display_plugin_admin_page' ), '', '45.6'
+			__( 'Content Views Dashboard', 'content-views-query-and-display-post-page' ), _x( 'Content Views', 'Plugin name. Do not translate', 'content-views-query-and-display-post-page' ), $user_role, $this->plugin_slug, array( $this, 'display_plugin_dashboard_page' ), '', '45.6'
 		);
 
-		$this->plugin_sub_screen_hook_suffix[] = PT_CV_Functions::menu_add_sub(
-				$this->plugin_slug, __( 'All Views', 'content-views-query-and-display-post-page' ), __( 'All Views', 'content-views-query-and-display-post-page' ), $user_role, 'list', __CLASS__
-		);
+		$hide_sc = PT_CV_Functions::get_option_value( 'hide_shortcode_feature' );
+		if ( !$hide_sc ) {
+			$this->plugin_sub_screen_hook_suffix[] = PT_CV_Functions::menu_add_sub(
+			$this->plugin_slug, __( 'All Views', 'content-views-query-and-display-post-page' ), __( 'All Views', 'content-views-query-and-display-post-page' ), $user_role, 'list', __CLASS__
+			);
 
-		$this->plugin_sub_screen_hook_suffix[] = PT_CV_Functions::menu_add_sub(
-				$this->plugin_slug, __( 'Add New View', 'content-views-query-and-display-post-page' ), _x( 'Add New', 'post' ), $user_role, 'add', __CLASS__
-		);
-
-		$this->plugin_sub_screen_hook_suffix[] = add_submenu_page(
-			$this->plugin_slug, __( 'Content Views Settings', 'content-views-query-and-display-post-page' ), __( 'Settings' ), $user_role, $this->plugin_slug, array( $this, 'display_plugin_admin_page' )
-		);
-
-		global $submenu;
-		// Modify URL of "All Views"
-		if ( !empty( $submenu[ 'content-views' ][ 1 ][ 2 ] ) ) {
-			$submenu[ 'content-views' ][ 1 ][ 2 ] = 'edit.php?post_type=pt_view';
+			$this->plugin_sub_screen_hook_suffix[] = PT_CV_Functions::menu_add_sub(
+			$this->plugin_slug, __( 'Add New View', 'content-views-query-and-display-post-page' ), _x( 'Add New', 'post' ), $user_role, 'add', __CLASS__
+			);
 		}
 
-		// Remove first submenu which is similar to parent menu
-		unset( $submenu[ 'content-views' ][ 0 ] );
+		$this->plugin_sub_screen_hook_suffix[] = PT_CV_Functions::menu_add_sub(
+				$this->plugin_slug, __( 'Layout Library', 'content-views-query-and-display-post-page' ), _x( 'Layout Library', 'post' ), $user_role, 'blocklibrary', __CLASS__
+		);
+
+		$this->plugin_sub_screen_hook_suffix[] = PT_CV_Functions::menu_add_sub(
+				$this->plugin_slug, __( 'Content Views Settings', 'content-views-query-and-display-post-page' ), __( 'Settings' ), $user_role, 'setting', __CLASS__
+		);
+
+
+		global $submenu;
+		// Modify Menu Title
+		if ( !empty( $submenu[ 'content-views' ][ 0 ][ 0 ] ) ) {
+			$submenu[ 'content-views' ][ 0 ][ 0 ] = __( 'Dashboard' );
+		}
+		// Modify URL of "All Views"
+		if ( !empty( $submenu[ 'content-views' ][ 1 ][ 2 ] ) && !$hide_sc ) {
+			$submenu[ 'content-views' ][ 1 ][ 2 ] = 'edit.php?post_type=pt_view';
+		}
 	}
 
 	/**
@@ -368,12 +387,16 @@ class PT_Content_Views_Admin {
 		}
 	}
 
+	public static function display_plugin_dashboard_page() {
+		include_once( 'views/dashboard.php' );
+	}
+
 	/**
 	 * Render the settings page for this plugin.
 	 *
 	 * @since    1.0.0
 	 */
-	public static function display_plugin_admin_page() {
+	public static function display_sub_page_setting() {
 		include_once( 'views/admin.php' );
 	}
 
@@ -382,6 +405,10 @@ class PT_Content_Views_Admin {
 	 */
 	public static function display_sub_page_add() {
 		include_once( 'views/view.php' );
+	}
+
+	public static function display_sub_page_blocklibrary() {
+		include_once( 'views/blocklib.php' );
 	}
 
 	/**

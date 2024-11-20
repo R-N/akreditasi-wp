@@ -1,97 +1,188 @@
-=== Content Views - Post Grid & Filter for WordPress ===
+=== Content Views - Post Grid & Filter, Recent Posts, Category Posts ... (Shortcode, Blocks, and Elementor Widgets) ===
 Contributors: pt-guy
-Donate link: https://www.contentviewspro.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=donate
-Tags: post grid, grid plugin, grid, latest post, display post, post list, post, page, category, responsive, list, thumbnail
+Tags: post grid, blocks, elementor, gutenberg, recent posts, gutenberg blocks, grid, display posts, post list, post slider, post accordion, category post, news, magazine, portfolio, latest posts, related posts
 Requires at least: 3.3
-Tested up to: 5.5.1
-Stable tag: 2.3.3.1
-License: GPLv2 or later
-License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Tested up to: 6.7
+Requires PHP: 5.6
+Stable tag: 4.0.1
+License: GPLv3
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Create beautiful grid and list of WordPress posts, pages in minutes. No coding required. Mobile friendly. Optimized for performance.
+Easy to show posts, pages, custom posts in grid, list, slider, accordion... Highly Customizable. Available as Shortcode, Blocks, Elementor Widgets.
 
 == Description ==
 
-### Easy To Filter And Display Posts, Pages In Grid/List
+Content Views is the most popular grid plugin to create stunning Blogs, News, Personal, Portfolio, Business, and Shop sites.
 
-We believe that a beautiful grid and list of posts with make your WordPress site stand out and keep visitors engaged. That's why we built [Content Views](https://www.contentviewspro.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views "Content Views"), a WordPress post grid and list plugin that's EASY and POWERFUL.
+Easy to display posts, pages, custom post types, images, and taxonomy terms in attractive grid, list, slider, accordion, pinterest, timeline, overlay, and more.
 
-Content Views helps you to create beautiful grid and list to display the recent posts, the posts of specific category, tag, author easily, without any line of code!
+Show recent posts, category posts, tag posts, author posts, posts by keyword, posts by custom field, posts by date, etc. effortlessly.
 
-Content Views is a 100% mobile responsive solution, so your grid of posts will always look great on all devices (mobiles, tablets, and desktops).
+Classic editor friendly & Gutenberg block editor ready & Elementor supported!
 
-Content Views also highly optimized for performance, to help improve SEO and conversions.
+[See Live Demo](https://contentviewspro.com/demo/?utm_source=wordpress&utm_medium=link&utm_campaign=readme) | [Content Views Pro](https://contentviewspro.com/?utm_source=wordpress&utm_medium=link&utm_campaign=readme) | [Documentation](https://contentviewspro.com/documentation/?utm_source=wordpress&utm_medium=link&utm_campaign=readme) | [Support](https://contentviewspro.com/contact/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)
 
-There is no more pain of creating WordPress posts grid and list.
+## 🏆 SHORTCODE FOR CLASSIC EDITOR AND PAGE BUILDERS
 
-### Easy to Use
+Content Views provides a powerful shortcode feature to work with the Classic editor and page builders in 2 simple steps:
 
-Content Views requires no time to learn, no coding skill to create beautiful grid and list of posts for your WordPress site. There is a friendly form of settings to help you create your grid and list easily. All settings are well organized, with clear descriptions. There is a live preview panel to see your posts grid instantly.
+https://www.youtube.com/watch?v=QgQLjB0DQ8s&controls=1&modestbranding=1&rel=0&cc_load_policy=1
 
-There are 3 simple steps to design your grid by Content Views:
-* Step 1: Filter any posts you want to show (with many possible options: ID, category, tag, author, keyword, status).
-* Step 2: Select beautiful grid or list layout to display your posts. You can customize the layout in your own way with many useful settings.
-* Step 3: Paste generated shortcode to anywhere you want to display your grid of posts.
+* **Step 1: Create a View**
+Start by creating a View where you can query and sort any posts, pages, custom post types by category, tag, taxonomy, custom field, post ID, post title, date, author, etc. Select a layout that fits your needs, customize and style it with a lot of options.
 
-[youtube https://www.youtube.com/watch?v=drxqtCiaw4I]
-
-### Features
-
-We have all the settings you need to filter and display any WordPress posts, pages in responsive grid and list layout easily, without coding:
+* **Step 2: Add Shortcode**
+Add the created view shortcode to the Classic editor, page builder, widget, or anywhere you want to display your post grid.
 
 
-* 100% Responsive and Mobile Friendly
-* SEO friendly and optimized for speed
-* Pagination support
-* Display grid of posts on WordPress page, widget, theme template easily by shortcode
-* Display recent posts
-* Display posts from specific category, tag, author, ID
-* Display posts contain specific keyword
-* Display child pages of a parent page
-* Show posts' featured images in grid gallery
-* Display title, excerpt, full content, thumbnail, published date, author, category, comments count of posts
-* Sort posts by date, title
-* Limit the number of posts in grid
-* Show posts in Collapsible list, useful for a FAQ page
-* Show posts in Scrollable list, a simple slider of posts
-* Easy to customize and extend with many custom actions, filters hook
-* PHP 7 compatible
-* GDPR compliance (Content Views does not collect and store any personal data)
+## 🏆 BLOCKS FOR GUTENBERG EDITOR
 
-Give Content Views a try, and create your WordPress posts grid effortlessly!
+### 💎 16 GUTENBERG POST BLOCKS
 
-### PRO Features
+Content Views adds 16 amazing and feature-rich blocks to help you display WordPress posts, pages, custom post types stunningly. Using our awesome Gutenberg blocks plugin, you can build and show website content with endless customization options:
 
-There is Pro version of Content Views plugin that comes with many more valuable features to supercharge your WordPress posts grid and list.
-[Upgrade to Pro](https://www.contentviewspro.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views).
+* Different blocks for different kinds of content/sections/websites
+* Various post block layouts to provide you more design choices
+* Advanced post query filters to control block content
+* Built-in responsive settings in blocks
+* Advanced typography settings
+* Google fonts supported in blocks
 
-PRO features list:
+https://www.youtube.com/watch?v=4Mj55xrPtV8&controls=1&modestbranding=1&rel=0&cc_load_policy=1&start=17
 
-* Support [WooCommerce](http://sample.contentviewspro.com/supports/woocommerce-3/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views), [Easy Digital Downloads](http://sample.contentviewspro.com/supports/easy-digital-downloads/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views), [The Events Calendar, Events Manager](http://docs.contentviewspro.com/filter-events-by-date/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views)... and other custom post type plugins
-* Support [Advanced Custom Fields](http://sample.contentviewspro.com/supports/advanced-custom-fields/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views), Pods, Toolset Types, Custom Post Type UI... and other custom field plugins
-* Support membership plugins: Paid Memberships Pro, Members, Ultimate Member, MemberPress, MemberMouse, WP eMember
-* Support translation plugins: WPML, Polylang, qTranslate
-* [More advanced layouts](http://sample.contentviewspro.com/multi-views-on-page/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views) - Pinterest, Masonry, Facebook Timeline, Glossary...
-* [Grid layout for WordPress Category, Blog, Search, Archive pages](http://sample.contentviewspro.com/category/business/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views)
-* [Filterable grid](http://sample.contentviewspro.com/shuffle-filter/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views)
-* [Show grid of categories](http://sample.contentviewspro.com/category-as-output/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views)
-* [Load More pagination](http://sample.contentviewspro.com/pagination/load-more/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views)
-* [Infinite Scrolling pagination](http://sample.contentviewspro.com/pagination/infinite-scrolling/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views)
-* [Media thumbnail](http://sample.contentviewspro.com/advanced/media-thumbnails/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views) - Display Youtube, Vimeo, Dailymotion, Soundcloud, custom image as thumbnail
-* [Social Sharing](http://sample.contentviewspro.com/social-sharing/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views) - Show sharing buttons of Facebook, Twitter, Google +, Linkedin, Pinterest for your WordPress posts
-* Make money $ online by displaying advertisements (Google Adsense, HTML banner…) in posts grid
-* Styling - Customize design without writing CSS
-* Drag & drop to customize layout
-* Query posts by custom fields
-* Show custom fields of posts
-* Advanced sorting options - Random order, Custom field, Drag & Drop...
-* Custom query parameters
+### 💎 76+ READY GUTENBERG BLOCK PATTERNS & TEMPLATES
+
+To save your time and help you to build faster in the WordPress Block editor, we created a collection of 76+ stunningly designed Gutenberg block patterns and templates that you can explore and import to the Block editor with just a few clicks. You can customize these post block patterns & templates easily in the way you want with numerous block options. You can use our pre-designed post block templates to build a complete page in just a few minutes. You also can combine the post block patterns in your own way to create unique design for your WordPress website.
+
+## 🏆 WIDGETS FOR ELEMENTOR PAGE BUILDER
+
+If you use the Elementor page builder, our plugin will enhance your Elementor experience with 16 advanced Elementor widgets to showcase your posts, pages, custom post types, media files in stunning layouts (grid, list, slider, timeline, and many more).
+
+Each of our Elementor widgets is a different way to show your content. All Elementor widgets are fully customizable with many useful and friendly options (to control what to show, and how to show):
+
+* Powerful query controls for each Elementor widget
+* Many layout and display options to completely control the output
+* Advanced style settings to customize typography, color, padding, border, etc.
+
+With our plugin, you can build websites with the Elementor page builder so much faster and easier.
+
+https://www.youtube.com/watch?v=xaKZM9T794c&controls=1&modestbranding=1&rel=0&cc_load_policy=1
+
+
+
+## 🏆 TOP FEATURES
+
+### 💎 MULTIPLE LAYOUTS FOR ANY KIND OF WEBSITES
+
+We provide various attractive & responsive layouts for different types of websites and purposes. Pick one from our beautiful grid, list, slider/carousel, pinterest, masonry, timeline, glossary, accordion layouts that fits your need, and then customize it as you want with a lot of block/shortcode/widget settings.
+Content Views is proud of helping bloggers, business/shop owners, companies, religious communities, universities, and government departments to show and build their WordPress websites content amazingly and efficiently.
+
+### 💎 POWERFUL QUERY FILTERS
+
+Whether you use our blocks/shortcode/Elementor widgets, Content Views provides a lot of options to help you query, filter, search and sort any posts, pages, custom post types easily.
+
+* **Post Type**
+Select one or multiple post types in your website including post, page, custom post types, media/attachment.
+* **Taxonomy**
+Filter posts by categories, tags, custom taxonomy terms easily.
+* **Common**
+Include, exclude specific posts by post ID or post title. You also can set post offset, and amount of posts to show.
+* **Sort/order**
+By default, it sorts posts by published date to show recent posts or latest posts. You can change it to sort posts by modified date, post title, post ID, random order, menu order, and more.
+* **Filter posts by keyword**
+Easy to find your posts by custom keyword that appears in post title, post content, post excerpt.
+* **Filter posts by author**
+Find posts created by or not created by specific post authors and current logged in author.
+* **Filter posts by status**
+Display published posts, scheduled posts, private posts, or posts with another status easily with this feature.
+* **Filter posts by published date**
+Display posts published today, yesterday, this week/month/year, within a custom date range.
+* **Filter Sticky Post (PRO)**
+Hide sticky posts, show them at top, or show only sticky posts.
+* **Restrict posts by membership (PRO)**
+Help you to show posts to only allowed members of membership plugins such as Members, MemberMouse…
+* **Filter posts by custom field (PRO)**
+Filter your posts by one or multiple custom fields easily & quickly. It supports ACF, Meta Box, and other custom field plugins.
+
+
+### 💎 ADVANCED FRONT-END FILTER (PRO)
+
+If you are looking for a truly powerful front-end filter or faceted search for your website, then this feature is for you. You can help your website visitors to find any posts, pages, custom post types easily by showing category, tag, custom taxonomy, custom field as filtering options in various formats such as dropdowns, checkboxes, radios, date ranges, number sliders, buttons. Also, you can show text search field, and sorting options by post date, post title, custom field. Furthermore, you can customize style of these filters, change their appearance order, etc. And you can show the filters above or beside the post grid.
+
+### 💎 AJAX & NORMAL PAGINATION
+
+Our plugin provides both normal and AJAX pagination. AJAX pagination will retrieve posts without reloading the page, using 3 different pagination styles including ajax numeric pagination, ajax load more, and ajax infinite scroll. It is easy to enable/disable pagination in our post grid.
+
+### 💎 REPLACE THEME LAYOUT (PRO)
+
+Our special Replace Layout feature will help you to display beautiful grid/another layout for posts on below WordPress pages easily, without changing the theme, and no coding required:
+
+✔️ Blog page
+✔️ Category page
+✔️ Tag page
+✔️ Search page
+✔️ Author page
+✔️ Date page
+✔️ Taxonomy, term page
+
+### 💎 3RD-PARTY INTEGRATIONS & COMPATIBILITY
+
+Content Views seamlessly integrates with a wide range of plugins:
+
+* **WooCommerce**: show products in beautiful layouts. Easily filter products by price, categories, tags, attributes, visibility. And show sale, best-selling, featured, top-rated products with one single click.
+* **The Events Calendar**: filter events by categories, tags, start/end date, etc. and show events & their information in grid/list easily
+* **Advanced Custom Fields, Meta Box, Pods**: filter posts by custom fields, and show custom field for each post in the post grid
+* **WPML, Polylang**: display translated posts, pages, custom posts, taxonomies, custom fields automatically in our layouts
+* **Membership plugins**: show posts to only allowed members of Members, Paid Memberships Pro, MemberPress...
+* **Yoast SEO, Rank Math**: filter posts by primary category, and show only primary category as meta output in the post grid
+
+
+## 🏆 AND MANY MORE GREAT FEATURES
+
+Here are some other great features that Content Views offers:
+
+* 100% mobile-friendly blocks, shortcode, and Elementor widgets
+* Complete control over block content, layout and style
+* Border, color, background, margin, padding settings
+* Change the html tag, length of post title in the post grid
+* Change post content/excerpt source, length
+* Change post image size, styles in blocks, shortcode, and Elementor widgets
+* Lazy loading for images in the post grid
+* Show post comment count
+* Show post author name, avatar
+* Show post category, post tag, post taxonomy in custom position
+* Show post date in custom format
+* Post meta field selection, position and styling
+* Change the post link target attribute
+* Social sharing buttons for each post in the post grid
+* SEO and speed optimization for all blocks, shortcode, and Elementor widgets
+* Display advertisements between posts in the post grid
+* Reusing the shortcode with extra parameters
 * Right to Left (RTL) support
-* And much more!
+* Customizable output with many hooks
 
-[Upgrade to Pro](https://www.contentviewspro.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views).
-[See Live Demo](http://sample.contentviewspro.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views).
-[Documentation](http://docs.contentviewspro.com/?utm_source=wordpress&utm_medium=plugin&utm_campaign=content-views).
+
+## 🏆 SHORTCODE LAYOUTS, GUTENBERG BLOCKS, AND ELEMENTOR WIDGETS LIST
+
+All shortcode layouts, Gutenberg blocks, and Elementor widgets support posts, pages, custom post types, media files and come with a lot of options to customize. Here is the key feature of each layout/block/widget:
+
+- **[Grid Post](https://contentviewspro.com/demo/blocks/grid/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This post grid displays your posts in a beautiful standard grid layout
+- **[List Post](https://contentviewspro.com/demo/blocks/list/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This post list displays your posts in a list with post image on the left/right
+- **[Pinterest](https://contentviewspro.com/demo/blocks/pinterest/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This post displays your posts in a modern stacking grid that looks like Pinterest.com
+- **[Collapsible Post](https://contentviewspro.com/demo/blocks/collapsible/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This post displays your posts in a layout that can expand or collapse post content. It is a perfect choice for FAQ page or a narrow section
+- **[Scrollable Post](https://contentviewspro.com/demo/blocks/scrollable/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This post displays your posts in a carousel/slider layout with navigation, indicator and autoplay to explore more posts easily
+- **[Timeline](https://contentviewspro.com/demo/blocks/timeline/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This post displays your posts in a classic Timeline layout like Facebook
+- **[Big Post 1](https://contentviewspro.com/demo/blocks/big-post-1/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This post displays one big post above other small posts. Big post and small posts can be customized separately
+- **[Big Post 2](https://contentviewspro.com/demo/blocks/big-post-2/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This post displays one big post beside other small posts. Big post and small posts can be customized separately
+- **[Post Overlay 1](https://contentviewspro.com/demo/blocks/overlay-1/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This post grid displays a beautiful grid layout with overlay over post image
+- **[Post Overlay 2](https://contentviewspro.com/demo/blocks/overlay-2/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This custom post grid has one post showing beside other stacked posts, and overlay enabled
+- **[Post Overlay 3](https://contentviewspro.com/demo/blocks/overlay-3/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This advanced post grid displays one post beside 3 other posts (shown in 2 rows), with text overlay
+- **[Post Overlay 4](https://contentviewspro.com/demo/blocks/overlay-4/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This post grid shows one post next to 3 other posts (shown in 2 columns), and overlay for image
+- **[Post Overlay 5](https://contentviewspro.com/demo/blocks/overlay-5/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This new post grid has one post beside 4 other posts (shown in a 2x2 grid), with overlay enabled
+- **[Post Overlay 6](https://contentviewspro.com/demo/blocks/overlay-6/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This custom post grid shows one post above other posts (shown in columns), with overlay on image
+- **[Post Overlay 7](https://contentviewspro.com/demo/blocks/overlay-7/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This post grid has one post next to & above other posts, and overlay over the image
+- **[Post Overlay 8](https://contentviewspro.com/demo/blocks/overlay-8/?utm_source=wordpress&utm_medium=link&utm_campaign=readme)** - This modern post grid shows 2 posts and 4 other posts in an advanced grid, with text overlay
+
 
 == Installation ==
 
@@ -121,43 +212,239 @@ PRO features list:
 
 == Frequently Asked Questions ==
 
-= How to start? =
+= How to use Content Views with the Classic Editor? =
 
-In WordPress Admin menu, click Content Views > Add New
+In the WordPress Admin menu, click Content Views > Add New, adjust options as you want, and save. Then copy the generated shortcode and add it to the Classic editor of your post, page.
 
-= What is 'View'? =
+= How to use Content Views with the Gutenberg Block Editor? =
 
-'View' is a custom post type, which is used to store all settings to filter & display your posts
+Create a new page and click the '+' sign, search for Content Views, or scroll to the CONTENT VIEWS section, you will find all our 16 Gutenberg blocks there. Click on the block you want to insert in your page and start displaying your posts stunningly with our blocks.
 
-= How many Views I can create? =
+= How to use Content Views with the Elementor page builder? =
 
-You can create Unlimited Views, in Unlimited websites
+Create a new page with Elementor, find our Elementor widgets under the CONTENT VIEWS section, click on the widget you want to use, and customize it as you want.
 
-= How to edit a View? =
+= Can I use Content Views without Gutenberg block editor? =
 
-In WordPress Admin menu, click Content Views. Paste View ID or title to text field beside "Search Views" button, then click the button to search.
-Click on Title of View you want to edit.
-You will be forwarded to View page.
+Sure, you can create and use our shortcode in Classic editor, without enabling Gutenberg block editor.
 
-= How to use View on my home page? =
+= Can I use Content Views without Elementor page builder? =
 
-If you are using a static page as home page, you should paste shortcode **[pt_view id="VIEW_ID"]** to editor of that page.
-If you are using "Your latest posts" as home page, you should paste this code `<?php echo do_shortcode("[pt_view id=VIEW_ID]"); ?>` to a theme file: `front-page.php` or `home.php` or `index.php`.
+Sure, you can use our shortcode (for any themes and page builders) or blocks (for block themes and the Gutenberg block editor).
 
+= Can I use Content Views with any WordPress theme? =
+
+Sure, Content Views is compatible with any WordPress theme.
+
+= Can I use Content Views with any page builders? =
+
+Sure, Content Views can be used with any page builders (Elementor, SiteOrigin, Beaver Builder, Divi, WPBakery, and so on) using our shortcode feature. With the Elementor page builder, you can also use our widgets.
+
+= Where can I get help? =
+
+If you encounter any difficulties or if you have questions about Content Views, you can create a ticket on our [support forum](https://wordpress.org/support/plugin/content-views-query-and-display-post-page/). Also, feel free to check our [demo](https://contentviewspro.com/demo/?utm_source=wordpress&utm_medium=link&utm_campaign=readme) to find out more about the features and our [documentation](https://contentviewspro.com/documentation/?utm_source=wordpress&utm_medium=link&utm_campaign=readme) for many guides, manuals, tutorials.
 
 
 == Screenshots ==
 
-1. Content Views plugin overview
-2. Display Setting form to customize output of queried posts at front-end
-3. Query and display in Grid layout (Show Title, Thumbnail)
-4. Query and display in Grid layout (Show Title, Thumbnail, Content) with Pagination
-5. Query and display in Collapsible layout
-6. Query and display in Slider layout
+1. Advanced query filters for Shortcode, Blocks, and Elementor widgets
+2. Dynamic filter settings for Shortcode
+3. Powerful display settings for Shortcode
+4. Advanced post grid blocks (for Gutenberg editor)
+5. 75+ ready-to-use block patterns (for Gutenberg editor)
+6. 16 widgets for the Elementor page builder
+7. Powerful controls for each Elementor widget
+8. Advanced typography options, font, color, background, border, and so on
+
+
 
 
 
 == Changelog ==
+
+= 4.0.1 =
+* Fix: [Shortcode] Remove unwanted CSS of another plugin (that causes issue to preview output) from the Add/Edit View page
+* Fix: [ElementorWidget] "Manual excerpt" and "HTML in excerpt" options not updated in output
+* Fix: [ElementorWidget] Undefined array key "columns" in some edge cases
+
+
+= 4.0 =
+* New: [ElementorWidget] Add 16 grid, list and other post layout widgets for the Elementor page builder.
+Each widget has powerful query controls, layout controls, and a lot of style controls to customize your output.
+* Fix: [Block] Layout > Alignment issue in the frontend
+* Fix: [Shortcode] Style issues of new layouts ("Grid 2" to "Big Post 2") when adding to the Divi page builder
+* Fix: compatible issue with WordPress 6.6
+
+
+= 3.8.0 =
+* Fix: [Shortcode] Correct the checked/unchecked status of some checkboxes after saving when using new layouts (Grid 2...Big Post 2)
+* Fix: [Block] Fix error when removing selected option of "Parent Page" control
+* Update: [Ajax Pagination] Improve the show/hide status of the First, Prev, Next, Last buttons
+* Update: [Block] Set default value when "Posts Per Page" is empty
+* Other fixes and improvements
+
+= 3.7.2 =
+* Fix: prevent issue in a multisite network when getting blog ids
+* Improve: Escaping pagination output for security enhancement
+
+= 3.7.1 =
+* Improve: Data escaping for security enhancement
+
+= 3.7.0 =
+* New: [Block] Add the Alignment option to "Read More"
+* New: [Shortcode] Add option "Show the default image" to Thumbnail settings
+* New: [Shortcode] Add "Heading Text" feature
+* New: Add option to hide, modify the "No Posts Found" text in blocks and shortcode
+* Fix: [Shortcode] Top Meta text is not clearly visible in Overlay layouts
+* Fix: [Block] Unexpected block errors caused by another block plugin
+* Fix: [Block] ReactDOM.render is no longer supported in React 18
+* Fix: [Block] Text is invisible in Overlay blocks when not showing thumbnail
+* Update: Sort layout names in Library popup/page
+* Update: Tweak CSS of the "Top Meta"
+* Update: Add default bottom margin to fields
+* Update: [Shortcode] Add instruction when showing full content in the Elementor page builder
+
+= 3.6.4 =
+* Fix: [Shortcode] fix CSS output in some edge cases
+* Fix: [Block] fix issue when click & move cursor in the ColorPicker area
+* Fix: [Block] fix issue when set empty value for "Border Radius"
+* Update: [Block] disable click on links in the Block Editor
+* Other tweaks and improvements
+
+= 3.6.3 =
+* Update: Revert to the Green background color for Readmore button in View shortcode (for Free version only. The selected blue/custom color in Pro version is unaffected)
+* Improve: Security Enhancement
+* Other tweaks and improvements
+
+= 3.6.2 =
+* New: Introduce the "Overlay Clickable" option for Overlay blocks/layouts
+* New: [Block] add Border, Border Radius, Box Shadow styles to the Title field
+* New: [Block] add option to allow HTML tags in excerpt
+* Fix: [Block] prevent blank row below blocks
+* Other improvements for blocks
+
+= 3.6.1.1 =
+* Update: [Block] Show the Block ID in the "Extra" tab of the Block settings, which can be used as VIEW_ID value in custom codes mentioned on [our documentation site](https://contentviewspro.com/documentation/?utm_source=wordpress&utm_medium=link&utm_campaign=changelog)
+* Other tweaks and improvements
+
+= 3.6.1 =
+* New: [Block] Add a Toolbar button to each block to open Block settings
+* Fix: [Block] Prevent responsive issue when using with page builder plugin
+* Fix: [Shortcode] It doesn't scroll to top of View after changing page, when enable pagination with the new layouts
+* Dev: [Block] Fix React warnings about "class", and unique "key" prop
+* Update: Add more instructions to the Library page, also rename it to 'Layout Library'
+
+= 3.6.0 =
+* New: Add 3 NEW FREE layouts (Grid 2, List, Overlay 1) to View shortcode
+* New: Add 'Library' to View shortcode to import ready-to-use patterns/layouts to new/existing View easily
+* New: Add 'Top Meta' field to View shortcode
+* Fix: Text Alignment of Scrollable block
+* Other tweaks and improvements
+
+= 3.5.0 =
+* New: [Block] Add 'Author Not In', 'Parent Page' options to blocks
+* New: [Block] Introduce 'Substitute' option for Featured Image in blocks
+* New: [Block] Introduce 'WooCommerce Hot Pick' to show Sale, Best selling, Featured, Top rated ... products in one click
+* New: [Block] Introduce the Timeline Block
+* Update: [Block] Add 'Theme' colors to the Color Picker
+* Update: [Block] Move 'Posts per page', 'Offset' to top of the Query panel to easy use
+* Update: [Block] Show default options for Include, Exclude fields
+
+= 3.4.0 - 2023/28/08 =
+* New: [Block] add "Live Filter" feature to blocks to show taxonomies, custom fields, text search as filtering options in front-end ([see demo](https://contentviewspro.com/demo/faceted-search-live-filter/?utm_source=wordpress&utm_medium=link&utm_campaign=changelog))
+* New: [Block] add "Filter by Published Date" feature to blocks
+* New: [Block] add "Show Advertisement" feature to blocks
+* Fix: color of meta fields in overlay blocks
+* Fix: position of author prefix text in blocks
+
+= 3.3.0.2 - 2023/08/08 =
+* Fix: [Block Settings] Some dropdown options (for example: Categories, Posts Include) are shown under Sort panel
+
+= 3.3.0 - 2023/08/03 =
+* New: [Block] add "Filter by Custom Field" feature to query posts by custom fields in blocks
+* Update: [Block] able to sort by multiple custom fields
+* Tweak CSS of the Scrollable block and view
+* Other tweaks and improvements
+
+= 3.2.0 - 2023/07/25 =
+* New: [Block] add "Custom Field" panel and settings to show custom fields in blocks. Support any custom field plugins: ACF, Meta Box, Pods...
+* New: [Block] add Margin, Padding to Featured Image Styles
+* Fix: [Block] changing Featured image Styles not working with some blocks
+* Update: [Block] adjust padding/margin of Pinterest, Collapsible blocks
+* Other fixes and improvements
+
+= 3.1.0 - 2023/07/17 =
+* New: [Block] add Operator IN, NOT IN, AND for each taxonomy in Block > Query
+* New: [Block] add "Fields Position" to Block > Layout to change fields position by drag & drop
+* Fix: [Block] icon for taxonomies in Bottom Meta
+* Fix PHP Deprecated in PHP 8.2
+* Other tweaks & improvements for Blocks
+
+= 3.0.4 - 2023/07/07 =
+* Fix: Readmore button is duplicated in the Pro shortcode layout 'One & Others'
+* Fix: 'Block Library' menu link when enabled 'Hide Content Views sub-menus' in the Settings page
+* Update: revert some small CSS updates since version 3.0 to ensure every tiny detail in view shortcode output is the same as before version 3.0
+* Update: add some texts to clarify on the Settings page, Block Library page
+
+= 3.0.3 - 2023/07/05 =
+* Update: toggle block checkbox of Heading Text, Title, Content, etc. will take immediately effect, without waiting for re-render
+* Update: add slug, menu order to sorting options on blocks and View (shortcode)
+* Update: add option to show/hide Read More button in View (shortcode)
+* Update: set default 'Full size' image for the 'Big Post 1' block
+* Fix compatible issue with custom taxonomy of Pods plugin
+
+= 3.0.2 - 2023/06/30 =
+* Fix uncaught error in block editor on a multisite network
+
+= 3.0.1 - 2023/06/30 =
+* New: add the option "Use the manual excerpt" to both shortcode & block modules
+* Fix: do not set the new blue background color to 'Read More' of existing view shortcode if it was shown as text link instead of button
+
+= 3.0 - 2023/06/29 =
+* Introduce the Block version with 15 blocks and 76+ stunning patterns ready to import
+* The shortcode version still works normally
+
+= 2.5.0.1 - 2022/11/23 =
+* Prevent potential conflict in the block editor
+
+= 2.5.0 - 2022/11/08 =
+- Create "Content Views" block in the Block editor. Now you can add a view as block or shortcode.
+- Prevent a compatible issue caused by another plugin
+- Tweak some texts
+
+= 2.4.0.7 - 2022/06/20 =
+* Fix some layout issues in Add/Edit view page in RTL languages
+
+= 2.4.0.6 - 2022/05/18 =
+* Tested up to WordPress 6.0
+* Some improvements
+
+= 2.4.0.5 - 2022/01/26 =
+* Updated for WordPress 5.9
+
+= 2.4.0.4 - 2022/01/26 =
+* Fix error and deprecation with PHP 8.0 and 8.1
+
+= 2.4.0.3 - 2022/01/17 =
+* Fix a bug with PHP 8.0
+
+= 2.4.0.2 - 2021/07/19 =
+* Tested up to WordPress 5.8
+* Remove blank "GitHub Plugin URI" in plugin header
+
+= 2.4.0.1 - 2021/03/11 =
+* Remove "Content Views" block as it caused unexpected issues
+
+= 2.4.0 - 2021/03/10 =
+* Add "Content Views" block to the Block editor
+* Fix AJAX pagination changes URL incorrectly in non-Latin languages
+* Fix logged warnings with jQuery 3.5
+* Other fixes and tweaks
+
+= 2.3.4 - 2020/12/07 =
+* Compatible with the upcoming WordPress 5.6
+* Update: remove non-authors in the backend author filter
+* Other fixes
 
 = 2.3.3.1 - 2020/10/14 =
 * Prevent text of another plugin from showing in generated excerpt
@@ -419,5 +706,8 @@ If you are using "Your latest posts" as home page, you should paste this code `<
 
 == Upgrade Notice ==
 
-= 1.6.8 =
-Major update with lot of improvements
+= 4.0 =
+Add 16 widgets for the Elementor page builder to showcase your posts, pages, custom posts in beautiful layouts (grid, list, and more). Each widget is fully customizable.
+
+= 3.0 =
+Add 16 Gutenberg blocks (including Post Grid, Post List, and more) and 76+ ready-to-use block patterns.

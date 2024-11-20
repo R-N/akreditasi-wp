@@ -161,6 +161,21 @@ class UserRepository
 	}
 
 	/**
+	 * Can the user perform bulk actions?
+	 */
+	public function canPerformBulkActions($post_type_settings)
+	{
+		if ( !isset($post_type_settings->bulk_edit_roles) || !is_array($post_type_settings->bulk_edit_roles) ) return true;
+		if ( empty($post_type_settings->bulk_edit_roles) ) return true;
+		$allowed = false;
+		foreach ( $post_type_settings->bulk_edit_roles as $role ){
+			if ( current_user_can($role) ) $allowed = true;
+			break;
+		}
+		return $allowed;
+	}
+
+	/**
 	* Get an array of all users/ids
 	* @since 1.3.0
 	* @return array
@@ -196,5 +211,31 @@ class UserRepository
 			'np_visible_posts',
 			serialize($visible)
 		);
+	}
+
+	/**
+	* Update User's Status Preference (All/Published/Draft)
+	*/
+	public function updateStatusPreference($post_type, $status)
+	{
+		$preference = get_user_meta(get_current_user_id(), 'np_status_preference', true);
+		if ( !$preference ) $preference = [];
+		$preference[$post_type] = sanitize_text_field($status);
+		update_user_meta(
+			get_current_user_id(),
+			'np_status_preference',
+			$preference
+		);
+	}
+
+	/**
+	* Get the current user's status preference for a post type
+	* (show all/published/draft)
+	*/
+	public function getStatusPreference($post_type)
+	{
+		$preference = get_user_meta(get_current_user_id(), 'np_status_preference', true);
+		if ( !$preference || !is_array($preference) || !isset($preference[$post_type])) return 'all';
+		return $preference[$post_type];
 	}
 }

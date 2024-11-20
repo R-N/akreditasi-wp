@@ -26,7 +26,6 @@ if ( ! class_exists( 'OGF_Reset' ) ) :
 		public function __construct() {
 			add_action( 'customize_register', array( $this, 'customize_register' ) );
 			add_action( 'wp_ajax_customizer_reset', array( $this, 'ajax_customizer_reset' ) );
-			add_action( 'customize_register', array( $this, 'customize_register' ) );
 			add_action( 'customize_controls_enqueue_scripts', array( $this, 'customize_scripts' ), 101 );
 		}
 
@@ -50,14 +49,12 @@ if ( ! class_exists( 'OGF_Reset' ) ) :
 		 * @param Object $wp_customize Global $wp_customize object.
 		 */
 		public function customize_register( $wp_customize ) {
-			$this->wp_customize = $wp_customize;
-
 			$wp_customize->add_control(
 				'ogf_reset_fonts',
 				array(
 					'type'        => 'button',
-					'label'   => __( 'Reset All Fonts', 'olympus-google-fonts' ),
-					'description'   => __( 'This will reset all fonts set by this plugin to their defaults. This action can not be reversed.', 'olympus-google-fonts' ),
+					'label'       => __( 'Reset All Fonts', 'olympus-google-fonts' ),
+					'description' => __( 'This will reset all fonts set by this plugin to their defaults. This action can not be reversed.', 'olympus-google-fonts' ),
 					'settings'    => array(),
 					'priority'    => 100,
 					'section'     => 'ogf_debugging',
@@ -67,17 +64,12 @@ if ( ! class_exists( 'OGF_Reset' ) ) :
 					),
 				)
 			);
-
 		}
 
 		/**
 		 * The reset AJAX request handler.
 		 */
 		public function ajax_customizer_reset() {
-			if ( ! $this->wp_customize->is_preview() ) {
-				wp_send_json_error( 'not_preview' );
-			}
-
 			if ( ! check_ajax_referer( 'ogf_reset', 'security' ) ) {
 				wp_send_json_error( 'invalid_nonce' );
 			}

@@ -78,7 +78,8 @@ class To_Top_Public {
 		$dependency = array();
 
 		if ( 'icon' == $option['style'] ) {
-			$dependency[] = 'dashicons';
+  			wp_enqueue_style( 'dashicons' );
+			// $dependency[] = 'dashicons';
 		}
 		else if ( 'genericon-icon' == $option['style'] ) {
 			$dependency[] = 'genericons';
@@ -86,13 +87,22 @@ class To_Top_Public {
 			wp_register_style( 'genericons', plugin_dir_url( __FILE__ ) . 'css/genericons/genericons.css', false, '3.4.1' );
 		}
 		else if ( 'font-awesome-icon' == $option['style'] ) {
-			$dependency[] = 'font-awesome';
+			$dependency[] = 'to-top-font-awesome';
 
-			wp_register_style( 'font-awesome', plugin_dir_url( __FILE__ ) . 'css/font-awesome/css/font-awesome.min.css', false, '4.5.0' );
+			wp_register_style( 'to-top-font-awesome', plugin_dir_url( __FILE__ ) . 'css/font-awesome/css/font-awesome.min.css', false, '4.5.0' );
 
 		}
 
 		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/to-top-public.css', $dependency, $this->version, 'all' );
+	}
+
+	function make_script_async( $tag, $handle, $src )
+	{
+		if ( $this->plugin_name != $handle ) {
+			return $tag;
+		}
+
+		return str_replace( '<script', '<script async', $tag );
 	}
 
 	/**
@@ -126,14 +136,13 @@ class To_Top_Public {
 	public function public_display() {
 
 		$option = to_top_get_options();
-
 		if ( is_admin() && !$option['show_on_admin'] ) {
 			//Bail early if in admin and show on admin is disabled
 			return;
 		}
 
 		if ( 'icon' == $option['style'] ) {
-			echo '<span id="to_top_scrollup" class="dashicons ' . esc_attr( $option['icon_type'] ) .'"><span class="screen-reader-text">' . esc_html__( 'Scroll Up', 'to-top' ) . '</span></span>' ;
+			echo '<span aria-hidden="true" id="to_top_scrollup" class="dashicons ' . esc_attr( $option['icon_type'] ) .'"><span class="screen-reader-text">' . esc_html__( 'Scroll Up', 'to-top' ) . '</span></span>' ;
 		}
 		else if ( 'genericon-icon' == $option['style'] ) {
 			if (  'dashicons-arrow-up' == $option['icon_type'] ) {
@@ -146,7 +155,7 @@ class To_Top_Public {
 				$class = 'genericon genericon-collapse';
 			}
 
-			echo '<span id="to_top_scrollup" class="' . esc_attr( $class ) .'"><span class="screen-reader-text">' . esc_html__( 'Scroll Up', 'to-top' ) . '</span></span>' ;
+			echo '<span aria-hidden="true" id="to_top_scrollup" class="' . esc_attr( $class ) .'"><span class="screen-reader-text">' . esc_html__( 'Scroll Up', 'to-top' ) . '</span></span>' ;
 		}
 		else if ( 'font-awesome-icon' == $option['style'] ) {
 			if (  'dashicons-arrow-up' == $option['icon_type'] ) {
@@ -159,7 +168,7 @@ class To_Top_Public {
 				$class = 'fa fa-angle-up';
 			}
 
-			echo '<span id="to_top_scrollup" class="' .  esc_attr( $class ) .'"><span class="screen-reader-text">' . esc_html__( 'Scroll Up', 'to-top' ) . '</span></span>' ;
+			echo '<span aria-hidden="true" id="to_top_scrollup" class="' .  esc_attr( $class ) .'"><span class="screen-reader-text">' . esc_html__( 'Scroll Up', 'to-top' ) . '</span></span>' ;
 		}
 		else {
 			if( '' != $option['image'] ){

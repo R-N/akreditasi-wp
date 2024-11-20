@@ -8,7 +8,7 @@
 /**
  * Create the admin pages.
  */
-class OGF_Admin_Welcome_Screen {
+class OGF_Welcome_Screen {
 
 	/**
 	 * Start up
@@ -53,14 +53,17 @@ class OGF_Admin_Welcome_Screen {
 			'',
 			25
 		);
-
 	}
 
 	/**
 	 * Add options page
 	 */
 	public function enqueue() {
-		wp_enqueue_style( 'olympus-google-fonts-welcome', plugins_url( 'admin/style.css', dirname( __FILE__ ) ), false, '1.0.0' );
+
+		if ( get_current_screen()->id === 'toplevel_page_fonts-plugin' ) {
+			wp_enqueue_style( 'olympus-google-fonts-admin', plugins_url( 'admin/style.css', __DIR__ ), false, '1.0.0' );
+		}
+
 		wp_enqueue_script( 'ogf-admin', esc_url( OGF_DIR_URL . 'assets/js/admin.js' ), 'jquery', OGF_VERSION, false );
 	}
 
@@ -68,36 +71,36 @@ class OGF_Admin_Welcome_Screen {
 	 * Options page callback
 	 */
 	public function render_welcome_page() {
-
-		if ( get_option( 'ogf_dismiss_guide', false ) !== false ) {
-			return;
-		}
-
-		$current_user = wp_get_current_user();
-		$email = ( string ) $current_user->user_email;
 		?>
 			<div class="eb-wrap">
 				<div class="eb-content">
 					<div class="eb-content__header">
-						<h1>Your Quickstart Guide</h1>
+						<h1><?php esc_html_e( 'Your Quickstart Guide', 'olympus-google-fonts' ); ?></h1>
 					</div>
 					<div class="eb-content__inner">
-						<img class="ebook-cover" src="<?php echo esc_url( plugins_url( 'admin/fonts-plugin-quickstart-guide.png', dirname( __FILE__ ) ) ); ?>">
-						<p>To help you get the most out of the Google Fonts plugin we’ve put together a free quickstart guide.</p>
-						<p>In this beautifully-formatted, easy-to-read PDF you will learn:
+						<img class="ebook-cover" src="<?php echo esc_url( plugins_url( 'admin/fonts-plugin-quickstart-guide.png', __DIR__ ) ); ?>">
+						<p><?php esc_html_e( 'To help you get the most out of the Google Fonts plugin we’ve put together a free quickstart guide.', 'olympus-google-fonts' ); ?></p>
+						<p><?php esc_html_e( 'In this beautifully-formatted, easy-to-read PDF you will learn:', 'olympus-google-fonts' ); ?>
 						<ul>
-							<li>How to <strong>easily</strong> customize your typography.</li>
-							<li>How to host fonts <strong>locally</strong> for speed, GDPR & DSGVO.</li>
-							<li>How to use Google Fonts without <strong>slowing down</strong> your website.</li>
+							<li><?php printf( esc_html__( 'How to %1$seasily%2$s customize your typography.', 'olympus-google-fonts' ), '<strong>', '</strong>' ); ?></li>
+							<li><?php printf( esc_html__( 'How to host fonts %1$slocally%2$s for speed, GDPR & DSGVO.', 'olympus-google-fonts' ), '<strong>', '</strong>' ); ?></li>
+							<li><?php printf( esc_html__( 'How to use Google Fonts without %1$sslowing down%2$s your website.', 'olympus-google-fonts' ), '<strong>', '</strong>' ); ?></li>
 						</ul>
-						<p>Download your free copy today.</p>
-						<!-- Begin Mailchimp Signup Form -->
-						<form action="https://fontsplugin.us9.list-manage.com/subscribe/post?u=1ed15f4383eb532a1a1034fb9&amp;id=2ed49283a0" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank" novalidate>
-							<input type="email" value="<?php echo sanitize_email( $email ); ?>" placeholder="Your email address..." name="EMAIL" class="required email" id="mce-EMAIL">
-							<div style="position: absolute; left: -5000px;" aria-hidden="true"><input type="text" name="b_1ed15f4383eb532a1a1034fb9_2ed49283a0" tabindex="-1" value=""></div>
-							<input type="submit" value="Send My Guide!" name="subscribe" id="mc-embedded-subscribe" class="ogf-send-guide-button button">
-						</form>
-						<!--End mc_embed_signup-->
+						<p><?php esc_html_e( 'Download your free copy today.', 'olympus-google-fonts' ); ?></p>
+
+						<?php if ( get_option( 'ogf_dismiss_guide', false ) === false ) : ?>
+							<form action="https://fontsplugin.email/subscribe" method="post" class="validate" target="_blank" novalidate>
+								<input type="email" value="" placeholder="<?php esc_attr_e( 'Your email address...', 'olympus-google-fonts' ); ?>" name="email" class="required email" id="mce-EMAIL">
+								<input type="hidden" name="list" value="2guyf8U56tOENOh6892lBQ6w"/>
+		<input type="hidden" name="subform" value="yes"/>
+								<input type="submit" value="<?php esc_attr_e( 'Send My Guide!', 'olympus-google-fonts' ); ?>" name="submit" class="ogf-send-guide-button button">
+							</form>
+						<?php else : ?>
+
+							<a class="ogf-send-guide-button button" href="https://fontsplugin.com/wp-content/uploads/qs-guide.pdf" target="_blank"><?php esc_html_e( 'Read Guide', 'olympus-google-fonts' ); ?></a>
+
+						<?php endif; ?>
+
 					</div>
 				</div>
 			</div>
@@ -114,5 +117,5 @@ class OGF_Admin_Welcome_Screen {
 }
 
 if ( is_admin() ) {
-	$my_settings_page = new OGF_Admin_Welcome_Screen();
+	$ogf_welcome_screen = new OGF_Welcome_Screen();
 }

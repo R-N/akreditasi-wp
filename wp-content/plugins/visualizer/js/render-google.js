@@ -4,6 +4,8 @@
 
 // this will store the images for each chart rendered.
 var __visualizer_chart_images   = [];
+var chartWrapperError = [];
+var isResizeRequest = false;
 
 (function($) {
 	var gv;
@@ -12,13 +14,30 @@ var __visualizer_chart_images   = [];
     var rendered_charts = [];
 
 	function renderChart(id) {
+        
+        if ( ! all_charts || 0 === Object.keys( all_charts ).length ) {
+            return;
+        }
+
         var chart = all_charts[id];
         var hasAnnotation = false;
+
+        if ( ! chart ) {
+            return;
+        }
 
         // re-render the chart only if it doesn't have annotations and it is on the front-end
         // this is to prevent the chart from showing "All series on a given axis must be of the same data type" during resize.
         // remember, some charts do not support annotations so they should not be included in this.
         var no_annotation_charts = ['tabular', 'timeline', 'gauge', 'geo', 'bubble', 'candlestick'];
+        if ( undefined !== chart.settings && undefined !== chart.settings.series && undefined === chart.settings.series.length ) {
+            var chartSeries = [];
+            var chartSeriesValue = Object.values( chart.settings.series );
+            $.each( Object.keys( chart.settings.series ), function( index, element ) {
+                chartSeries[element] = chartSeriesValue[index];
+            } );
+            chart.settings.series = chartSeries;
+        }
         if(id !== 'canvas' && typeof chart.series !== 'undefined' && typeof chart.settings.series !== 'undefined' && ! no_annotation_charts.includes(chart.type) ) {
             hasAnnotation = chart.series.length - chart.settings.series.length > 1;
         }
@@ -31,7 +50,12 @@ var __visualizer_chart_images   = [];
     function renderSpecificChart(id, chart) {
         var render, container, series, data, table, settings, i, j, row, date, axis, property, format, formatter;
 
-        if(chart.library !== 'google'){
+        if( chart.library !== 'google' ) {
+            return;
+        }
+      
+        // Bail if the chart is already rendered or is being rendered.
+        if ( ! window.isResizeRequest && ( $('#' + id).hasClass('visualizer-chart-loaded') || ( 'canvas' !== id && $('#' + id).children( ':not(.loader, style)' ).length > 0 ) ) ) {
             return;
         }
         rendered_charts[id] = 'yes';
@@ -62,13 +86,52 @@ var __visualizer_chart_images   = [];
                     break;
             }
 
-			render = new gv[render](container);
+            var controlWrapperElement = document.getElementById( "control_wrapper_" + id ) || null;
+            var withControlMode = ( typeof settings.controls !== 'undefined' && '' !== settings.controls.controlType ) && controlWrapperElement ? true : false;
+
+            if ( $( controlWrapperElement ).hasClass( 'no-filter' ) ) {
+                withControlMode = false;
+            }
+            if ( withControlMode ) {
+                // Chart wrapper.
+                render = new gv.ChartWrapper({
+                  'chartType': render,
+                  'containerId': id,
+                });
+                // Chart dashboard wrapper.
+                var chartWrapperElement   = document.getElementById( "chart_wrapper_" + id ) || null;
+                var chartWrapper          = new gv.Dashboard( chartWrapperElement );
+
+                // Error Handler.
+                gv.events.addListener(chartWrapper, 'error', function ( err ) {
+                    if ( chartWrapperError.length === 0 ) {
+                        chartWrapperError.push( err );
+                        gv.errors.removeError( err.id );
+                        var chartContainer = $( chartWrapperElement ).find( '.visualizer-front' );
+                        if ( chartContainer && chartContainer.is(':visible')) {
+                            if (chartContainer.parents('div').next( '#sidebar' ).length === 0) {
+                                chartContainer.addClass( 'visualizer-chart-loaded' ).addClass( 'visualizer-cw-error' );
+                                $( chartWrapperElement ).addClass( 'visualizer-cw-error' );
+                            }
+                        }
+                    } else {
+                        gv.errors.removeError( err.id );
+                    }
+                } );
+            } else {
+                render = new gv[render](container);
+            }
 		}
 
         if (settings['animation'] && parseInt(settings['animation']['startup']) === 1)
         {
             settings['animation']['startup'] = true;
             settings['animation']['duration'] = parseInt(settings['animation']['duration']);
+        }
+        if ( settings['controls'] ) {
+            settings['controls']['ui']['allowMultiple'] = 'true' === settings['controls']['allowMultiple'] ? true : false;
+            settings['controls']['ui']['allowTyping'] = 'true' === settings['controls']['allowTyping'] ? true : false;
+            settings['controls']['ui']['showRangeValues'] = 'true' === settings['controls']['showRangeValues'] ? true : false;
         }
 
         // mark roles for series that have specified a role
@@ -157,7 +220,7 @@ var __visualizer_chart_images   = [];
                 settings.sortBubblesBySize = settings.sortBubblesBySize ? settings.sortBubblesBySize == 1 : false; // jshint ignore:line
 				break;
 			case 'timeline':
-                settings['timeline'] = [];
+                settings['timeline'] = {};
                 settings['timeline']['groupByRowLabel'] = settings['groupByRowLabel'] ? true : false;
                 settings['timeline']['colorByRowLabel'] = settings['colorByRowLabel'] ? true : false;
                 settings['timeline']['showRowLabels']   = settings['showRowLabels'] ? true : false;
@@ -215,6 +278,10 @@ var __visualizer_chart_images   = [];
 					delete axis.viewWindow[property];
 				}
 			}
+
+            if(settings.hAxis && settings.hAxis.format == ''){
+                settings.hAxis.format = 'yyyy-MM-dd';
+            }
 		}
 
         if(settings.hAxis){
@@ -250,7 +317,15 @@ var __visualizer_chart_images   = [];
                     case 'date':
                         // fall-through.
                     case 'datetime':
-                        date = new Date(data[i][j]);
+                        if (typeof data[i][j] === 'string') {
+                            var dateParse = Date.parse(data[i][j].replace(/-/g, '/'));
+                            if ( isNaN( dateParse ) ) {
+                                dateParse = Date.parse(data[i][j]);
+                            }
+                            date = new Date( dateParse );
+                        } else if(typeof data[i][j] === 'object') {
+                            date = data[i][j];
+                        }
                         data[i][j] = null;
                         if (Object.prototype.toString.call(date) === "[object Date]") {
                             if (!isNaN(date.getTime())) {
@@ -287,8 +362,9 @@ var __visualizer_chart_images   = [];
                         if(series_annotations.includes(i)){
                             seriesIndexToUse++;
                         }
-
-                        format_data(id, table, series[seriesIndexToUse].type, settings.series[i].format, seriesIndexToUse);
+                        if ( series[seriesIndexToUse] ) {
+                            format_data(id, table, series[seriesIndexToUse].type, settings.series[i].format, seriesIndexToUse);
+                        }
                     }
                     break;
             }
@@ -304,19 +380,67 @@ var __visualizer_chart_images   = [];
 
         gv.events.addListener(render, 'ready', function () {
             var arr = id.split('-');
+            render = typeof render.getChart !== 'undefined' ? render.getChart() : render;
             __visualizer_chart_images[ arr[0] + '-' + arr[1] ] = '';
+
+            if (render.container && $(render.container).is(':visible')) {
+                if ($(render.container).parents('div').next( '#sidebar' ).length === 0) {
+                    $(render.container).addClass( 'visualizer-chart-loaded' );
+                }
+            }
+
             try{
-                var img = render.getImageURI();
-                __visualizer_chart_images[ arr[0] + '-' + arr[1] ] = img;
-                $('body').trigger('visualizer:render:chart', {id: arr[1], image: img});
+                if ( typeof render.getImageURI !== 'undefined' ) {
+                    var img = render.getImageURI();
+                    __visualizer_chart_images[ arr[0] + '-' + arr[1] ] = img;
+                    $('body').trigger('visualizer:render:chart', {id: arr[1], image: img});
+                    if ( $( '#chart-img' ).length ) {
+                        $( '#chart-img' ).val( img );
+                    }
+                }
             }catch(error){
-                console.warn('render.getImageURI not defined for ' + arr[0] + '-' + arr[1]);
+                var canvas = document.getElementById( 'canvas' );
+                domtoimage.toPng(canvas)
+                .then(function ( img ) {
+                    __visualizer_chart_images[ arr[0] + '-' + arr[1] ] = img;
+                    $('body').trigger('visualizer:render:chart', {id: arr[1], image: img});
+                    if ( $( '#chart-img' ).length ) {
+                        $( '#chart-img' ).val( img );
+                    }
+                })
+                .catch(function (error) {
+                  console.warn('render.getImageURI not defined for ' + arr[0] + '-' + arr[1]);
+                });
             }
         });
 
-        $('body').trigger('visualizer:chart:settings:extend', {id: id, chart: chart, settings: settings, data: table});
+        if ( withControlMode ) {
+           // alert( chart.is_library_page );
+            // Create a control wrapper, passing some options.
+            var controlWrapper = new gv.ControlWrapper( {
+                containerId: 'control_wrapper_' + id,
+                controlType: settings.controls.controlType,
+                'options': settings.controls,
+            } );
 
-        render.draw(table, settings);
+            $('body').trigger('visualizer:chart:settings:extend', {id: id, chart: chart, settings: settings, data: table});
+            render.setOptions(settings);
+            chartWrapper.bind(controlWrapper, render);
+            chartWrapper.draw(table);
+
+            gv.events.addListener(controlWrapper, 'ready', function ( err ) {
+                if ( 'vertical' === settings.controls.ui.orientation ) {
+                    if ( 'canvas' === id ) {
+                        jQuery( '#' + id ).addClass( 'vz-vertical' );
+                    }
+                } else {
+                    jQuery( '#' + id ).removeClass( 'vz-vertical' );
+                }
+            });
+        } else {
+            $('body').trigger('visualizer:chart:settings:extend', {id: id, chart: chart, settings: settings, data: table});
+            render.draw(table, settings);
+        }
 	}
 
     function format_data(id, table, type, format, index) {
@@ -359,22 +483,37 @@ var __visualizer_chart_images   = [];
 
 	function render() {
 		for (var id in (all_charts || {})) {
-			renderChart(id);
+            var chartElement = document.getElementById( id );
+            if (chartElement && chartElement.offsetParent) {
+		      renderChart(id);
+            }
 		}
 	}
 
     var resizeTimeout;
 
 	$(document).ready(function() {
-		$(window).resize(function() {
+		$(window).resize(function(e) {
 			clearTimeout(resizeTimeout);
+            window.isResizeRequest = 'undefined' !== typeof e.originalEvent ? true : false;
 			resizeTimeout = setTimeout(render, 100);
 		});
 
         resizeHiddenContainers(true);
+
+        if ( $( '.visualizer-hidden-container' ).length ) {
+            setInterval( function() {
+                $( '.visualizer-hidden-container' ).find(".visualizer-front:not(.visualizer-chart-loaded)").resize();
+            }, 500 );
+        }
+
+        window.addEventListener( 'orientationchange', function() {
+            $( '.visualizer-chart-loaded' ).removeClass( 'visualizer-chart-loaded' ).resize();
+        }, false);
     });
 
     $(window).on('load', function(){
+        $( '.visualizer-front:not(.visualizer-chart-loaded)' ).resize();
         resizeHiddenContainers(true);
     });
 
@@ -447,16 +586,22 @@ var __visualizer_chart_images   = [];
         }
 
         objects = {};
-        google.charts.load("current", {packages: $chart_types, mapsApiKey: v.map_api_key, 'language' : v.language});
-        google.charts.setOnLoadCallback(function() {
-            gv = google.visualization;
-            all_charts = v.charts;
-            if(v.is_front == true && typeof v.id !== 'undefined'){ // jshint ignore:line
-                renderChart(v.id);
-            } else {
-                render();
-            }
-        });
+        if ( 'object' === typeof google ) {
+            $chart_types.push( 'controls' );
+            google.load( 'visualization', '51', {packages: $chart_types, mapsApiKey: v.map_api_key, 'language' : v.language,
+                callback: function () {
+                    gv = google.visualization;
+                    all_charts = v.charts;
+                    if(v.is_front == true && typeof v.id !== 'undefined'){ // jshint ignore:line
+                        if ( document.getElementById( v.id ).offsetParent !== null ) {
+                            renderChart(v.id);
+                        }
+                    } else {
+                        render();
+                    }
+                }
+            });
+        }
     });
 
     $('body').on('visualizer:render:specificchart:start', function(event, v){
@@ -502,4 +647,14 @@ var __visualizer_chart_images   = [];
         }
     });
 
+    var timer = 0;
+    $( document ).on( 'input', '.series-linewidth', function() {
+        var seriesLineWidth = $( this );
+        clearTimeout( timer );
+        timer = setTimeout( function() {
+            if ( seriesLineWidth.val() != '' && seriesLineWidth.val() <= 0 ) {
+                seriesLineWidth.val( '0.1' );
+            }
+        }, 700 );
+    } );
 })(jQuery);

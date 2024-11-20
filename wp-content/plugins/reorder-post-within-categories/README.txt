@@ -1,11 +1,11 @@
 === Plugin Name ===
-Contributors: aurovrata, aurelien
+Contributors: aurovrata, aurelien, pondermatic, robrecord
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=36PNU5KYMP738
 Tags: order, reorder, re-order, order by category,order custom post type, order by categories, order category, order categories, order by taxonomy, order by taxonomies, manual order, order posts
 Requires at least: 4.4
-Tested up to: 5.5.1
+Tested up to: 6.3.0
 Requires PHP: 5.6
-Stable tag: trunk
+Stable tag: 2.14.5
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,7 @@ Due to a [bug](https://core.trac.wordpress.org/ticket/50070) in WordPress core, 
 
 v2.3 is now multi-post taxonomy enabled.  A taxonomy registered with multiple post types can has its term's posts in each type ranked manually and separately.
 
-**UPGRADE NOTE** if you are upgrading from v1.x, your old ranking data remains unaffected in the custom table used by the v1.x plugin.  However, in v2.x all the ranking is now stored as post meta.  While upgrading, some users have complained of missing posts/lost rankings.  If this is the case, you can reset your order for given term using the reset checkbox/button provided in the admin page (see screenshot #4).  It will reload the ranking from the v1.x custom table.  For more details please read this [post](https://wordpress.org/support/topic/how-to-upgrade-to-v-2-x/).
+**UPGRADE NOTE** if you are upgrading from v1.x, your old ranking data remains unaffected in the custom table used by the v1.x plugin.  However, in v2.x all the ranking is now stored as post meta.  While upgrading, some users have complained of missing posts/lost rankings.  If this is the case, you can reset your order for given term using the reset checkbox/button provided in the admin page (see screenshot #4).  It will reload the ranking from the v1.x custom table.  Please read FAQ #17 for more information on how to migrate your data.
 
 If your term was not sorted in the v1.x table or you are upgrading from v2.0.x or v2.1.x, then the reset button will reload the post order as per the default WP post table listing, which can be changed using the filtrs provided (see FAQ #7).
 
@@ -31,6 +31,15 @@ New enhanced **version 2.0** with grid-layout and multi-drag interface to ease s
 [Tor-Bjorn Fjellner](https://profiles.wordpress.org/tobifjellner/) for the swedish translation and i18n clean-up.
 [alekseo](https://wordpress.org/support/users/alekseo/) for support for the plugin.
 [Andrei Negrea](https://github.com/andreicnegrea) for post delete bug fix.
+[maddogprod](https://profiles.wordpress.org/maddogprod/) for helping resolve custom taxonomy front-end ordering.
+[menard1965](https://profiles.wordpress.org/menard1965/) for helping resolve `get_adjacent_post` prev/next ranked posts.
+[alexjamesbishop](https://profiles.wordpress.org/alexjamesbishop/) for helping fix the 'orderby' bug.
+[pondermatic](https://profiles.wordpress.org/pondermatic/) for fixing the min-range bug.
+[andreicnegrea](https://profiles.wordpress.org/andreicnegrea/) for fixing the offset warnings.
+[isinica](https://profiles.wordpress.org/isinica/) for fixing the disappearing ranked post when editing them.
+[sarahjsouris](https://profiles.wordpress.org/sarahjsouris/) from [playimports.com.au](https://www.playimports.com.au) for sponsoring WooCommerce plugin upgrade.
+[howdy_mcgee](https://profiles.wordpress.org/howdy_mcgee/) - helping fix array orderby directives for WooCommerce.
+[pavelkovar](https://profiles.wordpress.org/pavelkovar/) - helping fix html escaping issues on admin pages.
 
 == Installation ==
 
@@ -63,7 +72,7 @@ Keep in mind that you will now see `Pages` as a post type to re-order, selecting
 
 = 3.I want limit/enable roles that can re-order posts =
 
-Since v1.3.0 a new filter has been added that allows you to do that.  Make sure you return a [valid capability](https://codex.wordpress.org/Roles_and_Capabilities#Capabilities),
+Since v1.3.0 a new filter has been added that allows you to do that.  Make sure you return a [valid capability](https://wordpress.org/support/article/roles-and-capabilities/#roles),
 
 `add_filter('reorder_post_within_categories_capability', 'enable_editors', 10,2);
 function enable_editors($capability, $post_type){
@@ -174,7 +183,7 @@ function ranking_post_type($type, $wp_query){
 **There are several reasons why this might happen,**
 
 **1. You are using a custom query get_posts()...**
-If you are displaying your posts using a **custom query with the function get_posts()** you should be aware that it sets the attribute 'suppress_filters' to false by default (see the [codex page](https://developer.wordpress.org/reference/functions/get_posts/#parameters)).  The ranked order is applied using filters on the query, hence you need to explictly set this attribute to true to get your results ranked properly.
+If you are displaying your posts using a **custom query with the function get_posts()** you should be aware that it sets the attribute 'suppress_filters' to true by default (see the [codex page](https://developer.wordpress.org/reference/functions/get_posts/#parameters)).  The ranked order is applied using filters on the query, hence you need to explictly set this attribute to `false` to get your results ranked properly.
 
 **2. Your theme or custom query explictly set the 'orderby' query attribute. **
 If your **query explicitly sets the 'orderby'** [attribute](https://developer.wordpress.org/reference/classes/wp_query/#order-orderby-parameters), and the override checkbox is checked (see [screenshot](https://wordpress.org/plugins/reorder-post-within-categories/#screenshots) #5), then the plugin will override your query and rank the results as per your manual order.  However, if you uncheck the ovverride setting (ie override is set to false), your query will be ordered as per the orderby directive.  However, you can programmatically override the `orderby` directive with the following hook should you need finer control,
@@ -284,7 +293,9 @@ function allow_draft_in_initial_order($status, $post_type, $term_id){
 
 = 14. Is it possible to control when the manual sorting is applied programmatically ? =
 In v2.7 a new filter has been added to do just that, allowing you to override the sorting of anually ranked posts,
-`add_filter('rpwc2_manual_sort_override', 'override_manual_sorting', 10,5);
+
+`
+add_filter('rpwc2_manual_sort_override', 'override_manual_sorting', 10,5);
 function  override_manual_sorting($apply_sorting, $wp_query, $taxonomy, $term_id, $type){
     //$apply_sorting a boolean to filter, true by default, which will apply the manual sorting.
     //the current queried $taxonomy with $term_id for post_type $type.
@@ -294,7 +305,8 @@ function  override_manual_sorting($apply_sorting, $wp_query, $taxonomy, $term_id
       $apply_sorting = false; //do not sort using the manual ranking.
     }
     return $apply_sorting;
-}`
+}
+`
 
 = 15. How to enable post navigation (prev/next) on a page based on the manual order? =
 use the WordPress core functions,
@@ -314,31 +326,104 @@ $adj->prev_post; //this is the previous post ID, null is the post is the first i
 $adj->next_post; //this is the next post ID, null is the post is the last in the list.
 
  `
+= 17. I have upgraded from v1.X, should I delete the old table ? =
 
-== Thanks to ==
-@maddogprod for helping resolve custom taxonomy front-end ordering.
-@menard1965 for helping resolve `get_adjacent_post` prev/next ranked posts.
-@alexjamesbishop/ for helping fix the 'orderby' bug.
+The old plugin (v1.X) used a custom table to stored the manual order of posts.  This legacy data will be imported into the new plugin when you upgrade.  However, it is important that you delete the old table once you have successfully imported your ranking data.
+
+**How so I know if the data was successfully imported?**
+Go to your posts reorder admin pages, for each manually sorted term, check that your posts are in the correct order and that none are missing. If the lists of posts are correct (the right number of posts in the right order), **then move the 2nd posts to the first position and back to the 2nd position**.  This will automatically save the ranked list into your database usign the latest format.  Repeat for all manually sorted terms.  Once they are all saved with the new format, you will need to delete the legacy table.
+
+If you have spurious post listings then it is possible the imported data has been corrupted, you can reset it using the provided reset button, however, if the list of posts is still showing erroneous results then you will need to reset the manual ranking for that term one you have deleted the legacy table, and manually re-order your posts.
+
+**How do I delete the legacy data? **
+In your dashboard, navigate to the Settings->Reorder Posts page, scroll to the bottom of the page and proceed to the delete the legacy table under the section title: **'Delete old custom table from plugin v1.x'**.
+
+= 18. How can I access the ranking order of a post within a term ? =
+
+v2.11 introduced the `get_rpwc2_order()` function to do this.
+
+`
+//the function returns an array of post IDs for a given post type and term ID
+$ranking = get_rpwc2_order($post_type, $term_id);
+//the ranking will refelct the manual sort order that was saved in the admin reOrder page.
+$zero_based_rank = array_search($post_ID, $ranking);
+`
+
+= 19. Can I order attahment posts types ? =
+As of v2.13 this is now possible thanks to the contribution from @robrecord.  You will need to add the 'inherit' post status to the allowed status to make it work using the following filters in your `functions.php` file,
+
+`
+add_filter(
+    'rpwc2_initial_rank_posts_allowed_statuses',
+    function ($statuses) {
+        $statuses[] = 'inherit';
+        return $statuses;
+    }
+);
+
+add_filter(
+    'rpwc2_initial_rank_posts_status',
+    function ($status, $post_type, $term_id) {
+        if ('attachment' === $post_type) {
+            $status[] = 'inherit';
+        }
+        return $status;
+    },
+    10,
+    3
+);
+`
+= 20. Can I debug the manual ranking process ? =
+Sure, if you enable `WP_DEBUG` and `WPGURUS_DEBUG` in your `wp-config.php` file,
+
+`
+define('WP_DEBUG', true);
+define('WPGURUS_DEBUG', true);
+`
+the plugin will printout debug messages, along with the final SQL query for your manually ranked posts.  This is useful in order to determine if another plugin is also filtering your posts queries and overriding the ranking of the resuls.
+
 == Changelog ==
-= 2.8.0 =
-* expose functionaliy to get adjacent posts.
-= 2.7.8 =
-* fix new term order seetings update.
-= 2.7.7 =
-* fix SortableJs for reset button.
-= 2.7.6 =
-* fix SortableJs plugin initialisation on some setups.
-= 2.7.5 =
-* fix post count in admin.
-= 2.7.4 =
-* fix post count.
-= 2.7.3 =
-* fix multi-post_type queries.
-= 2.7.2 =
-* improved handling of term post counts.
-= 2.7.1 =
-* fix term counts for private/scheduled posts.
-= 2.7.0 =
-* added filter 'rpwc2_manual_sort_override'.
-* fixed orderby query_vars bug.
-* update settins link.
+= 2.14.5 =
+* fix term validation issue on admin reorder page.
+= 2.14.4 =
+* cleanup html escaping logic.
+* fix misuse esc_attr_e() bug.
+= 2.14.3 =
+* added localisation for admin menu labels.
+= 2.14.2 =
+* fix admin page refresh post selection.
+* fix for PHPCS WP Code security std.
+= 2.14.1 =
+* WPML compatibility fix.
+= 2.14.0 =
+* enable full SQL print in debug mode.
+* cache ranked queries to speed up front-end queries.
+= 2.13.0 =
+* enable attachment posts (see FAQ #19)
+* enable upgrade warnings before major upgrades.
+* fix null start/end in admin page.
+= 2.12.5 =
+* handle array orderby directives.
+= 2.12.4 =
+* handle multi orderby directive.
+= 2.12.3 =
+* fix slider range reload bug.
+= 2.12.2 =
+* fix non-woocommerce override.
+= 2.12.1 =
+* typo fix
+= 2.12.0 =
+* WooCommerce products orderby overriden by default.
+= 2.11.0 =
+* expose functionality `get_rpwc2_order()` to retrieve rank for given post_type in given term.
+= 2.10.4 =
+* undo change to v2.10.3
+= 2.10.3 =
+* set post id select query as unique.
+= 2.10.2 =
+* fix ranked id merger bug.
+= 2.10.1 =
+* fix disappearing ranked posts when editing them.
+* fix illegal offset warnings.
+= 2.10.0 =
+* improve taxonomy term dropdown list.

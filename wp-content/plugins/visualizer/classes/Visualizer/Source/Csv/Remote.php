@@ -47,7 +47,7 @@ class Visualizer_Source_Csv_Remote extends Visualizer_Source_Csv {
 	 * @access public
 	 * @return string The serialized array of data.
 	 */
-	public function getData() {
+	public function getData( $dumb = false ) {
 		return serialize(
 			array(
 				'source' => $this->_filename,
@@ -97,6 +97,9 @@ class Visualizer_Source_Csv_Remote extends Visualizer_Source_Csv {
 	 * @return array The re populated array of data or old one.
 	 */
 	public function repopulateData( $data, $chart_id ) {
+		if ( ! is_array( $data ) ) {
+			$data = array();
+		}
 		return array_key_exists( 'data', $data ) ? $data['data'] : $data;
 	}
 

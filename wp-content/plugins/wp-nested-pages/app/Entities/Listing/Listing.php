@@ -122,6 +122,17 @@ class Listing
 	private $sticky_posts;
 
 	/**
+	* User status preference
+	* @var array
+	*/
+	private $status_preference;
+
+	/**
+	 * User can perform bulk actions
+	 */
+	private $can_user_perform_bulk_actions;
+
+	/**
 	* Enabled Custom Fields
 	*/
 	private $enabled_custom_fields;
@@ -143,6 +154,8 @@ class Listing
 		$this->setTaxonomies();
 		$this->setPostTypeSettings();
 		$this->setStandardFields();
+		$this->setStatusPreference();
+		$this->setCanUserPerformBulkActions();
 	}
 
 	/**
@@ -152,8 +165,7 @@ class Listing
 	*/
 	public static function admin_menu($post_type)
 	{
-		$class_name = get_class();
-		$classinstance = new $class_name($post_type);
+		$classinstance = new \NestedPages\Entities\Listing\Listing($post_type);
 		return [&$classinstance, "listPosts"];
 	}
 
@@ -163,7 +175,7 @@ class Listing
 	private function pageURL()
 	{
 		$base = ( $this->post_type->name == 'post' ) ? admin_url('edit.php') : admin_url('admin.php');
-		return $base . '?page=' . $_GET['page'];
+		return $base . '?page=' . sanitize_text_field($_GET['page']);
 	}
 
 	/**
@@ -283,6 +295,22 @@ class Listing
 	}
 
 	/**
+	 * Set if the user can perform bulk actions
+	 */
+	private function setCanUserPerformBulkActions()
+	{
+		$this->can_user_perform_bulk_actions = $this->user->canPerformBulkActions($this->post_type_settings);
+	}
+
+	/**
+	* Set the user status preference
+	*/
+	private function setStatusPreference()
+	{
+		$this->status_preference = $this->user->getStatusPreference($this->post_type->name);
+	}
+
+	/**
 	* Opening list tag <ol>
 	* @param array $pages - array of page objects from current query
 	* @param int $count - current count in loop
@@ -311,8 +339,10 @@ class Listing
 
 		// Primary List
 		if ( $count == 0 ) {
-			include( Helpers::view('partials/list-header') ); // List Header
-			include( Helpers::view('partials/bulk-edit') ); // Bulk Edit
+			if ( $this->can_user_perform_bulk_actions ) {
+				include( Helpers::view('partials/list-header') ); // List Header
+				include( Helpers::view('partials/bulk-edit') ); // Bulk Edit
+			}
 			echo '<ol class="' . $list_classes . '" id="np-' . $this->post_type->name . '">';
 			return;
 		}
@@ -364,7 +394,12 @@ class Listing
 		$wpml_current_language = null;
 		if ( $wpml ) $wpml_current_language = $this->integrations->plugins->wpml->getCurrentLanguage();
 
-		if ( !$this->listing_repo->isSearch() ){
+		if ( $this->listing_repo->isFiltered() ){
+			$parent_status = null;
+			$pages = $this->all_posts;
+			$level++;
+			echo '<ol class="sortable nplist visible filtered">';
+		} elseif ( !$this->listing_repo->isSearch() ) {
 			$pages = get_page_children($parent, $this->all_posts);
 			if ( !$pages ) return;
 			$parent_status = get_post_status($parent);
@@ -379,7 +414,7 @@ class Listing
 		
 		foreach($pages as $page) :
 
-			if ( $page->post_parent !== $parent && !$this->listing_repo->isSearch() ) continue;
+			if ( $page->post_parent !== $parent && !$this->listing_repo->isSearch() && !$this->listing_repo->isFiltered() ) continue;
 			$count++;
 
 			global $post;
@@ -388,25 +423,28 @@ class Listing
 
 			if ( $this->post->status !== 'trash' ) :
 
-				echo '<li id="menuItem_' . esc_attr($this->post->id) . '" class="page-row';
-
+				$row_parent_classes = 'page-row';
 				// Post Type
-				echo ' post-type-' . esc_attr($this->post->post_type);
+				$row_parent_classes .= ' post-type-' . esc_attr($this->post->post_type);
 
-				// Assigned to manage a post type?
-				if ( $this->listing_repo->isAssignedPostType($this->post->id, $this->assigned_pt_pages) ) echo ' is-page-assignment';
+				// Managed Post Type page?
+				if ( $this->listing_repo->isAssignedPostType($this->post->id, $this->assigned_pt_pages) ) $row_parent_classes .= ' is-page-assignment';
 
 				// Published?
-				if ( $this->post->status == 'publish' ) echo ' published';
-				if ( $this->post->status == 'draft' ) echo ' draft';
-				
+				if ( $this->post->status == 'publish' ) $row_parent_classes .= ' published';
+				if ( $this->post->status == 'draft' ) $row_parent_classes .=  ' draft';
+
 				// Hidden in Nested Pages?
-				if ( $this->post->np_status == 'hide' ) echo ' np-hide';
+				if ( $this->post->np_status == 'hide' ) $row_parent_classes .= ' np-hide';
+
+				// User Status Preference
+				if ( $this->status_preference == 'published' && $this->post->status == 'draft' ) $row_parent_classes .= ' np-hide';
+				if ( $this->status_preference == 'draft' && $this->post->status !== 'draft' ) $row_parent_classes .= ' np-hide';
 
 				// Taxonomies
-				echo ' ' . $this->post_repo->getTaxonomyCSS($this->post, $this->h_taxonomies, $this->f_taxonomies);
-				
-				echo '">';
+				$row_parent_classes .= ' ' . $this->post_repo->getTaxonomyCSS($this->post, $this->h_taxonomies, $this->f_taxonomies);
+
+				echo '<li id="menuItem_' . esc_attr($this->post->id) . '" class="' . apply_filters('nestedpages_row_parent_css_classes', $row_parent_classes, $this->post, $this->post_type) . '">';
 				
 				$count++;
 
@@ -414,7 +452,7 @@ class Listing
 
 				// CSS Classes for the <li> row element
 				$template = ( $this->post->template )
-					? ' tpl-' .  str_replace('.php', '', $this->post->template)
+					? ' tpl-' .  sanitize_html_class( str_replace('.php', '', $this->post->template ) )
 					: '';
 
 				$row_classes = '';
@@ -437,11 +475,11 @@ class Listing
 
 			endif; // trash status
 			
-			if ( !$this->listing_repo->isSearch() ) $this->listPostLevel($page->ID, $count, $level);
+			if ( !$this->listing_repo->isSearch() && !$this->listing_repo->isFiltered() ) $this->listPostLevel($page->ID, $count, $level);
 
 			if ( $this->post->status !== 'trash' ) echo '</li>';
 
-			if ( $this->publishedChildrenCount($this->post) > 0 && !$this->listing_repo->isSearch() && $continue_nest ) echo '</ol>';
+			if ( $this->publishedChildrenCount($this->post) > 0 && !$this->listing_repo->isSearch() && !$this->listing_repo->isFiltered() ) echo '</ol>';
 
 		endforeach; // Loop
 			

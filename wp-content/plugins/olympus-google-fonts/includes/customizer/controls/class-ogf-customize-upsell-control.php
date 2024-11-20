@@ -20,28 +20,24 @@ class OGF_Customize_Upsell_Control extends WP_Customize_Control {
 	/**
 	 * The control type.
 	 *
-	 * @access public
 	 * @var string
 	 */
-	public $type = 'upsell';
+	public $type = 'ogf-upsell';
 
 	/**
 	 * Render the control's content.
-	 *
-	 * Allows the content to be overriden without having to rewrite the wrapper.
 	 */
-	public function render_content() { ?>
-			<div class="ogf-upsell">
-				<h2 class="upsell__title">Upgrade to Google Fonts Pro</h2>
-				<ul>
-					<li>✅ Unlock Font Size & Color</li>
-					<li>📦 Host Fonts Locally</li>
-					<li>⚡️ Optimized Font Loading</li>
-					<li>🧙‍ Upload Custom Fonts</li>
-				</ul>
-				<a class="upsell__button button button-primary" href="https://fontsplugin.com/pro-upgrade/?utm_source=plugin&utm_medium=customizer&utm_campaign=<?php echo esc_attr( $this->section ); ?>" target="_blank">Learn More</a>
-			</div>
+	public function render_content() {
+		?>
+		<div class="ogf-upsell">
+			<h2 class="upsell__title"><?php esc_html_e( 'Upgrade to Fonts Plugin Pro', 'olympus-google-fonts' ); ?></h2>
+			<ul>
+				<li><?php esc_html_e( '✅ Unlock Font Size & Color', 'olympus-google-fonts' ); ?></li>
+				<li><?php esc_html_e( '⚡️ Optimized Font Loading', 'olympus-google-fonts' ); ?></li>
+				<li><?php esc_html_e( '📦 Host Fonts Locally', 'olympus-google-fonts' ); ?></li>
+			</ul>
+			<a class="upsell__button button button-primary" href="https://fontsplugin.com/pro-upgrade/?utm_source=plugin&utm_medium=customizer&utm_campaign=<?php echo esc_attr( $this->section ); ?>" target="_blank"><?php esc_html_e( 'Learn More', 'olympus-google-fonts' ); ?></a>
+		</div>
 		<?php
 	}
-
 }

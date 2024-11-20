@@ -28,6 +28,7 @@ var IKSM = {
         element: '.' + termClass,
         elementCurrent: '.' + termClass + '--current',
         elementInner: '.' + termClass + '__inner',
+        elementLink: '.' + termClass + '__link',
         elementHasChildren: '.' + termClass + '--has-children',
         elementIsParent: '.' + termClass + '--parent',
         elementExpandedCurrent: '.' + termClass + '--expanded-current',
@@ -39,15 +40,26 @@ var IKSM = {
         collapseAnimationDuration: "collapse_animation_duration",
         expandAnimationDuration: "expand_animation_duration",
         disableParentLinks: "disable_parent_links_level",
+        toggleByItemClick: "toggle_by_item_click",
         initialExpansionDisableScreenWidth: "initial_expansion_disable_screen_width",
     },
 };
+jQuery( document ).on( 'elementor/popup/show', (event, id) => {
+    var $ = jQuery;
+    var $popupMenu = $("[data-elementor-id=" + id + "]");
+    var $menuElementor = $popupMenu.find(IKSM.selectors.container);
+    if ($menuElementor.length > 0 ) {
+        initMenuAccordion($menuElementor);
+    }
+});
 
-function initMenuAccordion() {
+function initMenuAccordion($menus = null) {
     var $ = jQuery;
     var selectors = IKSM.selectors;
     var classes = IKSM.classes;
-    var $menus = $(selectors.container);
+    if (!$menus) {
+        $menus = $(selectors.container);
+    }
     log('initMenuAccordion, $menus:', $menus);
 
     $menus.each(function (index, menu) {
@@ -57,13 +69,40 @@ function initMenuAccordion() {
 
         var $menu = $(menu);
         var $toggles = $menu.find(selectors.toggle);
+        var $elementsInner = $menu.find(selectors.elementInner);
+        var $elementsLinks = $menu.find(selectors.elementLink);
         var data = $menu.find(selectors.dataAttrs).data() || {};
 
-        log('data', data);
-        // console.time('Click init');
         $toggles.click(processClick);
+        $toggles.keypress(function (event) {
+            if (event.keyCode === 13) { // Enter
+                event.target && event.target.click()
+            }
+        });
 
-        processDisableParentLinks();
+        $elementsInner.keypress(function (event) {
+            if (event.keyCode === 13) { // Enter
+                var $target = $(event.target)
+                var children = $target.children(selectors.elementLink)
+                if (children.length) {
+                    children[0].click()
+                }
+            }
+        });
+
+        // Focus and Blur parent element when focusing/blurring link element
+
+        $elementsLinks.focus(function (event) {
+            var parent = getLinkContainer(event.target)
+            parent && parent.focus()
+        });
+
+        $elementsLinks.blur(function (event) {
+            var parent = getLinkContainer(event.target)
+            parent && parent.blur()
+        });
+
+        processToggledLinks();
 
         processInitialExpansion();
 
@@ -72,7 +111,6 @@ function initMenuAccordion() {
         */
 
         function processClick() {
-            // console.time('Click');
             var $this = $(this);
             var $item = $this.closest(selectors.element);
 
@@ -87,11 +125,13 @@ function initMenuAccordion() {
                     collapseOther($item);
                 }
             }
-            // console.timeEnd('Click');
         }
 
-        function processDisableParentLinks() {
-            if (data.hasOwnProperty(IKSM.dataAttrs.disableParentLinks)) {
+        function processToggledLinks() {
+            if (
+              data.hasOwnProperty(IKSM.dataAttrs.disableParentLinks)
+              || data.hasOwnProperty(IKSM.dataAttrs.toggleByItemClick)
+            ) {
                 var $elements = $menu.find("a[data-toggle=1]");
 
                 $elements.each(function (index, element) {
@@ -233,6 +273,12 @@ function initMenuAccordion() {
         }
     });
 
+    function getLinkContainer(element) {
+        var $target = $(element)
+        var parent = $target.closest(selectors.elementInner)
+        return parent[0]
+    }
+
     function log(/*...args*/) {
         // console.log(...args);
     }
@@ -241,3 +287,4 @@ function initMenuAccordion() {
         return window.matchMedia('(max-width: ' + width + 'px)').matches;
     }
 }
+

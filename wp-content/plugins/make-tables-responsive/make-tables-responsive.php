@@ -7,7 +7,7 @@ Author: Nikolay Nikolov
 Author URI: https://nikolaydev.com/
 Text Domain: make-tables-responsive
 Domain Path: /languages
-Version: 1.5.3
+Version: 1.8.0
 */
 
 // Exit if accessed directly
@@ -15,7 +15,10 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( "MAKE_TABLES_RESPONSIVE_VERSION", "1.5.3" );
+define( "MAKE_TABLES_RESPONSIVE_VERSION", "1.8.0" );
+
+// Adds the hook for the shortcode output filter on init, so it does not check the settings on every shortcode if not enabled
+add_action( 'init', 'mtr_init_some_hooks' );
 
 // Show an error if Multibyte String in not enabled
 add_action( 'admin_notices', 'mtr_admin_notice_multibyte_error' );
@@ -42,6 +45,18 @@ add_filter( 'the_content', 'mtr_change_the_tables', 99999999999 );
  */
 add_filter( 'widget_text', 'mtr_change_the_tables', 99999999999 );
 
+/**
+ * Filters the content of category descriptions and if it sees that it contains HTML tables it makes
+ * the HTML changes needed for them to become responsive tables. (These changes are not enough, we also display CSS code in another function).
+ */
+add_filter( 'category_description', 'mtr_change_the_tables', 99999999999 );
+
+/**
+ * Filters the content of excerpts and if it sees that it contains HTML tables it makes
+ * the HTML changes needed for them to become responsive tables. (These changes are not enough, we also display CSS code in another function).
+ */
+add_filter( 'the_excerpt', 'mtr_change_the_tables', 99999999999 );
+
 // Displays the CSS code for the front end part of the site, taking into account the plugin settings.
 add_action( 'wp_head', 'mtr_add_css_on_front_end', 99999999999 );
 
@@ -54,9 +69,17 @@ add_action( 'amp_post_template_css', 'mtr_add_css_on_front_end', 99999999999 );
 // Adds a link to the settings page in the plugin action links.
 add_filter( 'plugin_action_links', 'mtr_add_settings_plugin_action_link', 10, 2 );
 
+// Adds the hook for the shortcode output filter on init, so it does not check the settings on every shortcode if not enabled
+function mtr_init_some_hooks() {
+    $settings = mtr_get_settings_array();
+    if ( $settings['mtr-enable-in-shortcodes'] === 'checked' || $settings['mtr-single-enable-in-shortcodes'] === 'checked' ) {
+        add_filter( 'do_shortcode_tag', 'mtr_change_the_tables', 99999999999 );
+    }
+}
+
 // Show an error if Multibyte String in not enabled
 function mtr_admin_notice_multibyte_error() {
-    if ( ! function_exists( 'mb_convert_encoding' ) ) {
+    if ( ! function_exists( 'mb_encode_numericentity' ) ) {
         echo '<div class="notice notice-error"><p>' . esc_html__( 'Error: The PHP on your server does not support Multibyte String. '
             . 'The plugin Make Tables Responsive requires it. Please contact your hosting provider and ask them to enable Multibyte String.',
             'make-tables-responsive' ) . '</p></div>';
@@ -115,6 +138,11 @@ function mtr_admin_settings_page() {
                 break;
             }
 
+            if ( ! is_numeric( $_POST['mtr-multi-row-columns'] ) || $_POST['mtr-multi-row-columns'] < 1 ) {
+                $status = 'invalid';
+                break;
+            }
+
             if ( ! mtr_is_hex_color( $_POST['mtr-even-row-background-color'] ) || ! mtr_is_hex_color( $_POST['mtr-even-row-cell-border-color'] )
                 || ! mtr_is_hex_color( $_POST['mtr-odd-row-background-color'] ) || ! mtr_is_hex_color( $_POST['mtr-odd-row-cell-border-color'] ) ) {
                 $status = 'invalid';
@@ -148,6 +176,16 @@ function mtr_admin_settings_page() {
                 $rtl = 'checked';
             }
 
+            $align_left = '';
+            if ( isset( $_POST['mtr-align-left'] ) ) {
+                $align_left = 'checked';
+            }
+
+            $line = '';
+            if ( isset( $_POST['mtr-line-separator'] ) ) {
+                $line = 'checked';
+            }
+
             $enable_in_widgets = '';
             if ( isset( $_POST['mtr-enable-in-widgets'] ) ) {
                 $enable_in_widgets = 'checked';
@@ -158,13 +196,34 @@ function mtr_admin_settings_page() {
                 $enable_in_content = 'checked';
             }
 
+            $enable_in_excerpt = '';
+            if ( isset( $_POST['mtr-enable-in-excerpt'] ) ) {
+                $enable_in_excerpt = 'checked';
+            }
+
+            $enable_in_category_descriptions = '';
+            if ( isset( $_POST['mtr-enable-in-category-descriptions'] ) ) {
+                $enable_in_category_descriptions = 'checked';
+            }
+
+            $enable_in_shortcodes = '';
+            if ( isset( $_POST['mtr-enable-in-shortcodes'] ) ) {
+                $enable_in_shortcodes = 'checked';
+            }
+
             update_option( 'mtr-enable-on-screen-size-below', intval( $_POST['mtr-enable-on-screen-size-below'] ) );
+            update_option( 'mtr-multi-row-columns', intval( $_POST['mtr-multi-row-columns'] ) );
             update_option( 'mtr-enable-in-content', mtr_sanitize_checkbox_checked( $enable_in_content ) );
+            update_option( 'mtr-enable-in-excerpt', mtr_sanitize_checkbox_checked( $enable_in_excerpt ) );
+            update_option( 'mtr-enable-in-category-descriptions', mtr_sanitize_checkbox_checked( $enable_in_category_descriptions ) );
             update_option( 'mtr-enable-in-widgets', mtr_sanitize_checkbox_checked( $enable_in_widgets ) );
+            update_option( 'mtr-enable-in-shortcodes', mtr_sanitize_checkbox_checked( $enable_in_shortcodes ) );
             update_option( 'mtr-hide-tfoot', mtr_sanitize_checkbox_checked( $hide_tfoot ) );
             update_option( 'mtr-limit-left-side', mtr_sanitize_number_or_empty( $_POST['mtr-limit-left-side'] ) );
             update_option( 'mtr-limit-right-side', mtr_sanitize_number_or_empty( $_POST['mtr-limit-right-side'] ) );
             update_option( 'mtr-rtl', mtr_sanitize_checkbox_checked( $rtl ) );
+            update_option( 'mtr-align-left', mtr_sanitize_checkbox_checked( $align_left ) );
+            update_option( 'mtr-line-separator', mtr_sanitize_checkbox_checked( $line ) );
             update_option( 'mtr-disable-styling', mtr_sanitize_checkbox_checked( $disable_styling ) );
             update_option( 'mtr-even-row-background-color', sanitize_hex_color( $_POST['mtr-even-row-background-color'] ) );
             update_option( 'mtr-even-row-cell-border-color', sanitize_hex_color( $_POST['mtr-even-row-cell-border-color'] ) );
@@ -218,9 +277,24 @@ function mtr_admin_settings_page() {
                 $enable_in_content = 'checked';
             }
 
+            $enable_in_excerpt = '';
+            if ( isset( $_POST['mtr-single-enable-in-excerpt'] ) ) {
+                $enable_in_excerpt = 'checked';
+            }
+
+            $enable_in_category_descriptions = '';
+            if ( isset( $_POST['mtr-single-enable-in-category-descriptions'] ) ) {
+                $enable_in_category_descriptions = 'checked';
+            }
+
             $enable_in_widgets = '';
             if ( isset( $_POST['mtr-single-enable-in-widgets'] ) ) {
                 $enable_in_widgets = 'checked';
+            }
+
+            $enable_in_shortcodes = '';
+            if ( isset( $_POST['mtr-single-enable-in-shortcodes'] ) ) {
+                $enable_in_shortcodes = 'checked';
             }
 
             $disable_styling = '';
@@ -231,7 +305,10 @@ function mtr_admin_settings_page() {
             update_option( 'mtr-single-enable-on-screen-size-below', intval( $_POST['mtr-single-enable-on-screen-size-below'] ) );
             update_option( 'mtr-single-row-columns', intval( $_POST['mtr-single-row-columns'] ) );
             update_option( 'mtr-single-enable-in-content', mtr_sanitize_checkbox_checked( $enable_in_content ) );
+            update_option( 'mtr-single-enable-in-category-descriptions', mtr_sanitize_checkbox_checked( $enable_in_category_descriptions ) );
+            update_option( 'mtr-single-enable-in-excerpt', mtr_sanitize_checkbox_checked( $enable_in_excerpt ) );
             update_option( 'mtr-single-enable-in-widgets', mtr_sanitize_checkbox_checked( $enable_in_widgets ) );
+            update_option( 'mtr-single-enable-in-shortcodes', mtr_sanitize_checkbox_checked( $enable_in_shortcodes ) );
             update_option( 'mtr-single-row-layout', sanitize_html_class( $_POST['mtr-single-row-layout'] ) );
             update_option( 'mtr-single-row-cell-align', sanitize_html_class( $_POST['mtr-single-row-cell-align'] ) );
             update_option( 'mtr-single-disable-styling', mtr_sanitize_checkbox_checked( $disable_styling ) );
@@ -256,7 +333,8 @@ function mtr_admin_settings_page() {
             $status = "saved";
 
             if ( mtr_sanitize_html_class_or_id_list( $_POST['mtr-exclude-html-classes'] ) != $_POST['mtr-exclude-html-classes'] ||
-                mtr_sanitize_html_class_or_id_list( $_POST['mtr-exclude-html-ids'] ) != $_POST['mtr-exclude-html-ids'] ) {
+                mtr_sanitize_html_class_or_id_list( $_POST['mtr-exclude-html-ids'] ) != $_POST['mtr-exclude-html-ids'] ||
+                mtr_sanitize_html_class_or_id_list( $_POST['mtr-exclude-html-classes-parent'] ) != $_POST['mtr-exclude-html-classes-parent'] ) {
                 $status = 'invalid';
                 break;
             }
@@ -273,10 +351,17 @@ function mtr_admin_settings_page() {
                 break;
             }
 
+            $exclude_no_thead = '';
+            if ( isset( $_POST['mtr-exclude-no-thead'] ) ) {
+                $exclude_no_thead = 'checked';
+            }
+
             update_option( 'mtr-exclude-html-classes', mtr_sanitize_html_class_or_id_list( $_POST['mtr-exclude-html-classes'] ) );
+            update_option( 'mtr-exclude-html-classes-parent', mtr_sanitize_html_class_or_id_list( $_POST['mtr-exclude-html-classes-parent'] ) );
             update_option( 'mtr-exclude-html-ids', mtr_sanitize_html_class_or_id_list( $_POST['mtr-exclude-html-ids'] ) );
             update_option( 'mtr-exclude-post-page-ids', mtr_sanitize_list_of_numbers( $_POST['mtr-exclude-post-page-ids'] ) );
             update_option( 'mtr-enable-only-post-page-ids', mtr_sanitize_list_of_numbers( $_POST['mtr-enable-only-post-page-ids'] ) );
+            update_option( 'mtr-exclude-no-thead', mtr_sanitize_checkbox_checked( $exclude_no_thead ) );
 
         } while( false );
 
@@ -285,12 +370,18 @@ function mtr_admin_settings_page() {
         check_admin_referer( 'mtr-multi-save-settings-nonce' );
 
         delete_option( 'mtr-enable-on-screen-size-below' );
+        delete_option( 'mtr-multi-row-columns' );
         delete_option( 'mtr-enable-in-content' );
         delete_option( 'mtr-enable-in-widgets' );
+        delete_option( 'mtr-enable-in-shortcodes' );
+        delete_option( 'mtr-enable-in-excerpt' );
+        delete_option( 'mtr-enable-in-category-descriptions' );
         delete_option( 'mtr-hide-tfoot' );
         delete_option( 'mtr-limit-left-side' );
         delete_option( 'mtr-limit-right-side' );
         delete_option( 'mtr-rtl' );
+        delete_option( 'mtr-align-left' );
+        delete_option( 'mtr-line-separator' );
         delete_option( 'mtr-disable-styling' );
         delete_option( 'mtr-even-row-background-color' );
         delete_option( 'mtr-even-row-cell-border-color' );
@@ -311,6 +402,9 @@ function mtr_admin_settings_page() {
         delete_option( 'mtr-single-row-columns' );
         delete_option( 'mtr-single-enable-in-content' );
         delete_option( 'mtr-single-enable-in-widgets' );
+        delete_option( 'mtr-single-enable-in-shortcodes' );
+        delete_option( 'mtr-single-enable-in-excerpt' );
+        delete_option( 'mtr-single-enable-in-category-descriptions' );
         delete_option( 'mtr-single-row-layout' );
         delete_option( 'mtr-single-row-cell-align' );
         delete_option( 'mtr-single-disable-styling' );
@@ -329,9 +423,11 @@ function mtr_admin_settings_page() {
         $class_global = 'mtr-active';
 
         delete_option( 'mtr-exclude-html-classes' );
+        delete_option( 'mtr-exclude-html-classes-parent' );
         delete_option( 'mtr-exclude-html-ids' );
         delete_option( 'mtr-exclude-post-page-ids' );
         delete_option( 'mtr-enable-only-post-page-ids' );
+        delete_option( 'mtr-exclude-no-thead' );
 
         $status = "saved";
 
@@ -387,6 +483,15 @@ function mtr_admin_settings_page() {
                         id="mtr-enable-on-screen-size-below" name="mtr-enable-on-screen-size-below" /> px
                 </p>
                 <p>
+                    <label for="mtr-multi-row-columns">
+                        <?php esc_html_e( 'Enable for tables with at least:', 'make-tables-responsive' ); ?>
+                    </label>
+                    <br>
+                    <input type="text" value="<?php echo esc_attr( $settings['mtr-multi-row-columns'] ); ?>"
+                        id="mtr-multi-row-columns" name="mtr-multi-row-columns" />
+                    <?php esc_html_e( 'columns', 'make-tables-responsive' ); ?>
+                </p>
+                <p>
                     <input type="checkbox" <?php echo mtr_sanitize_checkbox_checked( $settings['mtr-enable-in-content'] ); ?>
                         id="mtr-enable-in-content" name="mtr-enable-in-content" />
                     <label for="mtr-enable-in-content">
@@ -396,11 +501,38 @@ function mtr_admin_settings_page() {
                     </label>
                 </p>
                 <p>
+                    <input type="checkbox" <?php echo mtr_sanitize_checkbox_checked( $settings['mtr-enable-in-excerpt'] ); ?>
+                        id="mtr-enable-in-excerpt" name="mtr-enable-in-excerpt" />
+                    <label for="mtr-enable-in-excerpt">
+                        <?php
+                            esc_html_e( 'Enable in post/page excerpt', 'make-tables-responsive' );
+                        ?>
+                    </label>
+                </p>
+                <p>
+                    <input type="checkbox" <?php echo mtr_sanitize_checkbox_checked( $settings['mtr-enable-in-category-descriptions'] ); ?>
+                        id="mtr-enable-in-category-descriptions" name="mtr-enable-in-category-descriptions" />
+                    <label for="mtr-enable-in-category-descriptions">
+                        <?php
+                            esc_html_e( 'Enable in category descriptions', 'make-tables-responsive' );
+                        ?>
+                    </label>
+                </p>
+                <p>
                     <input type="checkbox" <?php echo mtr_sanitize_checkbox_checked( $settings['mtr-enable-in-widgets'] ); ?>
                         id="mtr-enable-in-widgets" name="mtr-enable-in-widgets" />
                     <label for="mtr-enable-in-widgets">
                         <?php
                             esc_html_e( 'Enable in widgets', 'make-tables-responsive' );
+                        ?>
+                    </label>
+                </p>
+                <p>
+                    <input type="checkbox" <?php echo mtr_sanitize_checkbox_checked( $settings['mtr-enable-in-shortcodes'] ); ?>
+                        id="mtr-enable-in-shortcodes" name="mtr-enable-in-shortcodes" />
+                    <label for="mtr-enable-in-shortcodes">
+                        <?php
+                            esc_html_e( 'Enable in shortcode output (required for Oxygen Builder)', 'make-tables-responsive' );
                         ?>
                     </label>
                 </p>
@@ -439,6 +571,25 @@ function mtr_admin_settings_page() {
                     <label for="mtr-rtl">
                         <?php
                             esc_html_e( 'Put the column names on the right side (suitable for RTL languages)', 'make-tables-responsive' );
+                        ?>
+                    </label>
+                </p>
+                <p>
+                    <input type="checkbox" <?php echo mtr_sanitize_checkbox_checked( $settings['mtr-align-left'] ); ?>
+                        id="mtr-align-left" name="mtr-align-left" />
+                    <label for="mtr-align-left">
+                        <?php
+                            esc_html_e( 'Align the content of the right side to the left', 'make-tables-responsive' );
+                        ?>
+                    </label>
+                </p>
+                <p>
+                    <input type="checkbox" <?php echo mtr_sanitize_checkbox_checked( $settings['mtr-line-separator'] ); ?>
+                        id="mtr-line-separator" name="mtr-line-separator" />
+                    <label for="mtr-line-separator">
+                        <?php
+                            esc_html_e( 'Show a vertical line separator between the two columns (requires the "Limit the left side width to" option '
+                                . 'to be set above and the "Disable styling" option to not be checked)', 'make-tables-responsive' );
                         ?>
                     </label>
                 </p>
@@ -534,11 +685,38 @@ function mtr_admin_settings_page() {
                     </label>
                 </p>
                 <p>
+                    <input type="checkbox" <?php echo mtr_sanitize_checkbox_checked( $settings['mtr-single-enable-in-excerpt'] ); ?>
+                        id="mtr-single-enable-in-excerpt" name="mtr-single-enable-in-excerpt" />
+                    <label for="mtr-single-enable-in-excerpt">
+                        <?php
+                            esc_html_e( 'Enable in post/page excerpt', 'make-tables-responsive' );
+                        ?>
+                    </label>
+                </p>
+                <p>
+                    <input type="checkbox" <?php echo mtr_sanitize_checkbox_checked( $settings['mtr-single-enable-in-category-descriptions'] ); ?>
+                        id="mtr-single-enable-in-category-descriptions" name="mtr-single-enable-in-category-descriptions" />
+                    <label for="mtr-single-enable-in-category-descriptions">
+                        <?php
+                            esc_html_e( 'Enable in category descriptions', 'make-tables-responsive' );
+                        ?>
+                    </label>
+                </p>
+                <p>
                     <input type="checkbox" <?php echo mtr_sanitize_checkbox_checked( $settings['mtr-single-enable-in-widgets'] ); ?>
                         id="mtr-single-enable-in-widgets" name="mtr-single-enable-in-widgets" />
                     <label for="mtr-single-enable-in-widgets">
                         <?php
                             esc_html_e( 'Enable in widgets', 'make-tables-responsive' );
+                        ?>
+                    </label>
+                </p>
+                <p>
+                    <input type="checkbox" <?php echo mtr_sanitize_checkbox_checked( $settings['mtr-single-enable-in-shortcodes'] ); ?>
+                        id="mtr-single-enable-in-shortcodes" name="mtr-single-enable-in-shortcodes" />
+                    <label for="mtr-single-enable-in-shortcodes">
+                        <?php
+                            esc_html_e( 'Enable in shortcode output (required for Oxygen Builder)', 'make-tables-responsive' );
                         ?>
                     </label>
                 </p>
@@ -654,6 +832,15 @@ function mtr_admin_settings_page() {
                         id="mtr-exclude-html-classes" name="mtr-exclude-html-classes" />
                 </p>
                 <p>
+                    <label for="mtr-exclude-html-classes-parent">
+                        <?php esc_html_e( 'Disable by class of the parent element of the table tag (comma-separated list, without a dot). '
+                            . 'Use this option for classes added to the table block settings in the editor:', 'make-tables-responsive' ); ?>
+                    </label>
+                    <br>
+                    <input type="text" value="<?php echo esc_attr( $settings['mtr-exclude-html-classes-parent'] ); ?>"
+                        id="mtr-exclude-html-classes-parent" name="mtr-exclude-html-classes-parent" />
+                </p>
+                <p>
                     <label for="mtr-exclude-html-ids">
                         <?php esc_html_e( 'Disable by ID of the table tag (comma-separated list, without a hash):', 'make-tables-responsive' ); ?>
                     </label>
@@ -683,6 +870,15 @@ function mtr_admin_settings_page() {
                     <input type="text" value="<?php echo esc_attr( $settings['mtr-enable-only-post-page-ids'] ); ?>"
                         id="mtr-enable-only-post-page-ids" name="mtr-enable-only-post-page-ids" />
                 </p>
+                <p>
+                    <input type="checkbox" <?php echo mtr_sanitize_checkbox_checked( $settings['mtr-exclude-no-thead'] ); ?>
+                        id="mtr-exclude-no-thead" name="mtr-exclude-no-thead" />
+                    <label for="mtr-exclude-no-thead">
+                        <?php
+                            esc_html_e( 'Disable for tables without a header section (a <thead> tag)', 'make-tables-responsive' );
+                        ?>
+                    </label>
+                </p>
 
                 <hr>
 
@@ -708,7 +904,14 @@ function mtr_add_css_on_settings_page() {
     ?>
     <style type="text/css">
 
+    #wpbody .notice,
+    #wpbody .woocommerce-store-alerts,
+    #wpbody .error {
+        display: none;
+    }
+
     #mtr-enable-on-screen-size-below,
+    #mtr-multi-row-columns,
     #mtr-single-enable-on-screen-size-below,
     #mtr-single-row-columns,
     #mtr-limit-left-side,
@@ -825,7 +1028,7 @@ function mtr_add_css_on_settings_page() {
 function mtr_change_the_tables( $content ) {
 
     // We only make changes on the front-end if there are tables in the post/page and the numbers of opening and closing table tags are the same.
-    if ( function_exists( 'mb_convert_encoding' ) && ! is_admin() && strpos( $content, '<table' ) !== false
+    if ( function_exists( 'mb_encode_numericentity' ) && ! is_admin() && strpos( $content, '<table' ) !== false
         && substr_count( $content, '<table' ) == substr_count( $content, '</table>' ) ) {
 
         // We get the plugin settings we need
@@ -840,6 +1043,23 @@ function mtr_change_the_tables( $content ) {
 
         // If the plugin is not enabled for widgets and we are in the widget text filter, we return the content without changes
         if ( 'widget_text' === $current_filter && 'checked' !== $settings['mtr-enable-in-widgets'] && 'checked' !== $settings['mtr-single-enable-in-widgets'] ) {
+            return $content;
+        }
+
+        // If the plugin is not enabled for shortcode output and we are in the do_shortcode_tag filter, we return the content without changes
+        if ( 'do_shortcode_tag' === $current_filter && 'checked' !== $settings['mtr-enable-in-shortcodes']
+            && 'checked' !== $settings['mtr-single-enable-in-shortcodes'] ) {
+            return $content;
+        }
+
+        // If the plugin is not enabled for excerpts and we are in the excerpt text filter, we return the content without changes
+        if ( 'the_excerpt' === $current_filter && 'checked' !== $settings['mtr-enable-in-excerpt'] && 'checked' !== $settings['mtr-single-enable-in-excerpt'] ) {
+            return $content;
+        }
+
+        // If the plugin is not enabled for category descriptions and we are in the category descriptions text filter, we return the content without changes
+        if ( 'category_description' === $current_filter && 'checked' !== $settings['mtr-enable-in-category-descriptions']
+            && 'checked' !== $settings['mtr-single-enable-in-category-descriptions'] ) {
             return $content;
         }
 
@@ -869,6 +1089,11 @@ function mtr_change_the_tables( $content ) {
             }
         }
 
+        // Adds a unique attribute to all tables to fix an issue that happens when we have the exact same tables and disable by parent class
+        if ( ! empty( $settings['mtr-exclude-html-classes-parent'] ) ) {
+            $content = mtr_add_unique_attribute_to_tables( $content, $current_filter );
+        }
+
         /*
          * Here we make an array of the original HTML tables code, so we can replace it at the end with the new code. Getting the code with the DOM
          * functions seems to make some small changes to it (probably whitespace or something), and we cannot find and replace it.
@@ -883,7 +1108,7 @@ function mtr_change_the_tables( $content ) {
         // We load the content in a DOMDocument object
         $dom = new DOMDocument();
         $internalErrors = libxml_use_internal_errors( true );
-        $dom->loadHTML( mb_convert_encoding( $content, 'HTML-ENTITIES', 'UTF-8' ) );
+        $dom->loadHTML( mtr_replace_mb_convert_encoding( $content ) );
         libxml_use_internal_errors( $internalErrors );
 
         $new_content = $content;
@@ -914,6 +1139,12 @@ function mtr_change_the_tables( $content ) {
                 continue;
             }
 
+            // If the option to exclude tables without a thead tag is on, and we find one, we skip it
+            if ( "checked" === $settings['mtr-exclude-no-thead'] && strpos( $table_outer_html, '<thead' ) === false ) {
+                $table_count++;
+                continue;
+            }
+
             // Here we check if we need to skip any tables that are excluded by class
             if ( ! empty( $settings['mtr-exclude-html-classes'] ) && $table->hasAttribute( 'class' ) ) {
                 $table_class_attribute = $table->getAttribute( 'class' );
@@ -925,6 +1156,25 @@ function mtr_change_the_tables( $content ) {
                         if ( $exclude_class == $table_class && ! empty( $table_class ) ) {
                             $skip_table = 'yes';
                             break 2;
+                        }
+                    }
+                }
+            }
+
+            // Here we check if we need to skip any tables that are excluded by parent class
+            if ( ! empty( $settings['mtr-exclude-html-classes-parent'] ) ) {
+                $parent_of_table = $table->parentNode;
+                if ( $parent_of_table->hasAttribute( 'class' ) ) {
+                    $parent_class_attribute = $parent_of_table->getAttribute( 'class' );
+                    $parent_classes = explode( ' ', $parent_class_attribute );
+                    $exclude_classes_setting = mtr_strip_whitespace( $settings['mtr-exclude-html-classes-parent'] );
+                    $exclude_classes = explode( ',', $exclude_classes_setting );
+                    foreach ( $exclude_classes as $exclude_class ) {
+                        foreach ( $parent_classes as $parent_class ) {
+                            if ( $exclude_class == $parent_class && ! empty( $parent_class ) ) {
+                                $skip_table = 'yes';
+                                break 2;
+                            }
                         }
                     }
                 }
@@ -968,7 +1218,7 @@ function mtr_change_the_tables( $content ) {
 
             $dom_table = new DOMDocument();
             $internalErrors = libxml_use_internal_errors( true );
-            $dom_table->loadHTML( mb_convert_encoding( $table_outer_html, 'HTML-ENTITIES', 'UTF-8' ) );
+            $dom_table->loadHTML( mtr_replace_mb_convert_encoding( $table_outer_html ) );
             libxml_use_internal_errors( $internalErrors );
 
             $one_row_table = 'no';
@@ -977,7 +1227,10 @@ function mtr_change_the_tables( $content ) {
             if ( substr_count( $table_outer_html, '<tr' ) < 2 ) {
                 $one_row_table = 'yes';
                 if ( ( 'the_content' === $current_filter && 'checked' !== $settings['mtr-single-enable-in-content'] )
-                    || ( 'widget_text' === $current_filter && 'checked' !== $settings['mtr-single-enable-in-widgets'] ) ) {
+                    || ( 'widget_text' === $current_filter && 'checked' !== $settings['mtr-single-enable-in-widgets'] )
+                    || ( 'do_shortcode_tag' === $current_filter && 'checked' !== $settings['mtr-single-enable-in-shortcodes'] )
+                    || ( 'the_excerpt' === $current_filter && 'checked' !== $settings['mtr-single-enable-in-excerpt'] )
+                    || ( 'category_description' === $current_filter && 'checked' !== $settings['mtr-single-enable-in-category-descriptions'] ) ) {
                     $table_count++;
                     continue;
                 }
@@ -988,7 +1241,10 @@ function mtr_change_the_tables( $content ) {
 
                 // We may skip tables with multiple rows based on the settings
                 if ( ( 'the_content' === $current_filter && 'checked' !== $settings['mtr-enable-in-content'] )
-                    || ( 'widget_text' === $current_filter && 'checked' !== $settings['mtr-enable-in-widgets'] ) ) {
+                    || ( 'widget_text' === $current_filter && 'checked' !== $settings['mtr-enable-in-widgets'] )
+                    || ( 'do_shortcode_tag' === $current_filter && 'checked' !== $settings['mtr-enable-in-shortcodes'] )
+                    || ( 'the_excerpt' === $current_filter && 'checked' !== $settings['mtr-enable-in-excerpt'] )
+                    || ( 'category_description' === $current_filter && 'checked' !== $settings['mtr-enable-in-category-descriptions'] ) ) {
                     $table_count++;
                     continue;
                 }
@@ -1003,7 +1259,7 @@ function mtr_change_the_tables( $content ) {
                     $first_row_inner_html = mtr_get_inner_html( $row );
                     $dom_first_row = new DOMDocument();
                     $internalErrors = libxml_use_internal_errors( true );
-                    $dom_first_row->loadHTML( mb_convert_encoding( $first_row_inner_html, 'HTML-ENTITIES', 'UTF-8' ) );
+                    $dom_first_row->loadHTML( mtr_replace_mb_convert_encoding( $first_row_inner_html ) );
                     libxml_use_internal_errors( $internalErrors );
 
                     $th_column_names_cells = mtr_get_tags( $dom_first_row, 'th' );
@@ -1024,6 +1280,7 @@ function mtr_change_the_tables( $content ) {
                             $current_cell_inner_html = mtr_get_inner_html( $th_column_names_cell );
                             $current_column_name = esc_attr( strip_tags( $current_cell_inner_html ) );
                             $current_column_name = str_replace( '&amp;', '&', $current_column_name );
+                            $current_column_name = str_replace( '&#039;', "'", $current_column_name );
                             $column_names[] = $current_column_name;
                         }
                     } else {
@@ -1031,6 +1288,7 @@ function mtr_change_the_tables( $content ) {
                             $current_cell_inner_html = mtr_get_inner_html( $td_column_names_cell );
                             $current_column_name = esc_attr( strip_tags( $current_cell_inner_html ) );
                             $current_column_name = str_replace( '&amp;', '&', $current_column_name );
+                            $current_column_name = str_replace( '&#039;', "'", $current_column_name );
                             $column_names[] = $current_column_name;
                         }
                     }
@@ -1046,6 +1304,12 @@ function mtr_change_the_tables( $content ) {
 
                 $columns_count = count( $column_names );
 
+                // If the number of colums is less than the X number set in the settings, we skip this table
+                if ( $columns_count < $settings['mtr-multi-row-columns'] ) {
+                    $table_count++;
+                    continue;
+                }
+
                 $td_count_cells = substr_count( $table_outer_html, '<td' );
                 $thead_count = substr_count( $table_outer_html, '<thead' );
                 $th_count_cells = substr_count( $table_outer_html, '<th' ) - $thead_count;
@@ -1054,7 +1318,7 @@ function mtr_change_the_tables( $content ) {
                  * If the number of cells is less than the columns or if the number of cells is not a multiple of the number of columns,
                  * we will skip the table. This means that some columns use "th" tags and some "td" tags which we do not support.
                  */
-                if ( $td_count_cells < $columns_count || ( $td_count_cells % $columns_count ) !== 0 ) {
+                if ( $columns_count < 1 || $td_count_cells < $columns_count || ( $td_count_cells % $columns_count ) !== 0 ) {
                     $table_count++;
                     continue;
                 }
@@ -1240,7 +1504,8 @@ function mtr_add_css_on_front_end() {
 
     $settings = mtr_get_settings_array();
 
-    if ( 'wp_head' === current_filter() ) {
+    // Checking with strpos makes it compatible with Oxygen Builder, since it uses some kind of wp_head_fake hook instead
+    if ( strpos( current_filter(), 'wp_head' ) !== false ) {
         echo '
     <!-- BEGIN - Make Tables Responsive -->
     <style type="text/css">
@@ -1275,11 +1540,22 @@ function mtr_add_css_on_front_end() {
     ';
 
     if ( empty( $settings['mtr-rtl'] ) ) {
-        echo '
-        .mtr-table .mtr-cell-content {
-        	text-align: right !important;
+        if ( empty( $settings['mtr-align-left'] ) ) {
+            echo '
+            .mtr-table .mtr-cell-content {
+            	text-align: right !important;
+            }
+            ';
+        } else {
+            echo '
+            .mtr-table .mtr-cell-content {
+            	text-align: left !important;
+                width: 100%;
+                padding-left: 6px;
+                box-sizing: border-box;
+            }
+            ';
         }
-        ';
     } else {
         echo '
         .mtr-table .mtr-cell-content {
@@ -1331,20 +1607,44 @@ function mtr_add_css_on_front_end() {
         .mtr-table.mtr-tr-td tr:nth-of-type(2) td:first-child,
         .mtr-table.mtr-tr-td tr:nth-of-type(2) th:first-child {
             border-top: 1px solid ' . sanitize_hex_color( $settings['mtr-even-row-cell-border-color'] ) . ' !important;
+        }';
+
+        if ( ! empty( $settings['mtr-line-separator'] ) && ! empty( $settings['mtr-limit-left-side'] ) ) {
+            $line_position = round( 100 / intval( $settings['mtr-limit-left-side'] ), 1 );
+            echo '
+            .mtr-table tr:nth-child(even),
+            .mtr-table tr:nth-child(even) .mtr-td-tag,
+            .mtr-table tr:nth-child(even) .mtr-th-tag {
+                background: linear-gradient(90deg, transparent, transparent calc(100% / ' . $line_position . '), '
+                    . sanitize_hex_color( $settings['mtr-even-row-cell-border-color'] ) . ' calc((100% / ' . $line_position
+                    . ') + 1px), transparent calc((100% / ' . $line_position . ') + 1px)) '
+                    . sanitize_hex_color( $settings['mtr-even-row-background-color'] ) . ' !important;
+            }
+
+            .mtr-table tr:nth-child(odd),
+            .mtr-table tr:nth-child(odd) .mtr-td-tag,
+            .mtr-table tr:nth-child(odd) .mtr-th-tag {
+                background: linear-gradient(90deg, transparent, transparent calc(100% / ' . $line_position . '), '
+                    . sanitize_hex_color( $settings['mtr-odd-row-cell-border-color'] ) . ' calc((100% / ' . $line_position
+                    . ') + 1px), transparent calc((100% / ' . $line_position . ') + 1px))'
+                    . sanitize_hex_color( $settings['mtr-odd-row-background-color'] ) . ' !important;
+            }';
+        } else {
+            echo '
+            .mtr-table tr:nth-child(even),
+            .mtr-table tr:nth-child(even) .mtr-td-tag,
+            .mtr-table tr:nth-child(even) .mtr-th-tag {
+                background: ' . sanitize_hex_color( $settings['mtr-even-row-background-color'] ) . ' !important;
+            }
+
+            .mtr-table tr:nth-child(odd),
+            .mtr-table tr:nth-child(odd) .mtr-td-tag,
+            .mtr-table tr:nth-child(odd) .mtr-th-tag {
+                background: ' . sanitize_hex_color( $settings['mtr-odd-row-background-color'] ) . ' !important;
+            }';
         }
 
-        .mtr-table tr:nth-child(even),
-        .mtr-table tr:nth-child(even) .mtr-td-tag,
-        .mtr-table tr:nth-child(even) .mtr-th-tag {
-            background: ' . sanitize_hex_color( $settings['mtr-even-row-background-color'] ) . ' !important;
-        }
-
-        .mtr-table tr:nth-child(odd),
-        .mtr-table tr:nth-child(odd) .mtr-td-tag,
-        .mtr-table tr:nth-child(odd) .mtr-th-tag {
-            background: ' . sanitize_hex_color( $settings['mtr-odd-row-background-color'] ) . ' !important;
-        }
-
+        echo '
         .mtr-table .mtr-td-tag,
         .mtr-table .mtr-td-tag:first-child,
         .mtr-table .mtr-th-tag,
@@ -1366,16 +1666,32 @@ function mtr_add_css_on_front_end() {
         }
         ';
     } else {
-        echo '
-        .mtr-table td[data-mtr-content]:before,
-        .mtr-table th[data-mtr-content]:before {
-        	display: inline-block !important;
-        	content: attr(data-mtr-content) !important;
-        	float: right !important;
-            text-align: right !important;
-            white-space: pre-line !important;
+        if ( empty( $settings['mtr-align-left'] ) ) {
+            echo '
+            .mtr-table td[data-mtr-content]:before,
+            .mtr-table th[data-mtr-content]:before {
+            	display: inline-block !important;
+            	content: attr(data-mtr-content) !important;
+            	float: right !important;
+                text-align: right !important;
+                white-space: pre-line !important;
+            }
+            ';
+        } else {
+            echo '
+            .mtr-table td[data-mtr-content]:before,
+            .mtr-table th[data-mtr-content]:before {
+            	display: inline-block !important;
+            	content: attr(data-mtr-content) !important;
+            	float: right !important;
+                text-align: left !important;
+                white-space: pre-line !important;
+                padding-left: 6px;
+                box-sizing: border-box;
+                width: 100%;
+            }
+            ';
         }
-        ';
     }
 
     echo '
@@ -1670,7 +1986,7 @@ function mtr_add_css_on_front_end() {
     echo '
     }';
 
-    if ( 'wp_head' === current_filter() ) {
+    if ( strpos( current_filter(), 'wp_head' ) !== false ) {
         echo '
     </style>
     <!-- END - Make Tables Responsive -->
@@ -1709,8 +2025,12 @@ function mtr_get_default_settings_array() {
 
         // Multi-row settings
         'mtr-enable-on-screen-size-below' => 651,
+        'mtr-multi-row-columns' => 2,
         'mtr-enable-in-content' => 'checked',
         'mtr-enable-in-widgets' => '',
+        'mtr-enable-in-excerpt' => '',
+        'mtr-enable-in-category-descriptions' => '',
+        'mtr-enable-in-shortcodes' => '',
         'mtr-hide-tfoot' => '',
         'mtr-limit-left-side' => 49,
         'mtr-limit-right-side' => 49,
@@ -1720,12 +2040,17 @@ function mtr_get_default_settings_array() {
         'mtr-even-row-cell-border-color' => '#dddddd',
         'mtr-odd-row-background-color' => '#dddddd',
         'mtr-odd-row-cell-border-color' => '#bbbbbb',
+        'mtr-line-separator' => '',
+        'mtr-align-left' => '',
 
         // Single-row settings
         'mtr-single-enable-on-screen-size-below' => 651,
         'mtr-single-row-columns' => 4,
         'mtr-single-enable-in-content' => 'checked',
         'mtr-single-enable-in-widgets' => '',
+        'mtr-single-enable-in-excerpt' => '',
+        'mtr-single-enable-in-category-descriptions' => '',
+        'mtr-single-enable-in-shortcodes' => '',
         'mtr-single-row-layout' => '2-columns',
         'mtr-single-row-cell-align' => 'no-change',
         'mtr-single-disable-styling' => '',
@@ -1735,9 +2060,11 @@ function mtr_get_default_settings_array() {
 
         // Global Settings
         'mtr-exclude-html-classes' => '',
+        'mtr-exclude-html-classes-parent' => '',
         'mtr-exclude-html-ids' => '',
         'mtr-exclude-post-page-ids' => '',
         'mtr-enable-only-post-page-ids' => '',
+        'mtr-exclude-no-thead' => '',
     );
 }
 
@@ -1789,7 +2116,7 @@ function mtr_strip_whitespace( $string ) {
 function mtr_set_inner_html( DOMNode $element, $content ) {
     $DOM_inner_HTML = new DOMDocument();
     $internal_errors = libxml_use_internal_errors( true );
-    $DOM_inner_HTML->loadHTML( mb_convert_encoding( $content, 'HTML-ENTITIES', 'UTF-8' ) );
+    $DOM_inner_HTML->loadHTML( mtr_replace_mb_convert_encoding( $content ) );
     libxml_use_internal_errors( $internal_errors );
     $content_node = $DOM_inner_HTML->getElementsByTagName('body')->item(0);
     $content_node = $element->ownerDocument->importNode( $content_node, true );
@@ -1971,4 +2298,35 @@ function mtr_add_element_to_array( $original_array, $add_element_key, $add_eleme
 
     // We return the new array we made
     return $new_array;
+}
+
+/**
+ * Adds a unique attribute to every table to make thier outer HTML code unique.
+ * This will fix the problem that happens when we use the option to disable the plugin for tables by parent class
+ * in situations where the exact same table exists more than once on the page - sometimes with parent clas, sometimes without.
+ * Without this fix all such tables would be made responsive regardless of the parent class. This function is since version 1.5.10.
+ * @param string $content
+ * @param string $current_filter
+ * @return string
+ */
+function mtr_add_unique_attribute_to_tables( $content, $current_filter ) {
+    $GLOBALS['mtr-unique-attribute-number'] = 0;
+    $GLOBALS['mtr-unique-attribute-start'] = md5( $current_filter . '-' . intval( get_the_ID() ) ) . '-';
+    $new_content = preg_replace_callback( '/' . preg_quote('<table', '/') . '/', function( $match ) {
+        $GLOBALS['mtr-unique-attribute-number']++;
+        return '<table data-mtr-unique-id="'
+            . esc_attr( $GLOBALS['mtr-unique-attribute-start'] . $GLOBALS['mtr-unique-attribute-number'] ) . '"';
+    }, $content );
+    return $new_content;
+}
+
+
+/*
+ * Converts the encoding to UTF-8.
+ * This will replace this code which is deprecated in PHP 8.2: mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8');
+ * @param string $content
+ * @return string
+ */
+function mtr_replace_mb_convert_encoding( $content ) {
+    return mb_encode_numericentity( htmlspecialchars_decode( htmlentities( $content, ENT_NOQUOTES, 'UTF-8', false ), ENT_NOQUOTES ), [0x80, 0x10FFFF, 0, ~0], 'UTF-8' );
 }

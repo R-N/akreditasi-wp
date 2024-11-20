@@ -1,28 +1,33 @@
-=== TablePress ===
+=== TablePress - Tables in WordPress made easy ===
 Contributors: TobiasBg
-Donate link: https://tablepress.org/donate/
-Tags: table,spreadsheet,data,csv,excel,html,tables
-Requires at least: 5.3
-Requires PHP: 5.6.20
-Tested up to: 5.5
-Stable tag: 1.12
+Donate link: https://tablepress.org/premium/?utm_source=wordpress.org&utm_medium=textlink&utm_content=donate-link
+Tags: table, spreadsheet, csv, excel, tables
+Requires at least: 6.0
+Requires PHP: 7.2
+Tested up to: 6.6
+Stable tag: 2.4.4
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Embed beautiful and feature-rich tables into your posts and pages, without having to write code.
+Embed beautiful and interactive tables into your WordPress website’s posts and pages, without having to write code!
 
 == Description ==
 
-TablePress allows you to easily create and manage beautiful tables. You can embed the tables into posts, pages, or text widgets with a simple Shortcode. Table data can be edited in a spreadsheet-like interface, so no coding is necessary. Tables can contain any type of data, even formulas that will be evaluated. An additional JavaScript library adds features like sorting, pagination, filtering, and more for site visitors. Tables can be imported and exported from/to Excel, CSV, HTML, and JSON files.
+**Boost your website with feature-rich tables that your visitors will love!**
+
+TablePress is the most popular and highest-rated WordPress table plugin.
+
+* Easily create, edit, and manage **beautiful and modern** data tables, no matter if **small or large**!
+* Add live **sorting**, **pagination**, **searching**, and more interactivity for your site’s visitors!
+* Use any type of data, insert **images**, **links**, and even **math formulas**!
+* **Import** and **export** tables from/to Excel, CSV, HTML, and JSON files or URLs.
+* Embed tables into posts, pages, or other site areas using the block editor or Shortcodes.
+* All with **no coding knowledge needed**!
+
+Even **more great features** for you and your site’s visitors and **priority email support** are **available** with a Premium license plan of TablePress. [Go check them out!](https://tablepress.org/premium/?utm_source=wordpress.org&utm_medium=textlink&utm_content=readme)
 
 = More information =
-Please visit the plugin website at [tablepress.org](https://tablepress.org/) for more information or a [demo](https://tablepress.org/demo/). For latest news, [follow @TablePress](https://twitter.com/TablePress) on Twitter.
-
-= Supporting future development =
-If you like TablePress, please rate and review it here in the WordPress Plugin Directory or support it with your [donation](https://tablepress.org/donate/). Thank you!
-
-= TablePress Extensions =
-Additional features and useful enhancements are available as separate plugins, called [TablePress Extensions](https://tablepress.org/extensions/), on the plugin website.
+Visit [tablepress.org](https://tablepress.org/) for more information, take a look at [example tables](https://tablepress.org/demo/), or [try TablePress on a free test site](https://tablepress.org/demo/#try). For latest news, [follow @TablePress](https://twitter.com/TablePress) on Twitter/X or subscribe to the [TablePress Newsletter](https://tablepress.org/#newsletter).
 
 == Screenshots ==
 
@@ -33,92 +38,156 @@ Additional features and useful enhancements are available as separate plugins, c
 5. "Export" screen
 6. "Plugin Options" screen
 7. "About" screen
-8. An example table (as it can be seen on the [TablePress website](https://tablepress.org/demo/))
+8. The “TablePress table” block in the block editor
+9. An example table (as it can be seen on the [TablePress website](https://tablepress.org/demo/))
 
 == Installation ==
 
-The easiest way to install TablePress is via your WordPress Dashboard. Go to the "Plugins" screen, click "Add New", and search for "TablePress" in the WordPress Plugin Directory. Then, click "Install Now" and wait a moment. Finally, click "Activate" and start using the plugin!
+The easiest way to install TablePress is via your WordPress Dashboard:
+
+1. Go to the "Plugins" screen, click "Add New", and search for "TablePress" in the WordPress Plugin Directory.
+1. Click "Install Now" and after that's complete, click "Activate".
+1. Create and manage tables by going to the "TablePress" screen in the admin menu.
+1. To insert a table into a post or page, add a "TablePress table" block in the block editor and select the desired table or use Shortcodes with common page builders.
 
 Manual installation works just as for other WordPress plugins:
 
-1. [Download](https://downloads.wordpress.org/plugin/tablepress.latest-stable.zip) and extract the ZIP file.
+1. [Download the TablePress ZIP file](https://downloads.wordpress.org/plugin/tablepress.latest-stable.zip) and extract it on your computer.
 1. Move the folder "tablepress" to the "wp-content/plugins/" directory of your WordPress installation, e.g. via FTP.
-1. Activate the plugin "TablePress" on the "Plugins" screen of your WordPress Dashboard.
+1. Activate "TablePress" on the "Plugins" screen of your WordPress Dashboard.
 1. Create and manage tables by going to the "TablePress" screen in the admin menu.
-1. To insert a table into a post or page, copy its Shortcode `[table id=<ID> /]` and paste it into a "Shortcode" block at the desired place in the block editor. Each table has a unique ID that needs to be adjusted in that Shortcode.
-1. You can change the table styling by using CSS code, which can be entered into the "Custom CSS" textarea on the "Plugin Options" screen.
+1. To insert a table into a post or page, add a "TablePress table" block in the block editor and select the desired table or use Shortcodes with common page builders.
 
 == Frequently Asked Questions ==
 
 = Where can I find answers to Frequently Asked Questions? =
-Many questions, regarding different features or styling, have been answered on the [FAQ page](https://tablepress.org/faq/) on the plugin website.
+Many questions, regarding different features or styling, have been answered on the [FAQ page](https://tablepress.org/faq/) on the TablePress website.
 
 = Support? =
-For support questions, bug reports, or feature requests, please use the [WordPress Support Forums](https://wordpress.org/support/plugin/tablepress/). Please search through the forums first, and only [create a new topic](https://wordpress.org/support/plugin/tablepress#new-post) if you don't find an existing answer. Thank you!
+
+**Premium Support**
+
+Users with an active TablePress Premium license plan are eligible for Priority Email Support, directly from the plugin developer! [Find out more!](https://tablepress.org/premium/?utm_source=wordpress.org&utm_medium=textlink&utm_content=readme)
+
+**Community Support for users of the Free version**
+
+For support questions, bug reports, or feature requests, please use the [WordPress Support Forums](https://wordpress.org/support/plugin/tablepress/). Please search through the forums first, and only [create a new topic](https://wordpress.org/support/plugin/tablepress/#new-post) if you don't find an existing answer. Thank you!
 
 = Requirements? =
-In short: WordPress 5.3 or higher, while the latest version of WordPress is always recommended.
+In short: WordPress 6.0 or higher, while the latest version of WordPress is always recommended. In addition, the server must be running PHP 7.2 or newer.
 
 = Languages and Localization? =
 TablePress uses the ["Translate WordPress" platform](https://translate.wordpress.org/). Please see the sidebar on the TablePress page in the [WordPress Plugin Directory](https://wordpress.org/plugins/tablepress/) for available translations.
 
 To make TablePress available in your language, go to the [TablePress translations page](https://translate.wordpress.org/projects/wp-plugins/tablepress), log in with a free wordpress.org account and start translating.
 
-= Migration from WP-Table Reloaded =
-Several years ago, TablePress has superseded the now discontinued WP-Table Reloaded plugin. If you are still using that, please see the [migration guide](https://tablepress.org/migration-from-wp-table-reloaded/) and switch to TablePress.
-
 = Development =
-You can follow the development of TablePress more closely in its official [GitHub repository](https://github.com/TobiasBg/TablePress).
+You can follow the development of TablePress more closely in its official [GitHub repository](https://github.com/TablePress/TablePress).
+
+= Where do I report security issues? =
+Please report security issues and bugs found in the source code of TablePress through the [Patchstack Vulnerability Disclosure Program](https://patchstack.com/database/vdp/tablepress).
+The Patchstack team will assist you with verification, CVE assignment, and notify the TablePress developer.
 
 = Where can I get more information? =
-Please visit the [official plugin website](https://tablepress.org/) for the latest information on this plugin, or [follow @TablePress](https://twitter.com/TablePress) on Twitter.
+Visit the plugin website at [tablepress.org](https://tablepress.org/) for the latest news on TablePress, [follow @TablePress](https://twitter.com/TablePress) on Twitter/X, or subscribe to the [TablePress Newsletter](https://tablepress.org/#newsletter).
 
-== Usage ==
+== How to use TablePress ==
 
 After installing the plugin, you can create and manage tables on the "TablePress" screen in the WordPress Dashboard.
 
-To show one of your tables in a post or on a page, embed the Shortcode `[table id=<the-ID> /]` into a "Shortcode" block at the desired place in the block editor. Each table has a unique ID that needs to be adjusted in that Shortcode.
+To insert a table into a post or page, add a "TablePress table" block in the block editor and select the desired table or use Shortcodes with common page builders.
 
-After that, you might want to change the styling of the table. You can do this by entering CSS commands into the "Custom CSS" textarea on the "Plugin Options" screen. Some examples for common styling changes can be found on the [TablePress FAQ page](https://tablepress.org/faq/).
+Beginner-friendly step-by-step [tutorials, guides, and how-tos](https://tablepress.org/tutorials/) show how to achieve common and popular tasks with TablePress.
+Examples for common styling changes via "Custom CSS" code can be found on the [TablePress FAQ page](https://tablepress.org/faq/).
 You may also add certain features (like sorting, pagination, filtering, alternating row colors, row highlighting, print name and/or description, ...) by enabling the corresponding checkboxes on a table's "Edit" screen.
 
-== Acknowledgements ==
-
-Special thanks go to [Allan Jardine](https://www.sprymedia.co.uk/) for the [DataTables JavaScript library](https://www.datatables.net/).
-Thanks to all language file translators!
-Thanks to every donor, supporter, and bug reporter!
-
-== License ==
-
-This plugin is Free Software, released and licensed under the GPL, version 2 (https://www.gnu.org/licenses/gpl-2.0.html).
-You may use it free of charge for any purpose.
+**Even more great features for you and your site’s visitors and priority email support are available with a Premium license plan of TablePress. [Go check them out!](https://tablepress.org/premium/?utm_source=wordpress.org&utm_medium=textlink&utm_content=readme)**
 
 == Changelog ==
 
-Recent changes are shown below. For earlier changes, please see the [changelog history](https://tablepress.org/info/#changelog).
+Changes in recent versions are shown below. For earlier changes, please see the [changelog history](https://tablepress.org/info/#changelog).
 
-= Version 1.12 =
-* Full compatibility with WordPress 5.5.
-* Enhancement: Add placeholder variables with table and cell information for use in formulas.
-* Bugfix: Properly handle math formulas with numbers in their names in the math parser.
-* Bugfix: Restore proper highlighting of input fields with invalid values in the admin area.
-* Updated external libraries (DataTables, SimpleXLSX, Build tools).
-* Some internal changes for better stability, translations, and documentation.
+= Version 2.4.4 (October 15, 2024) =
 
-= Version 1.11 =
-* Full compatibility with WordPress 5.4.
-* Enhancement: Update list of allowed CSS features in "Custom CSS".
-* Enhancement: Allow more complex "Extra CSS classes", to support more CSS frameworks.
-* Enhancement: Modernize the arrow icons web font loading for faster loading.
-* Enhancement: Support the table markup structure of HTML 5.1.
-* Bugfix: Prevent fatal error due to misspelled function name during Excel import.
-* Updated external libraries (SimpleXLSX, CSSTidy, Build tools).
-* Some internal changes for better stability, translations, and documentation.
+* Bugfix: The import of CSV files with special formatting characters (BOM) is working again.
+* Bugfix: The position of the Search field in the “Automatic Periodic Table Import” configuration is correct again. (TablePress Max only.)
+* *Important note*: This release also contains an important security fix that was first released in TablePress 2.4.3.
+
+= Version 2.4.3 (October 9, 2024) =
+
+* *Security fix*: Sanitize output of evaluated formulas (CVE-2024-9595). Thanks to Max Boll and to the Wordfence team for following responsible disclosure policies when reporting this issue!
+* Bugfix: On the “Import” screen, a helpful feature pointer for new users is now shown properly again.
+* Bugfix: A check for whether combining cells on the “Edit” screen is possible was not strict enough.
+* Bugfix: The “Column Filter Dropdowns” feature module no longer shows duplicate entries in the dropdowns. (TablePress Pro and Max only.)
+* Bugfix: The “Individual Column Filtering” feature module no longer shows duplicate entries in the dropdowns. (TablePress Pro and Max only.)
+* Several external code libraries and build tools have been updated to benefit from enhancements and bug fixes.
+* Cleaned up and simplified code, for easier future maintenance, to follow WordPress Coding Standards, and to offer helpful inline documentation.
+
+= Version 2.4.2 (September 10, 2024) =
+
+* Bugfix: The “TablePress table” block in the WordPress Block Editor will properly show the table preview again.
+* Bugfix: Control elements like the Search again remain in place, when using the “Scroll” mode of the “Responsive Tables” feature module. (TablePress Pro and Max only.)
+* Bugfix: When the “Responsive Tables” feature module’s “Flip” is used, a “Fixed Header” row will be hidden. (TablePress Pro and Max only.)
+* Cleaned up and simplified code, for easier future maintenance, to follow WordPress Coding Standards, and to offer helpful inline documentation.
+
+= Version 2.4.1 (August 13, 2024) =
+
+* Bugfix: The table width is correct again, when using the “Scroll” mode of the “Responsive Tables” feature module. (TablePress Pro and Max only.)
+* Bugfix: The “Responsive Tables” feature module’s “Stack” mode now properly handles tables with combined cells. (TablePress Pro and Max only.)
+* Bugfix: An edge case problem in the “Row Order” feature module’s multi-column sorting was fixed. (TablePress Pro and Max only.)
+* Bugfix: In the table import engine, compatibility issues with older versions of PHP were fixed.
+* Enhancement: The settings of the “Server-side Processing” and the “Automatic Filtering” feature modules are now compatible. (TablePress Max only.)
+* Cleaned up and simplified code, for easier future maintenance, to follow WordPress Coding Standards, and to offer helpful inline documentation.
+* Several external code libraries and build tools have been updated to benefit from enhancements and bug fixes.
+
+= Version 2.4 (July 16, 2024) =
+
+**New and improved features**
+
+* A *new “Fuzzy Search” feature module* allows the visitor to find similar and not just exact search matches. This is useful when e.g. searching for words with the same pronunciation but different spelling. (TablePress Max only.)
+* The “Column Filter Dropdowns” feature module now allows specifying which columns should get a dropdown, and it’s possible to change their order! (TablePress Pro and Max only.)
+* Similarly, the “Search Panes” feature module now allows specifying which columns should get a search pane. (TablePress Pro and Max only.)
+* The “Fixed Columns” feature module now also allows the visitor to scroll left and right by clicking arrow buttons (see below for more). (TablePress Pro and Max only.)
+* The “Row Order” feature module now allows ordering a table by multiple columns at the same time! (TablePress Pro and Max only.)
+* The “Server-side Processing” feature module can automatically refresh the shown data after a configured interval, so that the visitor will always see the latest data. (TablePress Max only.)
+* The “Row Order” and “Server-side Processing” feature modules now sort non-numeric columns “naturally” and case-insensitive. (TablePress Pro and Max only.)
+* The “REST API” feature module now supports pagination and ordering request parameters and sends corresponding HTTP headers for easier integration. (TablePress Max only.)
+
+**The “Responsive Tables” and “Fixed Columns” premium modules offer more possibilities**
+
+* The “Scroll” mode’s arrow buttons now stick to the top of the page, making them easier to use in long tables.
+* In addition, they will now only be shown if a table actually needs horizontal scrolling!
+* They also scroll the table in the expected direction now.
+* And even better: These scroll arrow buttons are now also available when using the “Fixed Columns” feature module!
+* When using the “Scroll” mode, the table name, description, and control elements like the Search now remain in place.
+* In the “Flip” mode, the sorting arrows are now properly rotated.
+* The “Stack” no longer conflicts with the “Fixed Columns” feature.
+* The Safari browser on iOS will no longer unexpectedly change font sizes.
+
+**Miscellaneous changes**
+
+* TablePress warns that certain activated but retired TablePress Extensions will stop working with TablePress 3.0, later this year.
+* TablePress actively prevents conflicts with overwritten menu items in the dashboard’s admin menu.
+* The user interface experience on the “Edit” screen was improved.
+* The size of “Custom CSS” code will be reduced even further, if the code has comments.
+* The “Automatic Table Export” feature module now properly detects automatic periodic table imports. (TablePress Max only.)
+* The “Automatic Periodic Table Import” feature module’s configuration screen now has better spacing. (TablePress Max only.)
+* The “Server-side Processing” feature module checks for potential conflicts with incompatible features. (TablePress Max only.)
+
+**Behind the scenes**
+
+* Cleaned up and simplified code, for easier future maintenance, to follow WordPress Coding Standards, and to offer helpful inline documentation.
+* Updated external libraries to benefit from enhancements and bug fixes.
+* Automated code compatibility checks and build tools simplify chores for easier development.
+
+**Premium versions**
+
+* Even more great features for you and your site’s visitors and priority email support are available with a Premium license plan of TablePress. [Go check them out!](https://tablepress.org/premium/?utm_source=wordpress.org&utm_medium=textlink&utm_content=readme)
 
 == Upgrade Notice ==
 
-= 1.12 =
-This update is a stability, maintenance, and compatibility release. Updating is recommended.
+= 2.4.4 =
+This update is a stability and maintenance release. Updating is highly recommended.
 
-= 1.11 =
-This update is a stability, maintenance, and compatibility release. Updating is recommended.
+= 2.4 =
+This update is a feature, stability, maintenance, and compatibility release. Updating is highly recommended.

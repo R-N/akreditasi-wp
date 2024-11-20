@@ -35,7 +35,9 @@ function relevanssi_searching_tab() {
 	$cat                 = get_option( 'relevanssi_cat' );
 	$excat               = get_option( 'relevanssi_excat' );
 	$exclude_posts       = get_option( 'relevanssi_exclude_posts' );
-	$index_post_types    = get_option( 'relevanssi_index_post_types' );
+	$index_post_types    = get_option( 'relevanssi_index_post_types', array() );
+	$index_users         = get_option( 'relevanssi_index_users' );
+	$index_terms         = get_option( 'relevanssi_index_taxonomies' );
 
 	$throttle            = relevanssi_check( $throttle );
 	$respect_exclude     = relevanssi_check( $respect_exclude );
@@ -57,11 +59,19 @@ function relevanssi_searching_tab() {
 		$orfallback_visibility = '';
 	}
 
-	$docs_count = $wpdb->get_var( 'SELECT COUNT(DISTINCT doc) FROM ' . $relevanssi_variables['relevanssi_table'] . ' WHERE doc != -1' );  // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared
+	if ( ! $throttle ) {
+		$docs_count = get_transient( 'relevanssi_docs_count' );
+		if ( ! $docs_count ) {
+			$docs_count = $wpdb->get_var( 'SELECT COUNT(DISTINCT doc) FROM ' . $relevanssi_variables['relevanssi_table'] . ' WHERE doc != -1' );  // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared
+			set_transient( 'relevanssi_docs_count', $docs_count, WEEK_IN_SECONDS );
+		}
+	} else {
+		$docs_count = null;
+	}
 	?>
 
-	<table class="form-table" role="presentation">
-	<tr>
+	<table class="form-table" role="presentation" id="searching_settings">
+	<tr id="row_implicit_operator">
 		<th scope="row">
 			<label for='relevanssi_implicit_operator'><?php esc_html_e( 'Default operator', 'relevanssi' ); ?></label>
 		</th>
@@ -94,7 +104,7 @@ function relevanssi_searching_tab() {
 		<p class="description"><?php esc_html_e( 'By default, if AND search fails to find any results, Relevanssi will switch the operator to OR and run the search again. You can prevent that by checking this option.', 'relevanssi' ); ?></p>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_default_orderby">
 		<th scope="row">
 			<label for='relevanssi_default_orderby'><?php esc_html_e( 'Default order', 'relevanssi' ); ?></label>
 		</th>
@@ -106,11 +116,11 @@ function relevanssi_searching_tab() {
 			<?php // Translators: name of the query variable. ?>
 			<p class="description"><?php printf( esc_html__( 'If you want to override this or use multi-layered ordering (eg. first order by relevance, but sort ties by post title), you can use the %s query variable. See Help for more information.', 'relevanssi' ), '<code>orderby</code>' ); ?></p>
 			<?php if ( RELEVANSSI_PREMIUM ) { ?>
-			<p class="description"><?php esc_html_e( ' If you want date-based results, see the recent post bonus in the Weights section.', 'relevanssi' ); ?></p>
+			<p class="description"><?php esc_html_e( 'If you want date-based results, see the recent post bonus in the Weights section.', 'relevanssi' ); ?></p>
 			<?php } // End if ( RELEVANSSI_PREMIUM ). ?>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_keyword_matching">
 		<th scope="row">
 			<label for='relevanssi_fuzzy'><?php esc_html_e( 'Keyword matching', 'relevanssi' ); ?></label>
 		</th>
@@ -128,7 +138,7 @@ function relevanssi_searching_tab() {
 			<p class="description"><?php esc_html_e( "Partial words also includes cases where the word in the index begins or ends with the search term (searching for 'ana' will match 'anaconda' or 'banana', but not 'banal'). See Help, if you want to make Relevanssi match also inside words.", 'relevanssi' ); ?></p>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_weights">
 		<th scope="row">
 			<?php esc_html_e( 'Weights', 'relevanssi' ); ?>
 		</th>
@@ -191,7 +201,7 @@ function relevanssi_searching_tab() {
 		relevanssi_form_recency_cutoff();
 	}
 	?>
-	<tr>
+	<tr id="row_exact_match_boost">
 		<th scope="row">
 		<?php esc_html_e( 'Boost exact matches', 'relevanssi' ); ?>
 		</th>
@@ -210,7 +220,7 @@ function relevanssi_searching_tab() {
 	<?php
 	if ( function_exists( 'icl_object_id' ) && ! function_exists( 'pll_get_post' ) ) {
 		?>
-	<tr>
+	<tr id="row_wpml_only_current">
 		<th scope="row">
 		<?php esc_html_e( 'WPML', 'relevanssi' ); ?>
 		</th>
@@ -227,7 +237,7 @@ function relevanssi_searching_tab() {
 	</tr>
 	<?php } // WPML. ?>
 	<?php if ( function_exists( 'pll_get_post' ) ) { ?>
-	<tr>
+	<tr id="row_polylang_allow_all">
 		<th scope="row">
 		<?php esc_html_e( 'Polylang', 'relevanssi' ); ?>
 		</th>
@@ -243,7 +253,7 @@ function relevanssi_searching_tab() {
 		</td>
 	</tr>
 	<?php } // Polylang. ?>
-	<tr>
+	<tr id="row_admin_search">
 		<th scope="row">
 		<?php esc_html_e( 'Admin search', 'relevanssi' ); ?>
 		</th>
@@ -258,7 +268,7 @@ function relevanssi_searching_tab() {
 		<p class="description"><?php esc_html_e( "If checked, Relevanssi will be used for searches in the admin interface. The page search doesn't use Relevanssi, because WordPress works like that.", 'relevanssi' ); ?></p>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_respect_exclude">
 		<th scope="row">
 			<?php // Translators: %s is 'exclude_from_search'. ?>
 			<?php printf( esc_html__( 'Respect %s', 'relevanssi' ), 'exclude_from_search' ); ?>
@@ -294,27 +304,12 @@ function relevanssi_searching_tab() {
 		</fieldset>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_throttle_searches">
 		<th scope="row">
 			<?php esc_html_e( 'Throttle searches', 'relevanssi' ); ?>
 		</th>
 		<td id="throttlesearches">
-		<div id="throttle_disabled"
-		<?php
-		if ( ! $orderby_date ) {
-			echo "class='screen-reader-text'";
-		}
-		?>
-		>
-		<p class="description"><?php esc_html_e( 'Throttling the search does not work when sorting the posts by date.', 'relevanssi' ); ?></p>
-		</div>
-		<div id="throttle_enabled"
-		<?php
-		if ( ! $orderby_relevance ) {
-			echo "class='screen-reader-text'";
-		}
-		?>
-		>
+		<div id="throttle_enabled">
 		<fieldset>
 			<legend class="screen-reader-text"><?php esc_html_e( 'Throttle searches.', 'relevanssi' ); ?></legend>
 			<label for='relevanssi_throttle'>
@@ -322,14 +317,17 @@ function relevanssi_searching_tab() {
 				<?php esc_html_e( 'Throttle searches.', 'relevanssi' ); ?>
 			</label>
 		</fieldset>
-		<?php if ( $docs_count < 1000 ) { ?>
+		<?php if ( $docs_count && $docs_count < 1000 ) { ?>
 			<p class="description important"><?php esc_html_e( "Your database is so small that you don't need to enable this.", 'relevanssi' ); ?></p>
 		<?php } ?>
 		<p class="description"><?php esc_html_e( 'If this option is checked, Relevanssi will limit search results to at most 500 results per term. This will improve performance, but may cause some relevant documents to go unfound. See Help for more details.', 'relevanssi' ); ?></p>
+		<?php if ( 'post_date' === $orderby && ( 'on' === $index_users || 'on' === $index_terms ) ) { ?>
+			<p class="important"><?php esc_html_e( 'You have the default ordering set to post date and have enabled user or taxonomy term indexing. If you enable the throttle, the search results will only include posts. Users and taxonomy terms will be excluded. Either keep the throttle disabled or set the post ordering to relevance.', 'relevanssi' ); ?></p>
+		<?php } ?>
 		</div>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_category_restriction">
 		<th scope="row">
 			<?php esc_html_e( 'Category restriction', 'relevanssi' ); ?>
 		</th>
@@ -360,7 +358,7 @@ function relevanssi_searching_tab() {
 			<p class="description"><?php esc_html_e( 'You can restrict search results to a category for all searches. For restricting on a per-search basis and more options (eg. tag restrictions), see Help.', 'relevanssi' ); ?></p>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_category_exclusion">
 		<th scope="row">
 			<?php esc_html_e( 'Category exclusion', 'relevanssi' ); ?>
 		</th>
@@ -391,12 +389,12 @@ function relevanssi_searching_tab() {
 			<p class="description"><?php esc_html_e( 'Posts in these categories are not included in search results. To exclude the posts completely from the index, see Help.', 'relevanssi' ); ?></p>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_exclude_posts">
 		<th scope="row">
-			<label for='relevanssi_expst'><?php esc_html_e( 'Post exclusion', 'relevanssi' ); ?>
+			<label for='relevanssi_exclude_posts'><?php esc_html_e( 'Post exclusion', 'relevanssi' ); ?>
 		</th>
 		<td>
-			<input type='text' name='relevanssi_expst' id='relevanssi_expst' size='60' value='<?php echo esc_attr( $exclude_posts ); ?>' />
+			<input type='text' name='relevanssi_exclude_posts' id='relevanssi_exclude_posts' size='60' value='<?php echo esc_attr( $exclude_posts ); ?>' />
 			<p class="description"><?php esc_html_e( "Enter a comma-separated list of post or page ID's to exclude those pages from the search results.", 'relevanssi' ); ?></p>
 			<?php if ( RELEVANSSI_PREMIUM ) { ?>
 				<p class="description"><?php esc_html_e( "With Relevanssi Premium, it's better to use the check box on post edit pages. That will remove the posts completely from the index, and will work with multisite searches unlike this setting.", 'relevanssi' ); ?></p>

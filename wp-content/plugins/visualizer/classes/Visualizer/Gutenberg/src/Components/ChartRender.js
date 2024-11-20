@@ -7,7 +7,7 @@ import DataTable from './DataTable.js';
 
 import merge from 'merge';
 
-import { compact, formatDate, isValidJSON, formatData } from '../utils.js';
+import { compact, formatDate, isValidJSON, formatData, googleChartPackages } from '../utils.js';
 
 /**
  * WordPress dependencies
@@ -36,6 +36,9 @@ class ChartRender extends Component {
 	}
 
 	render() {
+
+		let chartVersion = 'undefined' !== typeof google ? google.visualization.Version : 'current';
+
 		let chart, footer;
 
 		let data = formatDate( JSON.parse( JSON.stringify( this.props.chart ) ) );
@@ -57,6 +60,12 @@ class ChartRender extends Component {
         if ( data['visualizer-data-exploded']) {
             footer = __( 'Annotations in this chart may not display here but they will display in the front end.' );
         }
+
+		if ( this.props.chart['visualizer-series'] && 0 <= [ 'date', 'datetime', 'timeofday' ].indexOf( this.props.chart['visualizer-series'][0].type ) ) {
+			if ( this.props.chart['visualizer-settings'] && ( this.props.chart['visualizer-settings'].hAxis && '' == this.props.chart['visualizer-settings'].hAxis.format ) ) {
+				this.props.chart['visualizer-settings'].hAxis.format = 'YYYY-MM-dd';
+			}
+		}
 
 		return (
 			<div className={ this.props.className }>
@@ -88,6 +97,7 @@ class ChartRender extends Component {
 							/>
 						) : ( '' !== data['visualizer-data-exploded'] ? (
 							<Chart
+								chartVersion={ chartVersion }
 								chartType={ chart }
 								rows={ data['visualizer-data'] }
 								columns={ data['visualizer-series'] }
@@ -98,9 +108,11 @@ class ChartRender extends Component {
 								}
 								height="500px"
                                 formatters={ formatData( data ) }
+								chartPackages={ googleChartPackages }
 							/>
                         ) : (
 							<Chart
+								chartVersion={ chartVersion }
 								chartType={ chart }
 								rows={ data['visualizer-data'] }
 								columns={ data['visualizer-series'] }
@@ -111,6 +123,7 @@ class ChartRender extends Component {
 								}
 								height="500px"
                                 formatters={ formatData( data ) }
+								chartPackages={ googleChartPackages }
 							/>
 						) ) }
 

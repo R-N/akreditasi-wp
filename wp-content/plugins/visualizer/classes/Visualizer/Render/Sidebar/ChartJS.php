@@ -35,6 +35,8 @@ abstract class Visualizer_Render_Sidebar_ChartJS extends Visualizer_Render_Sideb
 			'right'  => esc_html__( 'Right of the chart', 'visualizer' ),
 			'top'    => esc_html__( 'Above the chart', 'visualizer' ),
 			'bottom' => esc_html__( 'Below the chart', 'visualizer' ),
+			'bottom' => esc_html__( 'Below the chart', 'visualizer' ),
+			'none'   => esc_html__( 'Omit the legend', 'visualizer' ),
 		);
 
 	}
@@ -295,6 +297,23 @@ abstract class Visualizer_Render_Sidebar_ChartJS extends Visualizer_Render_Sideb
 			self::_renderSectionEnd();
 
 			$this->_renderAnimationSettings();
+
+			self::_renderSectionStart( esc_html__( 'License & Creator', 'visualizer' ), false );
+			self::_renderTextItem(
+				esc_html__( 'License', 'visualizer' ),
+				'license',
+				$this->license,
+				''
+			);
+			self::_renderTextItem(
+				esc_html__( 'Creator', 'visualizer' ),
+				'creator',
+				$this->creator,
+				''
+			);
+			self::_renderSectionEnd();
+
+			self::_renderChartImageSettings();
 
 		self::_renderGroupEnd();
 	}

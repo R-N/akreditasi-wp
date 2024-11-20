@@ -22,7 +22,11 @@ jQuery( document ).ready(
 			} else if ( isCustomFont( value ) ) {
 				jQuery( selector ).each( function( i, v ) {
 					const fontID = value.replace( 'cf-', '' );
-					v.style.setProperty( 'font-family', ogf_custom_fonts[ fontID ].stack, 'important' );
+					v.style.setProperty( 'font-family', ogf_custom_fonts_unique[ fontID ].family || ogf_custom_fonts_unique[ fontID ], 'important' );
+				} );
+			} else if ( isTypekitFont( value ) ) {
+				jQuery( selector ).each( function( i, v ) {
+					v.style.setProperty( 'font-family', ogf_typekit_fonts[ value ].stack, 'important' );
 				} );
 			} else {
 				jQuery( selector ).each( function( i, v ) {
@@ -40,6 +44,13 @@ jQuery( document ).ready(
 
 		function isCustomFont( fontID ) {
 			if ( fontID.indexOf( 'cf-' ) !== -1 ) {
+				return true;
+			}
+			return false;
+		}
+
+		function isTypekitFont( fontID ) {
+			if ( fontID.indexOf( 'tk-' ) !== -1 ) {
 				return true;
 			}
 			return false;
@@ -138,6 +149,19 @@ jQuery( document ).ready(
 						function( to ) {
 							jQuery( val.selectors ).each( function( i, v ) {
 								v.style.setProperty( 'text-transform', to, 'important' );
+							} );
+						}
+					);
+				}
+			);
+
+			wp.customize(
+				id + '_text_decoration',
+				function( value ) {
+					value.bind(
+						function( to ) {
+							jQuery( val.selectors ).each( function( i, v ) {
+								v.style.setProperty( 'text-decoration', to, 'important' );
 							} );
 						}
 					);

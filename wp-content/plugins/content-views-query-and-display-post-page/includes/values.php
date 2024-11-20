@@ -32,6 +32,7 @@ if ( !class_exists( 'PT_CV_Values' ) ) {
 			$excludes	 = array_merge( array( 'attachment' ), $excludes_ );
 			$result		 = array();
 			$args		 = array_merge( array( 'public' => true, '_builtin' => true ), $args );
+			if ( isset( $GLOBALS[ 'cvBlock' ] ) ) { unset( $args[ '_builtin' ] ); }
 			$args		 = apply_filters( PT_CV_PREFIX_ . 'post_types', $args );
 			$post_types	 = get_post_types( $args, 'objects' );
 
@@ -52,9 +53,10 @@ if ( !class_exists( 'PT_CV_Values' ) ) {
 		 *
 		 * @return array
 		 */
-		static function post_types_vs_taxonomies() {
+		static function post_types_vs_taxonomies( $no_restrict = false ) {
 			// Get post types
 			$args		 = apply_filters( PT_CV_PREFIX_ . 'post_types', array( 'public' => true, 'show_ui' => true, '_builtin' => true ) );
+			if( isset( $GLOBALS[ 'cvBlock' ] ) || isset( $GLOBALS[ 'cvElementor' ] ) || $no_restrict ) { unset( $args[ '_builtin' ] ); }
 			$post_types	 = get_post_types( $args );
 
 			// Get taxonomies of post types
@@ -75,9 +77,10 @@ if ( !class_exists( 'PT_CV_Values' ) ) {
 		 *
 		 * @return array
 		 */
-		static function taxonomy_list( $args = array() ) {
+		static function taxonomy_list( $fromBlock = false, $args = array() ) {
 			$result		 = array();
 			$args		 = array_merge( array( 'public' => true, 'show_ui' => true, '_builtin' => true ), $args );
+			if( isset( $GLOBALS[ 'cvBlock' ] ) || $fromBlock ) { unset( $args[ '_builtin' ] ); unset( $args[ 'show_ui' ] ); }
 			$args		 = apply_filters( PT_CV_PREFIX_ . 'taxonomy_query_args', $args );
 			$taxonomies	 = get_taxonomies( $args, 'objects' );
 
@@ -142,8 +145,8 @@ if ( !class_exists( 'PT_CV_Values' ) ) {
 		 * @param array  $args                Array of query parameters
 		 */
 		static function term_of_taxonomy( $taxonomy, &$terms_of_taxonomies, $args = array(), $data = 'name' ) {
-			$args	 = array_merge( array( 'hide_empty' => false ), $args );
-			$terms	 = get_terms( array( $taxonomy ), $args );
+			$args	 = array_merge( array( 'taxonomy' => $taxonomy, 'hide_empty' => false ), $args );
+			$terms	 = get_terms( apply_filters( PT_CV_PREFIX_ . 'terms_args', $args ) );
 
 			$term_slug_name = array();
 			foreach ( $terms as $term ) {
@@ -268,6 +271,12 @@ if ( !class_exists( 'PT_CV_Values' ) ) {
 					'order'		 => 'ASC',
 				);
 
+				if ( version_compare( $GLOBALS['wp_version'], '5.9', '>=' ) ) {
+					$args[ 'capability' ] = array( 'edit_posts' );
+				} else {
+					$args[ 'who' ] = 'authors';
+				}
+
 				$users = get_users( apply_filters( PT_CV_PREFIX_ . 'user_list', $args ) );
 				foreach ( (array) $users as $user ) {
 					$user->ID	 = (int) $user->ID;
@@ -290,8 +299,10 @@ if ( !class_exists( 'PT_CV_Values' ) ) {
 				''			 => sprintf( '- %s -', __( 'Select' ) ),
 				'ID'		 => __( 'ID', 'content-views-query-and-display-post-page' ),
 				'title'		 => __( 'Title' ),
+				'name'		 => __( 'Post slug', 'content-views-pro' ),
 				'date'		 => __( 'Published date', 'content-views-query-and-display-post-page' ),
 				'modified'	 => __( 'Modified date', 'content-views-query-and-display-post-page' ),
+				'menu_order' => __( 'Menu order', 'content-views-pro' ),
 			);
 
 			$result = apply_filters( PT_CV_PREFIX_ . 'regular_orderby', $regular_orderby );
@@ -382,13 +393,13 @@ if ( !class_exists( 'PT_CV_Values' ) ) {
 			$result				 = $sizes_to_sort		 = $dimensions_to_sort	 = array();
 
 			foreach ( get_intermediate_image_sizes() as $size_name ) {
-				if ( in_array( $size_name, array( 'thumbnail', 'medium', 'large' ) ) ) {
+				if ( in_array( $size_name, array( 'thumbnail', 'medium', 'medium_large', 'large' ) ) ) {
 					$this_size	 = array();
 					$this_size[] = get_option( $size_name . '_size_w' );
-					$this_size[] = get_option( $size_name . '_size_h' );
+					$this_size[] = ($size_name === 'medium_large') ? 'auto' : get_option( $size_name . '_size_h' );
 
 					// Add official sizes to result
-					$result[ $size_name ] = ucfirst( $size_name ) . ' (' . implode( ' &times; ', $this_size ) . ')';
+					$result[ $size_name ] = ucfirst( $size_name ) . ' (' . implode( ' x ', $this_size ) . ')';
 				} else {
 					if ( isset( $_wp_additional_image_sizes ) && isset( $_wp_additional_image_sizes[ $size_name ] ) ) {
 
@@ -404,7 +415,7 @@ if ( !class_exists( 'PT_CV_Values' ) ) {
 						$this_size = array( 0, 0 );
 					}
 
-					$sizes_to_sort[ $size_name ] = ucfirst( preg_replace( '/[\-_]/', ' ', $size_name ) ) . ' (' . implode( ' &times; ', $this_size ) . ')';
+					$sizes_to_sort[ $size_name ] = ucfirst( preg_replace( '/[\-_]/', ' ', $size_name ) ) . ' (' . implode( ' x ', $this_size ) . ')';
 				}
 
 				if ( !empty( $_size_name ) && $_size_name == $size_name ) {
@@ -442,6 +453,124 @@ if ( !class_exists( 'PT_CV_Values' ) ) {
 			$result = apply_filters( PT_CV_PREFIX_ . 'thumbnail_position', $thumbnail_position );
 
 			return $result;
+		}
+
+		static function title_tag() {
+			$tags = apply_filters( PT_CV_PREFIX_ . 'filter_title_tag', array( 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div' ) );
+			return array_combine( $tags, $tags );
+		}
+
+		static function content_show() {
+			return array(
+				'full'		 => __( 'Show Full Content', 'content-views-query-and-display-post-page' ),
+				'excerpt'	 => __( 'Show Excerpt', 'content-views-query-and-display-post-page' ),
+			);
+		}
+
+		static function nopost_options() {
+			return [
+				''			 => 'Show the default text',
+				'changetext' => 'Show custom text',
+			];
+		}
+
+		// from Pro
+		static function view_type_pro() {
+			$result = array(
+				'pinterest'	 => __( 'Pinterest', 'content-views-pro' ),
+				'masonry'	 => __( 'Masonry', 'content-views-pro' ),
+				'timeline'	 => __( 'Timeline', 'content-views-pro' ),
+				'glossary'	 => __( 'Glossary', 'content-views-pro' ),
+				'one_others' => __( 'One and others', 'content-views-pro' ),
+			);
+
+			return $result;
+		}
+
+		static function lname( $layout ) {
+			return str_replace( [ 'bigpost', 'ovl' ], [ 'onebig', 'overlay' ], $layout );
+		}
+
+		static function isprlayout( $layout, $variant = '' ) {
+			if ( get_option( 'pt_cv_version_pro' ) ) {
+				return false;
+			}
+			if ( !in_array( $layout, [ 'grid', 'collapsible', 'scrollable', 'grid1', 'list1', 'overlay1' ] ) ) {
+				return true;
+			}
+			if ( $variant && $variant !== 'layout1' ) {
+				return true;
+			}
+			return false;
+		}
+
+		// @since Hybrid
+		static function hybrid_layouts() {
+			$arr = [
+				'grid1'		 => __( 'Grid 2', 'content-views-pro' ),
+				'list1'		 => __( 'List', 'content-views-pro' ),
+				'overlay1'	 => __( 'Overlay 1', 'content-views-pro' ),
+				'ovl2'		 => __( 'Overlay 2', 'content-views-pro' ),
+				'ovl3'		 => __( 'Overlay 3', 'content-views-pro' ),
+				'ovl4'		 => __( 'Overlay 4', 'content-views-pro' ),
+				'ovl5'		 => __( 'Overlay 5', 'content-views-pro' ),
+				'ovl6'		 => __( 'Overlay 6', 'content-views-pro' ),
+				'ovl7'		 => __( 'Overlay 7', 'content-views-pro' ),
+				'ovl8'		 => __( 'Overlay 8', 'content-views-pro' ),
+				'bigpost1'	 => __( 'Big Post 1', 'content-views-pro' ),
+				'bigpost2'	 => __( 'Big Post 2', 'content-views-pro' ),
+			];
+			return apply_filters( PT_CV_PREFIX_ . 'hybrid_layouts', $arr );
+		}
+
+		// Old Pro + Block layouts
+		static function combined_layouts() {
+			return array_merge( self::view_type_pro(), self::hybrid_layouts() );
+		}
+
+		static function column_layouts( $layout = false ) {
+			$column3 = [ 'grid1', 'overlay1' ];
+			$column1 = [ 'list1', 'onebig1', 'onebig2' ];
+
+			if ( !$layout ) {
+				return array_merge( $column3, $column1 );
+			} else {
+				return in_array( $layout, $column3 ) ? '3' : (in_array( $layout, $column1 ) ? '1' : 0);
+			}
+		}
+
+		static function ovl_layouts( $from = 1 ) {
+			$ovl = [];
+			foreach ( range( $from, 8 ) as $number ) {
+				$ovl[]	 = 'overlay' . $number;
+				$ovl[]	 = 'ovl' . $number;
+			}
+			return $ovl;
+		}
+
+		static function hasone_layouts() {
+			$layouts = [ 'onebig1', 'onebig2' ];
+			$olv1 = self::ovl_layouts( 2 );
+			return array_merge( $layouts, $olv1 );
+		}
+
+		static function fixed_ppp_layouts() {
+			// ovl 2 3 4 5 7 8
+			$olv3 = self::ovl_layouts( 2 );
+			return array_values( array_diff( $olv3, [ 'ovl6', 'overlay6' ] ) );
+		}
+
+		static function imported_layout( $name ) {
+			$require_pro = '6.0';
+			$pro_version = get_option( 'pt_cv_version_pro' );
+
+			if ( !$pro_version || version_compare( $pro_version, $require_pro, '<' ) ) {
+				if ( !array_key_exists( $name, self::hybrid_layouts() ) ) {
+					$name = preg_replace( [ '/overlay([2-9]+)/', '/onebig(\d+)/' ], [ 'ovl$1', 'bigpost$1' ], $name );
+				}
+			}
+
+			return $name;
 		}
 
 	}

@@ -3,7 +3,7 @@
 Plugin Name: WP Sticky Sidebar
 Plugin URI: https://premio.io/
 Description: Simple sticky sidebar implementation. After install go to Settings / WP Sticky Sidebar and change Sticky Class to .your_sidebar_class.
-Version: 1.3.5
+Version: 1.4.1
 Author: Premio
 Author URI: https://premio.io/downloads/wpstickysidebar/
 Text Domain: mystickysidebar
@@ -12,8 +12,9 @@ Domain Path: /languages
 
 defined('ABSPATH') or die("Cannot access pages directly.");
 
-
-define("STICKY_SIDEBAR_VER", "1.3.5");
+define('STICKY_SIDEBAR_VER', "1.4.1");
+define('STICKY_SIDEBAR_PATH', plugin_basename(__FILE__) );
+define('STICKY_SIDEBAR_URL', plugin_dir_url(__FILE__) );
 
 class MyStickysidebarBackend
 {
@@ -28,6 +29,7 @@ class MyStickysidebarBackend
 
 		add_filter( 'plugin_action_links_mystickysidebar/mystickysidebar.php', array( $this, 'mystickysidebar_settings_link' )  );
 		add_action( 'activated_plugin', array( $this, 'mystickysidebar_activation_redirect' ) );
+		add_action( 'admin_init', array( $this, 'check_for_redirection' ) );
 
 		add_action( 'admin_enqueue_scripts', array( $this, 'mystickysidebar_admin_script' ) );
     }
@@ -45,21 +47,43 @@ class MyStickysidebarBackend
 	}
 
 	public function mystickysidebar_settings_link( $links ) {
-		$settings_link = '<a href="options-general.php?page=my-stickysidebar-settings">Settings</a>';
-		$links['go_pro'] = '<a href="'.admin_url("options-general.php?page=my-stickysidebar-settings&type=upgrade").'" style="color: #FF5983;font-weight: bold;">'.__( 'Upgrade', 'mystickysidebar' ).'</a>';
+		$settings_link = '<a href="admin.php?page=my-stickysidebar-settings">Settings</a>';
+		$links['go_pro'] = '<a href="'.admin_url("admin.php?page=my-stickysidebar-settings&type=upgrade").'" style="color: #FF5983;font-weight: bold;">'.__( 'Upgrade', 'mystickysidebar' ).'</a>';
 		array_unshift($links, $settings_link);
 		return $links;
 	}
 
 	public function mystickysidebar_activation_redirect( $plugin ) {
 		if( $plugin == plugin_basename( __FILE__ ) ) {
-			wp_redirect( admin_url( 'options-general.php?page=my-stickysidebar-settings' ) ) ;
-			exit;
+			if(!defined( 'DOING_AJAX' )) {
+                add_option("check_for_mss_redirection", 1);
+			}
 		}
 	}
+
+    public function check_for_redirection()
+    {
+        if(!defined( 'DOING_AJAX' )) {
+            $status = get_option("check_for_mss_redirection");
+            if($status) {
+                delete_option("check_for_mss_redirection");
+                wp_redirect(admin_url("admin.php?page=my-stickysidebar-settings"));
+                exit;
+            }
+        }
+
+        if(isset($_GET['hide_my_sticky_sidebar_plugins'])) {
+            $nonce = isset($_GET['mss_nonce'])?esc_attr($_GET['mss_nonce']):'';
+            if($nonce && wp_verify_nonce($nonce, 'hide_my_sticky_sidebar_plugins')) {
+                add_option('hide_my_sticky_sidebar_plugins', 1);
+                wp_redirect(admin_url("admin.php?page=my-stickysidebar-settings"));
+                exit;
+            }
+        }
+    }
 	public function mystickysidebar_admin_script() {
 
-		if ( isset($_GET['page']) && $_GET['page'] == 'my-stickysidebar-settings' ) {
+		if ( isset($_GET['page']) && ($_GET['page'] == 'my-stickysidebar-settings' || $_GET['page'] == 'my-sticky-sidebar-settings-upgrade')) {
 
 			wp_enqueue_style('google-fonts', 'https://fonts.googleapis.com/css?family=Poppins:400,600,700' );
 
@@ -74,14 +98,215 @@ class MyStickysidebarBackend
 
 	public function add_plugin_page()
 	{
-		add_options_page(
-			'Settings Admin',
-			'WP Sticky Sidebar',
-			'manage_options',
-			'my-stickysidebar-settings',
-			array( $this, 'create_admin_page' )
-		);
+        if (current_user_can('manage_options')) {
+            $hasPluginPage = get_option("hide_my_sticky_sidebar_plugins");
+            add_menu_page(
+                esc_attr__('WP Sticky Sidebar', 'mystickysidebar'),
+                esc_attr__('WP Sticky Sidebar', 'mystickysidebar'),
+                'manage_options',
+                'my-stickysidebar-settings',
+                [$this,'create_admin_page'],
+                'dashicons-sticky'
+            );
+            add_submenu_page(
+                'my-stickysidebar-settings',
+                esc_attr__('Settings', 'mystickysidebar'),
+                esc_attr__('Settings', 'mystickysidebar'),
+                'manage_options',
+                'my-stickysidebar-settings',
+                [$this,'create_admin_page']
+            );
+            if($hasPluginPage != 1) {
+                add_submenu_page(
+                    'my-stickysidebar-settings',
+                    esc_attr__('Recommended Plugins', 'mystickysidebar'),
+                    esc_attr__('Recommended Plugins', 'mystickysidebar'),
+                    'manage_options',
+                    'my-sticky-sidebar-plugins',
+                    [$this, 'recommended_plugins']
+                );
+            }
+            add_submenu_page(
+                'my-stickysidebar-settings',
+                esc_attr__('Upgrade to Pro', 'mystickysidebar'),
+                esc_attr__('Upgrade to Pro', 'mystickysidebar'),
+                'manage_options',
+                'my-sticky-sidebar-settings-upgrade',
+                [$this,'upgrade_to_pro']
+            );
+        }
 	}
+
+    public function recommended_plugins()
+    {
+        include_once plugin_dir_path( __FILE__ ) . 'recommended-plugins.php';
+    }
+
+    public function upgrade_to_pro()
+    { ?>
+        <style>
+            div#wpcontent {
+                background: rgba(101,114,219,1);
+                background: -moz-linear-gradient(-45deg, rgba(101,114,219,1) 0%, rgba(238,134,198,1) 67%, rgba(238,134,198,1) 100%);
+                background: -webkit-gradient(left top, right bottom, color-stop(0%, rgba(101,114,219,1)), color-stop(67%, rgba(238,134,198,1)), color-stop(100%, rgba(238,134,198,1)));
+                background: -webkit-linear-gradient(-45deg, rgba(101,114,219,1) 0%, rgba(238,134,198,1) 67%, rgba(238,134,198,1) 100%);
+                background: -o-linear-gradient(-45deg, rgba(101,114,219,1) 0%, rgba(238,134,198,1) 67%, rgba(238,134,198,1) 100%);
+                background: -ms-linear-gradient(-45deg, rgba(101,114,219,1) 0%, rgba(238,134,198,1) 67%, rgba(238,134,198,1) 100%);
+                background: linear-gradient(135deg, rgba(101,114,219,1) 0%, rgba(238,134,198,1) 67%, rgba(238,134,198,1) 100%);
+                filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#6572db', endColorstr='#ee86c6', GradientType=1 );
+            }
+        </style>
+        <script>
+            jQuery(document).ready(function(){
+                jQuery(".sticky-sidebar-menu ul li a").on( 'click', function(e){
+                    e.preventDefault();
+                    if(!jQuery(this).hasClass("active")) {
+                        jQuery(".sticky-sidebar-menu ul li a").removeClass("active");
+                        jQuery(this).addClass("active");
+                        thisHref = jQuery(this).attr("href");
+                        jQuery(".sticky-sidebar-content").hide();
+                        jQuery(thisHref).show();
+                    }
+                });
+                jQuery(".sticky-sidebar-upgrade-now").on( 'click', function(e){
+                    e.preventDefault();
+                    jQuery(".sticky-sidebar-menu ul li a:last").trigger("click");
+                });
+                jQuery(".multiple-options").on( 'change', function(){
+                    thisValue = jQuery(this).val();
+                    jQuery(this).closest(".rpt_plan").find("a.rpt_foot").attr("href", thisValue);
+                    thisPrice = jQuery(this).find("option:selected").attr("data-price");
+                    jQuery(this).closest(".rpt_plan").find(".rpt_price").text("$"+thisPrice);
+                    priceText = jQuery(this).find("option:selected").attr("data-header");
+                    jQuery(this).closest(".rpt_plan").find(".rpt_desc").text(priceText);
+                });
+            });
+        </script>
+
+        <?php $pro_url = "https://go.premio.io/?edd_action=add_to_cart&download_id=2525&edd_options[price_id]=" ?>
+        <div id="mystickysidebar" class="mystickysidebar wrap">
+            <div style="display: block" id="sticky-sidebar-upgrade" class="sticky-sidebar-content">
+                <div id="rpt_pricr" class="rpt_plans rpt_3_plans  rpt_style_basic">
+                    <p class="udner-title">
+                        <strong class="text-primary">Unlock All Features</strong>
+                    </p>
+                    <div class="">
+                        <div class="rpt_plan  rpt_plan_0  ">
+                            <div style="text-align:left;" class="rpt_title rpt_title_0">Basic</div>
+                            <div class="rpt_head rpt_head_0">
+                                <div class="rpt_recurrence rpt_recurrence_0">For small website owners</div>
+                                <div class="rpt_price rpt_price_0">$19</div>
+                                <div class="rpt_description rpt_description_0 rpt_desc">Per year. Renewals for 25% off</div>
+                                <div style="clear:both;"></div>
+                                <div class="rpt_features rpt_features_0">
+                                    <div class="rpt_feature rpt_feature_0-0"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Use WP Sticky Sidebar on 1 domain</span>1 website<span class="rpt_tooltip_plus" > +</span></a></div>
+                                    <div class="rpt_feature rpt_feature_0-2"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>You can disable the sticky effect on desktop or mobile</span>Devices<span class="rpt_tooltip_plus" > +</span></a></div>
+                                    <div class="rpt_feature rpt_feature_0-3"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Add CSS of your own to the sticky sidebar</span>CSS style<span class="rpt_tooltip_plus" > +</span></a></div>
+                                    <div class="rpt_feature rpt_feature_0-4"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Exclude pages you don't want to have sticky sidebar</span>Page targeting<span class="rpt_tooltip_plus" > +</span></a></div>
+                                    <div class="rpt_feature rpt_feature_0-9">
+                                        <select data-key="0" class="multiple-options">
+                                            <option data-header="Renewals for 25% off" data-price="19" value="<?php echo esc_url($pro_url."1") ?>">
+                                                <?php esc_html_e("Updates & support for 1 year") ?>
+                                            </option>
+                                            <option data-header="For 2 years" data-price="29" value="<?php echo esc_url($pro_url."13") ?>">
+                                                <?php esc_html_e("Updates & support for 2 years") ?>
+                                            </option>
+                                            <option data-header="For lifetime" data-price="59" value="<?php echo esc_url($pro_url."10") ?>">
+                                                <?php esc_html_e("Updates & support for lifetime") ?>
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style="clear:both;"></div>
+                                <a target="_blank" href="https://go.premio.io/?edd_action=add_to_cart&amp;download_id=2525&amp;edd_options[price_id]=1" class="rpt_foot rpt_foot_0">Buy now</a>
+                            </div>
+                        </div>
+                        <div class="rpt_plan  rpt_plan_1 rpt_recommended_plan ">
+                            <div style="text-align:left;" class="rpt_title rpt_title_1">Plus<img class="rpt_recommended" src="<?php echo plugins_url("") ?>/mystickysidebar/images/rpt_recommended.png" style="top: 27px;"></div>
+                            <div class="rpt_head rpt_head_1">
+                                <div class="rpt_recurrence rpt_recurrence_1">For businesses with multiple websites</div>
+                                <div class="rpt_price rpt_price_1">$39</div>
+                                <div class="rpt_description rpt_description_1 rpt_desc">Per year. Renewals for 25% off</div>
+                                <div style="clear:both;"></div>
+                            </div>
+                            <div class="rpt_features rpt_features_1">
+                                <div class="rpt_feature rpt_feature_1-0"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Use WP Sticky Sidebar on 5 domains</span>5 websites<span class="rpt_tooltip_plus" > +</span></a></div>
+                                <div class="rpt_feature rpt_feature_0-2"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>You can disable the sticky effect on desktop or mobile</span>Devices<span class="rpt_tooltip_plus" > +</span></a></div>
+                                <div class="rpt_feature rpt_feature_0-3"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Add CSS of your own to the sticky sidebar</span>CSS style<span class="rpt_tooltip_plus" > +</span></a></div>
+                                <div class="rpt_feature rpt_feature_0-4"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Exclude pages you don't want to have sticky sidebar</span>Page targeting<span class="rpt_tooltip_plus" > +</span></a></div>
+                                <div class="rpt_feature rpt_feature_0-9">
+                                    <select data-key="0" class="multiple-options">
+                                        <option data-header="Renewals for 25% off" data-price="39" value="<?php echo esc_url($pro_url."2") ?>">
+                                            <?php esc_html_e("Updates & support for 1 year") ?>
+                                        </option>
+                                        <option data-header="For 2 years" data-price="59" value="<?php echo esc_url($pro_url."14") ?>">
+                                            <?php esc_html_e("Updates & support for 2 years") ?>
+                                        </option>
+                                        <option data-header="For lifetime" data-price="99" value="<?php echo esc_url($pro_url."11") ?>">
+                                            <?php esc_html_e("Updates & support for lifetime") ?>
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="clear:both;"></div>
+                            <a target="_blank" href="https://go.premio.io/?edd_action=add_to_cart&amp;download_id=2525&amp;edd_options[price_id]=2" class="rpt_foot rpt_foot_1">Buy now</a>
+                        </div>
+                        <div class="rpt_plan  rpt_plan_2  ">
+                            <div style="text-align:left;" class="rpt_title rpt_title_2">Agency</div>
+                            <div class="rpt_head rpt_head_2">
+                                <div class="rpt_recurrence rpt_recurrence_2">For agencies who manage clients</div>
+                                <div class="rpt_price rpt_price_2">$79</div>
+                                <div class="rpt_description rpt_description_2 rpt_desc">Per year. Renewals for 25% off</div>
+                                <div style="clear:both;"></div>
+                            </div>
+                            <div class="rpt_features rpt_features_2">
+                                <div class="rpt_feature rpt_feature_2-0"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Use WP Sticky Sidebar on 50 domains</span>50 websites<span class="rpt_tooltip_plus" > +</span></a></div>
+                                <div class="rpt_feature rpt_feature_0-2"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>You can disable the sticky effect on desktop or mobile</span>Devices<span class="rpt_tooltip_plus" > +</span></a></div>
+                                <div class="rpt_feature rpt_feature_0-3"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Add CSS of your own to the sticky sidebar</span>CSS style<span class="rpt_tooltip_plus" > +</span></a></div>
+                                <div class="rpt_feature rpt_feature_0-4"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Exclude pages you don't want to have sticky sidebar</span>Page targeting<span class="rpt_tooltip_plus" > +</span></a></div>
+                                <div class="rpt_feature rpt_feature_0-9">
+                                    <select data-key="0" class="multiple-options">
+                                        <option data-header="Renewals for 25% off" data-price="79" value="<?php echo esc_url($pro_url."3") ?>">
+                                            <?php esc_html_e("Updates & support for 1 year") ?>
+                                        </option>
+                                        <option data-header="For 2 years" data-price="125" value="<?php echo esc_url($pro_url."15") ?>">
+                                            <?php esc_html_e("Updates & support for 2 years") ?>
+                                        </option>
+                                        <option data-header="For lifetime" data-price="199" value="<?php echo esc_url($pro_url."12") ?>">
+                                            <?php esc_html_e("Updates & support for lifetime") ?>
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="clear:both;"></div>
+                            <a target="_blank" href="https://go.premio.io/?edd_action=add_to_cart&amp;download_id=2525&amp;edd_options[price_id]=3" class="rpt_foot rpt_foot_2">Buy now</a>
+                        </div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <div class="client-testimonial">
+                        <p class="text-center"><span class="dashicons dashicons-yes"></span> 30 days money back guaranteed</p>
+                        <p class="text-center"><span class="dashicons dashicons-yes"></span> The plugin will always keep working even if you don't renew your license</p>
+                        <div class="payment">
+                            <img src="<?php echo esc_url(STICKY_SIDEBAR_URL."images/payment.png") ?>" alt="Payment" class="payment-img" />
+                        </div>
+                        <div class="easy-modal__bottom">
+                            <img class="user-photo" src="<?php echo esc_url(STICKY_SIDEBAR_URL."images/client-image.jpeg") ?>">
+                            <div class="easy-modal__bottom-p">
+                                <svg width="47" height="31" viewBox="0 0 47 31" fill="none" xmlns="http://www.w3.org/2000/svg" class="quote">
+                                    <path d="M2.61501 31C1.8523 31 1.19854 30.7281 0.653751 30.1842C0.217918 29.6404 0 28.9877 0 28.2263C0 27.5737 0.163438 26.7035 0.490314 25.6158L8.98907 3.75263C9.53386 2.44736 10.1331 1.5228 10.7869 0.978942C11.4406 0.326313 12.4213 0 13.7288 0H18.7953C19.667 0 20.3207 0.326313 20.7566 0.978942C21.3014 1.63158 21.4648 2.44737 21.2469 3.42632L17.6513 26.2684C17.3244 29.4228 15.799 31 13.075 31H2.61501ZM28.2747 31C27.512 31 26.8583 30.7281 26.3135 30.1842C25.8776 29.6404 25.6597 28.9877 25.6597 28.2263C25.6597 27.5737 25.8232 26.7035 26.15 25.6158L34.6488 3.75263C35.1936 2.44736 35.7929 1.5228 36.4466 0.978942C37.1003 0.326313 38.081 0 39.3885 0H44.455C45.3267 0 45.9805 0.326313 46.4163 0.978942C46.9611 1.63158 47.1245 2.44737 46.9066 3.42632L43.311 26.2684C42.9841 29.4228 41.4587 31 38.7347 31H28.2747Z" fill="#A886CD" fill-opacity="0.1"></path>
+                                </svg>
+                                I was using my default theme’s sticky sidebar, but it was not working as I want on my blog, then I got this plugin and it worked perfectlly.
+                                <p>
+                                    <span class="user-name">Divesh Diggiwal</span>,
+                                    <span class="user-role">WebTechPreneur</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php }
 
 	public function create_admin_page()
 	{
@@ -177,7 +402,7 @@ class MyStickysidebarBackend
 		</style>
 		<script>
 			jQuery(document).ready(function(){
-				jQuery(".sticky-sidebar-menu ul li a").click(function(e){
+				jQuery(".sticky-sidebar-menu ul li a").on( 'click', function(e){
 					e.preventDefault();
 					if(!jQuery(this).hasClass("active")) {
 						jQuery(".sticky-sidebar-menu ul li a").removeClass("active");
@@ -187,11 +412,11 @@ class MyStickysidebarBackend
 						jQuery(thisHref).show();
 					}
 				});
-				jQuery(".sticky-sidebar-upgrade-now").click(function(e){
+				jQuery(".sticky-sidebar-upgrade-now").on( 'click', function(e){
 					e.preventDefault();
 					jQuery(".sticky-sidebar-menu ul li a:last").trigger("click");
 				});
-                jQuery(".multiple-options").change(function(){
+                jQuery(".multiple-options").on( 'change', function(){
                     thisValue = jQuery(this).val();
                     jQuery(this).closest(".rpt_plan").find("a.rpt_foot").attr("href", thisValue);
                     thisPrice = jQuery(this).find("option:selected").attr("data-price");
@@ -202,13 +427,7 @@ class MyStickysidebarBackend
 			});
 		</script>
 		<div id="mystickysidebar" class="mystickysidebar wrap">
-			<div class="sticky-sidebar-menu">
-				<ul>
-					<li><a href="#sticky-sidebar-settings" class="<?php echo (isset($_GET['type'])&&$_GET['type']=="upgrade")?"":"active" ?>"><?php esc_attr_e('Settings', 'mystickysidebar'); ?></a></li>
-					<li><a href="#sticky-sidebar-upgrade" class="<?php echo (isset($_GET['type'])&&$_GET['type']=="upgrade")?"active":"" ?>"><?php esc_attr_e('Upgrade to Pro', 'mystickysidebar'); ?></a></li>
-				</ul>
-			</div>
-			<div style="display: <?php echo (isset($_GET['type'])&&$_GET['type']=="upgrade")?"none":"block" ?>" id="sticky-sidebar-settings" class="sticky-sidebar-content">
+			<div style="display: block"  id="sticky-sidebar-settings" class="sticky-sidebar-content">
 				<div class="mystickymenu-heading">
 					<div class="myStickymenu-header-title">
 						<h3><?php esc_attr_e('WP Sticky Sidebar Settings', 'mystickysidebar'); ?></h3>
@@ -418,137 +637,6 @@ class MyStickysidebarBackend
 				</form>
 				<p class="mystickysidebar-review"><a href="https://wordpress.org/support/plugin/mystickysidebar/reviews/" target="_blank"><?php esc_attr_e('Leave a review','mystickysidebar'); ?></a></p>
 			</div>
-            <?php $pro_url = "https://go.premio.io/?edd_action=add_to_cart&download_id=2525&edd_options[price_id]=" ?>
-			<div style="display: <?php echo (isset($_GET['type'])&&$_GET['type']=="upgrade")?"block":"none" ?>" id="sticky-sidebar-upgrade" class="sticky-sidebar-content">
-				<div id="rpt_pricr" class="rpt_plans rpt_3_plans  rpt_style_basic">
-					<p class="udner-title">
-						<strong class="text-primary">Unlock All Features</strong>
-					</p>
-					<div class="">
-						<div class="rpt_plan  rpt_plan_0  ">
-							<div style="text-align:left;" class="rpt_title rpt_title_0">Basic</div>
-							<div class="rpt_head rpt_head_0">
-								<div class="rpt_recurrence rpt_recurrence_0">For small website owners</div>
-								<div class="rpt_price rpt_price_0">$19</div>
-								<div class="rpt_description rpt_description_0 rpt_desc">Per year. Renewals for 25% off</div>
-								<div style="clear:both;"></div>
-							<div class="rpt_features rpt_features_0">
-								<div class="rpt_feature rpt_feature_0-0"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Use WP Sticky Sidebar on 1 domain</span>1 website<span class="rpt_tooltip_plus" > +</span></a></div>
-								<div class="rpt_feature rpt_feature_0-2"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>You can disable the sticky effect on desktop or mobile</span>Devices<span class="rpt_tooltip_plus" > +</span></a></div>
-								<div class="rpt_feature rpt_feature_0-3"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Add CSS of your own to the sticky sidebar</span>CSS style<span class="rpt_tooltip_plus" > +</span></a></div>
-								<div class="rpt_feature rpt_feature_0-4"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Exclude pages you don't want to have sticky sidebar</span>Page targeting<span class="rpt_tooltip_plus" > +</span></a></div>
-                                <div class="rpt_feature rpt_feature_0-9">
-                                    <select data-key="0" class="multiple-options">
-                                        <option data-header="Renewals for 25% off" data-price="19" value="<?php echo esc_url($pro_url."1") ?>">
-                                            <?php esc_html_e("Updates & support for 1 year") ?>
-                                        </option>
-                                        <option data-header="For 2 years" data-price="29" value="<?php echo esc_url($pro_url."13") ?>">
-                                            <?php esc_html_e("Updates & support for 2 years") ?>
-                                        </option>
-                                        <option data-header="For lifetime" data-price="59" value="<?php echo esc_url($pro_url."10") ?>">
-                                            <?php esc_html_e("Updates & support for lifetime") ?>
-                                        </option>
-                                    </select>
-                                </div>
-							</div>
-							<div style="clear:both;"></div>
-								<a target="_blank" href="https://go.premio.io/?edd_action=add_to_cart&amp;download_id=2525&amp;edd_options[price_id]=1" class="rpt_foot rpt_foot_0">Buy now</a>
-							</div>
-						</div>
-						<div class="rpt_plan  rpt_plan_1 rpt_recommended_plan ">
-							<div style="text-align:left;" class="rpt_title rpt_title_1">Plus<img class="rpt_recommended" src="<?php echo plugins_url("") ?>/mystickysidebar/images/rpt_recommended.png" style="top: 27px;"></div>
-							<div class="rpt_head rpt_head_1">
-								<div class="rpt_recurrence rpt_recurrence_1">For businesses with multiple websites</div>
-								<div class="rpt_price rpt_price_1">$39</div>
-								<div class="rpt_description rpt_description_1 rpt_desc">Per year. Renewals for 25% off</div>
-								<div style="clear:both;"></div>
-							</div>
-							<div class="rpt_features rpt_features_1">
-								<div class="rpt_feature rpt_feature_1-0"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Use WP Sticky Sidebar on 5 domains</span>5 websites<span class="rpt_tooltip_plus" > +</span></a></div>
-								<div class="rpt_feature rpt_feature_0-2"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>You can disable the sticky effect on desktop or mobile</span>Devices<span class="rpt_tooltip_plus" > +</span></a></div>
-								<div class="rpt_feature rpt_feature_0-3"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Add CSS of your own to the sticky sidebar</span>CSS style<span class="rpt_tooltip_plus" > +</span></a></div>
-								<div class="rpt_feature rpt_feature_0-4"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Exclude pages you don't want to have sticky sidebar</span>Page targeting<span class="rpt_tooltip_plus" > +</span></a></div>
-                                <div class="rpt_feature rpt_feature_0-9">
-                                    <select data-key="0" class="multiple-options">
-                                        <option data-header="Renewals for 25% off" data-price="39" value="<?php echo esc_url($pro_url."2") ?>">
-                                            <?php esc_html_e("Updates & support for 1 year") ?>
-                                        </option>
-                                        <option data-header="For 2 years" data-price="59" value="<?php echo esc_url($pro_url."14") ?>">
-                                            <?php esc_html_e("Updates & support for 2 years") ?>
-                                        </option>
-                                        <option data-header="For lifetime" data-price="99" value="<?php echo esc_url($pro_url."11") ?>">
-                                            <?php esc_html_e("Updates & support for lifetime") ?>
-                                        </option>
-                                    </select>
-                                </div>
-							</div>
-							<div style="clear:both;"></div>
-							<a target="_blank" href="https://go.premio.io/?edd_action=add_to_cart&amp;download_id=2525&amp;edd_options[price_id]=2" class="rpt_foot rpt_foot_1">Buy now</a>
-						</div>
-						<div class="rpt_plan  rpt_plan_2  ">
-							<div style="text-align:left;" class="rpt_title rpt_title_2">Agency</div>
-							<div class="rpt_head rpt_head_2">
-								<div class="rpt_recurrence rpt_recurrence_2">For agencies who manage clients</div>
-								<div class="rpt_price rpt_price_2">$79</div>
-								<div class="rpt_description rpt_description_2 rpt_desc">Per year. Renewals for 25% off</div>
-								<div style="clear:both;"></div>
-							</div>
-							<div class="rpt_features rpt_features_2">
-								<div class="rpt_feature rpt_feature_2-0"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Use WP Sticky Sidebar on 50 domains</span>50 websites<span class="rpt_tooltip_plus" > +</span></a></div>
-								<div class="rpt_feature rpt_feature_0-2"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>You can disable the sticky effect on desktop or mobile</span>Devices<span class="rpt_tooltip_plus" > +</span></a></div>
-								<div class="rpt_feature rpt_feature_0-3"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Add CSS of your own to the sticky sidebar</span>CSS style<span class="rpt_tooltip_plus" > +</span></a></div>
-								<div class="rpt_feature rpt_feature_0-4"><a href="javascript:;" class="rpt_tooltip"><span class="intool"><b></b>Exclude pages you don't want to have sticky sidebar</span>Page targeting<span class="rpt_tooltip_plus" > +</span></a></div>
-                                <div class="rpt_feature rpt_feature_0-9">
-                                    <select data-key="0" class="multiple-options">
-                                        <option data-header="Renewals for 25% off" data-price="79" value="<?php echo esc_url($pro_url."3") ?>">
-                                            <?php esc_html_e("Updates & support for 1 year") ?>
-                                        </option>
-                                        <option data-header="For 2 years" data-price="125" value="<?php echo esc_url($pro_url."15") ?>">
-                                            <?php esc_html_e("Updates & support for 2 years") ?>
-                                        </option>
-                                        <option data-header="For lifetime" data-price="199" value="<?php echo esc_url($pro_url."12") ?>">
-                                            <?php esc_html_e("Updates & support for lifetime") ?>
-                                        </option>
-                                    </select>
-                                </div>
-							</div>
-							<div style="clear:both;"></div>
-							<a target="_blank" href="https://go.premio.io/?edd_action=add_to_cart&amp;download_id=2525&amp;edd_options[price_id]=3" class="rpt_foot rpt_foot_2">Buy now</a>
-						</div>
-					</div>
-					<div style="clear:both;"></div>
-					<div class="client-testimonial">
-						<p class="text-center"><span class="dashicons dashicons-yes"></span> 30 days money back guaranteed</p>
-						<p class="text-center"><span class="dashicons dashicons-yes"></span> The plugin will always keep working even if you don't renew your license</p>
-						<div class="payment">
-							<img src="<?php echo plugins_url("") ?>/mystickysidebar/images/payment.png" alt="Payment" class="payment-img" />
-						</div>
-						<div class="easy-modal__bottom">
-							<img class="user-photo" src="<?php echo plugins_url("") ?>/mystickysidebar/images/client-image.jpeg">
-							<div class="easy-modal__bottom-p">
-								<svg width="47" height="31" viewBox="0 0 47 31" fill="none" xmlns="http://www.w3.org/2000/svg" class="quote">
-									<path d="M2.61501 31C1.8523 31 1.19854 30.7281 0.653751 30.1842C0.217918 29.6404 0 28.9877 0 28.2263C0 27.5737 0.163438 26.7035 0.490314 25.6158L8.98907 3.75263C9.53386 2.44736 10.1331 1.5228 10.7869 0.978942C11.4406 0.326313 12.4213 0 13.7288 0H18.7953C19.667 0 20.3207 0.326313 20.7566 0.978942C21.3014 1.63158 21.4648 2.44737 21.2469 3.42632L17.6513 26.2684C17.3244 29.4228 15.799 31 13.075 31H2.61501ZM28.2747 31C27.512 31 26.8583 30.7281 26.3135 30.1842C25.8776 29.6404 25.6597 28.9877 25.6597 28.2263C25.6597 27.5737 25.8232 26.7035 26.15 25.6158L34.6488 3.75263C35.1936 2.44736 35.7929 1.5228 36.4466 0.978942C37.1003 0.326313 38.081 0 39.3885 0H44.455C45.3267 0 45.9805 0.326313 46.4163 0.978942C46.9611 1.63158 47.1245 2.44737 46.9066 3.42632L43.311 26.2684C42.9841 29.4228 41.4587 31 38.7347 31H28.2747Z" fill="#A886CD" fill-opacity="0.1"></path>
-								</svg>
-								I was using my default theme’s sticky sidebar, but it was not working as I want on my blog, then I got this plugin and it worked perfectlly.
-								<p>
-									<span class="user-name">Divesh Diggiwal</span>,
-									<span class="user-role">WebTechPreneur</span>
-								</p>
-							</div>
-						</div>
-<!--						<div class="testimonial-box">-->
-<!--							<div class="testimonial-image">-->
-<!--								<img src="--><?php //echo plugins_url("") ?><!--/mystickysidebar/images/client-image.jpeg" style="top: 27px;">-->
-<!--							</div>-->
-<!--							<div class="testimonial-content">-->
-<!---->
-<!--								<div class="author">Divesh Diggiwal <small>WebTechPreneur</small></div>-->
-<!--							</div>-->
-<!--							<div style="clear:both;"></div>-->
-<!--						</div>-->
-					</div>
-				</div>
-			</div>
 		</div>
 		<?php
 	}
@@ -612,7 +700,7 @@ class MyStickysidebarFrontend
 		if  ( isset($mystickyside_options ['myfixed_cssstyle']) && $mystickyside_options ['myfixed_cssstyle'] !=  "" ) {
 
 			echo '<style id="mystickyside_cssstyle" type="text/css">';
-			echo $mystickyside_options ['myfixed_cssstyle'];
+			echo esc_attr($mystickyside_options ['myfixed_cssstyle']);
 			echo '</style>';
 		}
 	}
@@ -725,9 +813,77 @@ class MyStickysidebarFrontend
 
 if( is_admin() ) {
 	new MyStickysidebarBackend();
-
 	include_once "class-review-box.php";
 	include_once "class-affiliate.php";
 } else {
 	new MyStickysidebarFrontend();
+}
+
+
+if(!function_exists('mystickysidebar_change_menu_text')) {
+    function mystickysidebar_change_menu_text()
+    {
+        global $submenu;
+        $subMenuKey = 'my-stickysidebar-settings';
+        if (isset($submenu[$subMenuKey])) {
+            end($submenu[$subMenuKey]);         // move the internal pointer to the end of the array
+            $key = key($submenu[$subMenuKey]);
+            if (isset($submenu[$subMenuKey][$key][0])) {
+                $submenu[$subMenuKey][$key][0] = '<span><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M13.0518 4.01946C12.9266 3.91499 12.7747 3.84781 12.6132 3.82557C12.4517 3.80333 12.2872 3.82693 12.1385 3.89367L9.3713 5.12414L7.76349 2.22571C7.68664 2.09039 7.5753 1.97785 7.44081 1.89956C7.30632 1.82127 7.15348 1.78003 6.99786 1.78003C6.84224 1.78003 6.6894 1.82127 6.55491 1.89956C6.42042 1.97785 6.30908 2.09039 6.23224 2.22571L4.62442 5.12414L1.85724 3.89367C1.70822 3.82703 1.54352 3.8034 1.38178 3.82545C1.22003 3.84751 1.06768 3.91437 0.941941 4.01849C0.816207 4.1226 0.722106 4.25982 0.670275 4.41461C0.618444 4.56941 0.610951 4.73562 0.648642 4.89446L2.0377 10.8171C2.06427 10.9318 2.11383 11.0399 2.18339 11.1348C2.25295 11.2297 2.34107 11.3096 2.44239 11.3695C2.57957 11.4516 2.73642 11.495 2.8963 11.4952C2.97402 11.4951 3.05133 11.484 3.12599 11.4624C5.65792 10.7624 8.33233 10.7624 10.8643 11.4624C11.0955 11.5232 11.3413 11.4898 11.5479 11.3695C11.6498 11.3103 11.7384 11.2307 11.8081 11.1357C11.8777 11.0406 11.9269 10.9321 11.9525 10.8171L13.3471 4.89446C13.3843 4.73558 13.3764 4.56945 13.3243 4.41482C13.2721 4.2602 13.1777 4.12326 13.0518 4.01946V4.01946Z" fill="white"/>
+</svg></span> ' . esc_html__('Upgrade to Pro', 'chaty');
+            }
+        }
+    }
+
+    add_action('admin_init', 'mystickysidebar_change_menu_text');
+}
+
+if(!function_exists('mystickysidebar_admin_footer_style')) {
+    function mystickysidebar_admin_footer_style() {
+        ?>
+        <style>
+            #adminmenu .toplevel_page_my-stickysidebar-settings > ul > li:last-child {
+                padding: 5px 10px;
+            }
+            #adminmenu .toplevel_page_my-stickysidebar-settings > ul > li:last-child a {
+                display: flex;
+                background-color: #B78DEB;
+                border-radius: 6px;
+                font-size: 12px;
+                gap: 4px;
+                padding: 4px 8px;
+                color: #ffffff;
+                align-items: center;
+                transition: all 0.2s linear;
+                font-weight: normal;
+                box-shadow: 0px 6px 8px 0px #B78DEB3D;
+                justify-content: center;
+            }
+            #adminmenu .toplevel_page_my-stickysidebar-settings > ul > li:last-child a:hover, #adminmenu .toplevel_page_my-stickysidebar-settings > ul > li:last-child a.current {
+                box-shadow: 0px 6px 8px 0px #B78DEB3D;
+                color: #ffffff;
+                background-color: #9565d0;
+                font-weight: normal;
+            }
+            #adminmenu .toplevel_page_my-stickysidebar-settings > ul > li:last-child a span {
+                flex: 0 0 16px;
+                height: 16px;
+                background-color: #c5a4ef;
+                border-radius: 4px;
+                padding: 2px;
+                display: inline-flex;
+                transition: all 0.2s linear;
+            }
+            #adminmenu .toplevel_page_my-stickysidebar-settings > ul > li:last-child a:hover span {
+                background-color: #B78DEB;
+            }
+            #adminmenu .toplevel_page_my-stickysidebar-settings > ul > li:last-child a span svg {
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+        <?php
+    }
+    add_action('admin_head', 'mystickysidebar_admin_footer_style');
 }

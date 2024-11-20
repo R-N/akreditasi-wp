@@ -2,7 +2,7 @@ function addFormField() {
 	var id = jQuery('#id').val();
 
 	if (id > 5) {
-		alert( "You've reach the limit of the free version. Consider buying the pro version. It's less than $10.");
+		alert( "You've reach the limit of the free version. Consider buying the pro version. A lifetime license is less than $15.");
 	} else {
 		jQuery("#far_itemlist").append(
 		

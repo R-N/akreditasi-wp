@@ -4,6 +4,7 @@ namespace NestedPages\Entities\Post;
 use NestedPages\Form\Validation\Validation;
 use NestedPages\Entities\NavMenu\NavMenuRepository;
 use NestedPages\Entities\PostType\PostTypeRepository;
+use NestedPages\Entities\User\UserRepository;
 
 /**
 * Post Create/Update Methods
@@ -27,6 +28,11 @@ class PostUpdateRepository
 	protected $post_type_repo;
 
 	/**
+	* User Repository
+	*/
+	protected $user_repo;
+
+	/**
 	* New Post ID
 	* @var int
 	*/
@@ -37,6 +43,7 @@ class PostUpdateRepository
 		$this->validation = new Validation;
 		$this->nav_menu_repo = new NavMenuRepository;
 		$this->post_type_repo = new PostTypeRepository;
+		$this->user_repo = new UserRepository;
 	}
 
 	/**
@@ -45,31 +52,52 @@ class PostUpdateRepository
 	* @param int parent
 	* @since 1.0
 	*/
-	public function updateOrder($posts, $parent = 0)
+	public function updateOrder($posts, $parent = 0, $filtered = false)
 	{
 		$this->validation->validatePostIDs($posts);
+		$post_type = get_post_type($posts[0]['id']);
+		$update_post_hook = apply_filters('nestedpages_use_update_post', false);
+		if ( !$this->user_repo->canSortPosts($post_type) ) return;
 		global $wpdb;
 		foreach( $posts as $key => $post )
 		{
 			$post_id = sanitize_text_field($post['id']);
 			$original_modifed_date = get_post_modified_time('Y-m-d H:i:s', false, $post_id);
 			$original_modifed_date_gmt = get_post_modified_time('Y-m-d H:i:s', true, $post_id);
+			
+			if ( !$filtered ) $args['post_parent'] = intval($parent);
 
-			// Reset the modified date to the last modified date
-			$query = $wpdb->prepare(
-				"UPDATE $wpdb->posts 
-				SET menu_order = '%d', post_parent = '%d', post_modified = '%s', post_modified_gmt = '%s' 
-				WHERE ID = '%d'", 
-				intval($key), 
-				intval($parent),
-				$original_modifed_date, 
-				$original_modifed_date_gmt, 
-				intval($post_id)
-			);
+			// Update post hook causes server timeout on large sites, but may be required by some users
+			if ( $update_post_hook ) wp_update_post(['ID' => $post_id]);
+
+			if ( !$filtered ) :
+				$query = $wpdb->prepare(
+					"UPDATE $wpdb->posts 
+					SET menu_order = '%d', post_parent = '%d', post_modified = '%s', post_modified_gmt = '%s' 
+					WHERE ID = '%d'", 
+					intval($key), 
+					intval($parent),
+					$original_modifed_date, 
+					$original_modifed_date_gmt, 
+					intval($post_id)
+				);
+			else : // The posts are filtered, don't update the parent
+				$query = $wpdb->prepare(
+					"UPDATE $wpdb->posts 
+					SET menu_order = '%d', post_modified = '%s', post_modified_gmt = '%s' 
+					WHERE ID = '%d'", 
+					intval($key), 
+					$original_modifed_date, 
+					$original_modifed_date_gmt, 
+					intval($post_id)
+				); 
+			endif;
 
 			$wpdb->query( $query );
-			do_action('nestedpages_post_order_updated', $post_id, $parent, $key);
+			do_action('nestedpages_post_order_updated', $post_id, $parent, $key, $filtered);
 
+			wp_cache_delete( $post_id, 'posts' );
+			
 			if ( isset($post['children']) ) $this->updateOrder($post['children'], $post_id);
 		}
 		do_action('nestedpages_posts_order_updated', $posts, $parent);
@@ -84,6 +112,7 @@ class PostUpdateRepository
 	*/
 	public function updatePost($data, $append_taxonomies = false)
 	{
+		if ( !current_user_can( 'edit_post', $data['post_id'] ) ) return false;
 		$updated_post = [
 			'ID' => sanitize_text_field($data['post_id'])
 		];
@@ -146,6 +175,7 @@ class PostUpdateRepository
 		$this->updateLinkTarget($data);
 		$this->updateTitleAttribute($data);
 		$this->updateNavCSS($data);
+		$this->updateNavCustomUrl($data);
 
 		return true;
 	}
@@ -157,7 +187,7 @@ class PostUpdateRepository
 	*/
 	public function updateTemplate($data)
 	{
-		if ( isset($data['page_template']) ){
+		if ( isset($data['page_template']) && current_user_can('edit_post', $data['post_id']) ){
 			$template = sanitize_text_field($data['page_template']);
 			update_post_meta( 
 				$data['post_id'], 
@@ -174,6 +204,7 @@ class PostUpdateRepository
 	*/
 	public function updateNavStatus($data)
 	{
+		if ( !current_user_can('edit_post', $data['post_id']) ) return;
 		$status = ( isset($data['nav_status']) && $data['nav_status'] == 'hide' ) ? 'hide' : 'show';
 		$id = ( isset($data['post_id']) ) ? $data['post_id'] : $this->new_id;
 		update_post_meta( 
@@ -190,6 +221,7 @@ class PostUpdateRepository
 	*/
 	private function updateNestedPagesStatus($data)
 	{
+		if ( !current_user_can('edit_post', $data['post_id']) ) return;
 		if ( $this->post_type_repo->standardFieldDisabled('hide_in_np', sanitize_text_field($data['post_type'])) ) return;
 		
 		$status = ( isset($data['nested_pages_status']) && $data['nested_pages_status'] == 'hide' ) ? 'hide' : 'show';
@@ -208,6 +240,7 @@ class PostUpdateRepository
 	*/
 	private function updateNavTitle($data)
 	{
+		if ( !current_user_can('edit_post', $data['post_id']) ) return;
 		if ( isset($data['np_nav_title']) ){
 			$title = sanitize_text_field($data['np_nav_title']);
 			update_post_meta( 
@@ -225,6 +258,7 @@ class PostUpdateRepository
 	*/
 	private function updateNavCSS($data)
 	{
+		if ( !current_user_can('edit_post', $data['post_id']) ) return;
 		if ( isset($data['np_nav_css_classes']) ){
 			$css_classes = sanitize_text_field($data['np_nav_css_classes']);
 			update_post_meta( 
@@ -236,12 +270,32 @@ class PostUpdateRepository
 	}
 
 	/**
+	* Update Nested Pages Menu Custom URL
+	* @since 3.2.0
+	* @param array data
+	*/
+	private function updateNavCustomUrl($data)
+	{
+		if ( !current_user_can('edit_post', $data['post_id']) ) return;
+		if ( isset($data['np_nav_custom_url']) ){
+			$url_input = $data['np_nav_custom_url'];
+			$url = ( $url_input == '#' ) ? '#' : esc_url($data['np_nav_custom_url']);
+			update_post_meta( 
+				$data['post_id'], 
+				'_np_nav_custom_url', 
+				$url
+			);
+		}
+	}
+
+	/**
 	* Update Nested Pages Menu Title Attribute
 	* @since 1.0
 	* @param array data
 	*/
 	private function updateTitleAttribute($data)
 	{
+		if ( !current_user_can('edit_post', $data['post_id']) ) return;
 		if ( isset($data['np_title_attribute']) ){
 			$title_attr = sanitize_text_field($data['np_title_attribute']);
 			update_post_meta( 
@@ -261,10 +315,16 @@ class PostUpdateRepository
 		foreach ( $data as $key => $value ){
 			if ( strpos($key, 'np_custom_') !== false) {
 				$field_key = str_replace('np_custom_', '', $key);
+				$matches = preg_match('/nptype_(.*)_nptype/', $field_key, $output_array);
+				$field_type = ( $output_array && isset($output_array[1]) ) ? $output_array[1] : null;
+				$value = sanitize_text_field($data[$key]);
+				$field_key = preg_replace('/nptype_(.*)_nptype_/', '', $field_key);
+				if ( $field_type == 'url' ) $value = esc_url($value);
+				if ( !current_user_can('edit_post', $data['post_id']) ) continue;
 				update_post_meta( 
 					$data['post_id'], 
 					$field_key, 
-					sanitize_text_field($data[$key])
+					$value
 				);
 			}
 		}
@@ -277,6 +337,7 @@ class PostUpdateRepository
 	*/
 	private function updateCategories($data, $append_taxonomies = false)
 	{
+		if ( !current_user_can('edit_post', $data['post_id']) ) return;
 		if ( isset($data['post_category']) )
 		{
 			$this->validation->validateIntegerArray($data['post_category']);
@@ -295,6 +356,7 @@ class PostUpdateRepository
 	*/
 	private function updateTaxonomies($data, $append_taxonomies)
 	{
+		if ( !current_user_can('edit_post', $data['post_id']) ) return;
 		if ( isset($data['tax_input']) ) {
 			foreach ( $data['tax_input'] as $taxonomy => $term_ids ){
 				$tax = get_taxonomy($taxonomy);
@@ -315,6 +377,7 @@ class PostUpdateRepository
 	*/
 	private function updateHierarchicalTaxonomies($data, $taxonomy, $term_ids, $append_taxonomies)
 	{
+		if ( !current_user_can('edit_post', $data['post_id']) ) return;
 		$terms = [];
 		foreach ( $term_ids as $term ){
 			if ( $term !== 0 ) $terms[] = (int) $term;
@@ -329,6 +392,7 @@ class PostUpdateRepository
 	*/
 	private function updateFlatTaxonomy($data, $taxonomy, $terms, $append_taxonomies)
 	{
+		if ( !current_user_can('edit_post', $data['post_id']) ) return;
 		$terms = explode(',', sanitize_text_field($terms));
 		$new_terms = array();
 		foreach($terms as $term)
@@ -345,6 +409,7 @@ class PostUpdateRepository
 	*/
 	private function updateLinkTarget($data)
 	{
+		if ( !current_user_can('edit_post', $data['post_id']) ) return;
 		$link_target = ( isset($data['link_target']) && $data['link_target'] == "_blank" ) ? "_blank" : "";
 		$id = ( isset($data['post_id']) ) ? $data['post_id'] : $this->new_id;
 		update_post_meta( 
@@ -361,6 +426,7 @@ class PostUpdateRepository
 	*/
 	private function updateSticky($data)
 	{
+		if ( !current_user_can('manage_options') ) return;
 		if ( $this->post_type_repo->standardFieldDisabled('sticky', sanitize_text_field($data['post_type'])) ) return;
 		$sticky_posts = get_option('sticky_posts');
 		if ( isset($data['sticky']) && $data['sticky'] ){
@@ -381,6 +447,7 @@ class PostUpdateRepository
 	*/
 	private function updateMenuMeta($data)
 	{
+		if ( !current_user_can( 'edit_post', $data['post_id'] ) ) return false;
 		$id = ( isset($data['post_id']) ) ? $data['post_id'] : $this->new_id;
 		$link_target = ( isset($data['linkTarget']) ) ? "_blank" : "";
 		update_post_meta($id, '_np_link_target', $link_target);
@@ -408,6 +475,7 @@ class PostUpdateRepository
 	*/
 	public function updateRedirect($data)
 	{
+		if ( !current_user_can( 'edit_post', $data['post_id'] ) ) return false;
 		$menu_order = isset($data['menu_order']) ? $data['menu_order'] : 0;
 		$updated_post = [
 			'ID' => sanitize_text_field($data['post_id']),
@@ -433,6 +501,7 @@ class PostUpdateRepository
 	*/
 	public function saveRedirect($data)
 	{
+		if ( !$this->user_repo->canSortPosts('page') ) return;
 		$new_link = [
 			'post_title' => sanitize_text_field($data['menuTitle']),
 			'post_status' => sanitize_text_field('publish'),
@@ -444,6 +513,7 @@ class PostUpdateRepository
 			$new_link['post_content'] = esc_url($data['url']);
 		}
 		$this->new_id = wp_insert_post($new_link);
+		$data['post_id'] = $this->new_id;
 		$parent_post_type = ( isset($data['parent_post_type']) ) ? sanitize_text_field($data['parent_post_type']) : 'page';
 		add_post_meta($this->new_id, '_np_parent_post_type', $parent_post_type);
 		$this->updateMenuMeta($data);
@@ -457,6 +527,7 @@ class PostUpdateRepository
 	*/
 	public function updateFromMenuItem($data)
 	{
+		if ( !current_user_can( 'edit_post', $data['post_id'] ) ) return false;
 		$updated_post = [
 			'ID' => sanitize_text_field($data['post_id']),
 			'menu_order' => sanitize_text_field($data['menu_order']),

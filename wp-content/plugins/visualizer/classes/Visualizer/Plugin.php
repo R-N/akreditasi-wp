@@ -28,12 +28,13 @@
 class Visualizer_Plugin {
 
 	const NAME = 'visualizer';
-	const VERSION = '3.4.8';
+	const VERSION = '3.11.8';
 
 	// custom post types
 	const CPT_VISUALIZER = 'visualizer';
 
 	// custom meta fields
+	const CF_CHART_IMAGE = 'visualizer-chart-image';
 	const CF_CHART_TYPE = 'visualizer-chart-type';
 	const CF_SOURCE = 'visualizer-source';
 	const CF_SERIES = 'visualizer-series';
@@ -55,6 +56,8 @@ class Visualizer_Plugin {
 	const ACTION_DELETE_CHART = 'visualizer-delete-chart';
 	const ACTION_UPLOAD_DATA = 'visualizer-upload-data';
 	const ACTION_EXPORT_DATA = 'visualizer-export-data';
+
+	const STORE_URL = 'https://store.themeisle.com/';
 
 	/**
 	 *Action used for fetching specific users/roles for permissions.
@@ -88,6 +91,8 @@ class Visualizer_Plugin {
 	const FILTER_UNDO_REVISIONS = 'visualizer-undo-revisions';
 	const FILTER_HANDLE_REVISIONS = 'visualizer-handle-revisions';
 	const FILTER_GET_CHART_DATA_AS = 'visualizer-get-chart-data-as';
+	const FILTER_HANDLE_CACHE_EXPIRATION_TIME = 'visualizer-handle-expiration-time';
+	const FILTER_CHART_TITLE = 'the_title';
 
 	const CF_DB_SCHEDULE = 'visualizer-db-schedule';
 	const CF_DB_QUERY = 'visualizer-db-query';
@@ -95,8 +100,12 @@ class Visualizer_Plugin {
 	const CF_CHART_URL = 'visualizer-chart-url';
 	const CF_CHART_SCHEDULE = 'visualizer-chart-schedule';
 	// Added by Ash/Upwork
-	const PRO_TEASER_URL = 'https://themeisle.com/plugins/visualizer-charts-and-graphs/upgrade/#pricing';
+	const PRO_TEASER_URL = 'https://themeisle.com/plugins/visualizer-charts-and-graphs/upgrade/';
 	const PRO_TEASER_TITLE = 'Check PRO version ';
+
+	const CF_CHART_CACHE = 'visualizer-chart-cache';
+	const CF_JSON_WOOCOMMERCE_SOURCE = 'visualizer-woocommerce-source';
+	const CF_IS_WOOCOMMERCE_SOURCE = 'visualizer-is-woocommerce-source';
 
 	/**
 	 * Name of the option for WordPress DB.

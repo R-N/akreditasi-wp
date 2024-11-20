@@ -53,8 +53,9 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 		parent::__construct( $plugin );
 		$this->_addAction( 'load-post.php', 'enqueueMediaScripts' );
 		$this->_addAction( 'load-post-new.php', 'enqueueMediaScripts' );
+		$this->_addAction( 'enqueue_block_editor_assets', 'enqueueMediaScripts' );
 		$this->_addAction( 'admin_footer', 'renderTemplates' );
-		$this->_addAction( 'admin_enqueue_scripts', 'enqueueLibraryScripts', null, 8 );
+		$this->_addAction( 'admin_enqueue_scripts', 'enqueueLibraryScripts', null, 0 );
 		$this->_addAction( 'admin_menu', 'registerAdminMenu' );
 		$this->_addFilter( 'media_view_strings', 'setupMediaViewStrings' );
 		$this->_addFilter( 'plugin_action_links', 'getPluginActionLinks', 10, 2 );
@@ -74,11 +75,40 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 
 		$this->_addAction( 'admin_init', 'init' );
 
+		$this->_addAction( 'visualizer_chart_languages', 'addMultilingualSupport' );
+
+		$this->_addFilter( 'admin_footer_text', 'render_review_notice' );
+
 		if ( defined( 'TI_CYPRESS_TESTING' ) ) {
 			$this->load_cypress_hooks();
 		}
 
 	}
+	/**
+	 * Display review notice.
+	 */
+	public function render_review_notice( $footer_text ) {
+		$current_screen = get_current_screen();
+
+		$visualizer_page_ids = ['toplevel_page_visualizer', 'visualizer_page_viz-support', 'visualizer_page_ti-about-visualizer' ];
+
+		if ( ! empty( $current_screen ) && isset( $current_screen->id ) ) {
+			foreach ( $visualizer_page_ids as $page_to_check ) {
+				if ( strpos( $current_screen->id, $page_to_check ) !== false ) {
+					$footer_text = sprintf(
+						__( 'Enjoying %1$s? %2$s %3$s rating. Thank you for being so supportive!', 'visualizer' ),
+						'<b>Visualizer</b>',
+						esc_html__( 'You can help us by leaving a', 'visualizer' ),
+						'<a href="https://wordpress.org/support/plugin/visualizer/reviews/" target="_blank">&#9733;&#9733;&#9733;&#9733;&#9733;</a>'
+					);
+					break;
+				}
+			}
+		}
+
+		return $footer_text;
+	}
+
 
 	/**
 	 * Define the hooks that are needed for cypress.
@@ -112,28 +142,21 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 			return;
 		}
 
-		$license = __( 'PRO', 'visualizer' );
-		if ( Visualizer_Module::is_pro() ) {
-			switch ( $plan ) {
-				case 1:
-					$license = __( 'Developer', 'visualizer' );
-					break;
-			}
-		}
+		$is_new_personal = apply_filters( 'visualizer_is_new_personal', false );
 
 		$hours = array(
-			'0' => __( 'Live', 'visualizer' ),
-			'1'  => __( 'Each hour', 'visualizer' ),
-			'12' => __( 'Each 12 hours', 'visualizer' ),
-			'24' => __( 'Each day', 'visualizer' ),
-			'72' => __( 'Each 3 days', 'visualizer' ),
+			'0.16' => __( '10 minutes', 'visualizer' ),
+			'1'    => __( 'Each hour', 'visualizer' ),
+			'12'   => __( 'Each 12 hours', 'visualizer' ),
+			'24'   => __( 'Each day', 'visualizer' ),
+			'72'   => __( 'Each 3 days', 'visualizer' ),
 		);
 
 		switch ( $feature ) {
 			case 'json':
 			case 'csv':
 				// no more schedules if pro is already active.
-				if ( Visualizer_Module::is_pro() ) {
+				if ( Visualizer_Module::is_pro() && ! $is_new_personal ) {
 					return;
 				}
 				break;
@@ -145,7 +168,7 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 				return;
 		}
 
-		echo '<optgroup disabled label="' . sprintf( __( 'More in the %s version', 'visualizer' ), $license ) . '">';
+		echo '<optgroup disabled label="' . __( 'Upgrade required', 'visualizer' ) . '">';
 		foreach ( $hours as $hour => $desc ) {
 			echo '<option disabled>' . $desc . '</option>';
 		}
@@ -308,7 +331,9 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 	 */
 	public function enqueueMediaScripts() {
 		global $typenow;
-		if ( post_type_supports( $typenow, 'editor' ) ) {
+		global $current_screen;
+
+		if ( post_type_supports( $typenow, 'editor' ) || $current_screen->id === 'widgets' || $current_screen->id === 'customize' ) {
 			wp_enqueue_style( 'visualizer-media', VISUALIZER_ABSURL . 'css/media.css', array( 'media-views' ), Visualizer_Plugin::VERSION );
 
 			// Load all the assets for the different libraries we support.
@@ -365,7 +390,7 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 				'types'   => array_keys( $chart_types ),
 			),
 			'nonce'      => wp_create_nonce(),
-			'buildurl'   => add_query_arg( 'action', Visualizer_Plugin::ACTION_CREATE_CHART, admin_url( 'admin-ajax.php' ) ),
+			'buildurl'   => esc_url( add_query_arg( 'action', Visualizer_Plugin::ACTION_CREATE_CHART, admin_url( 'admin-ajax.php' ) ) ),
 		);
 
 		return $strings;
@@ -389,13 +414,15 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 			);
 		}
 
+		$enabled = self::proFeaturesLocked();
+
 		$types = array_merge(
 			$additional,
 			array(
 				'tabular' => array(
 					'name'    => esc_html__( 'Table', 'visualizer' ),
 					'enabled' => true,
-					'supports'  => array( 'Google Charts', 'DataTable' ),
+					'supports'  => $enabled ? array( 'Google Charts', 'DataTable' ) : array( 'DataTable' ),
 				),
 				'pie'         => array(
 					'name'    => esc_html__( 'Pie/Donut', 'visualizer' ),
@@ -407,68 +434,79 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 					'enabled' => true,
 					'supports'  => array( 'Google Charts', 'ChartJS' ),
 				),
-				'area'        => array(
-					'name'    => esc_html__( 'Area', 'visualizer' ),
-					'enabled' => true,
-					// in ChartJS, the fill option is used to make Line chart an area: https://www.chartjs.org/docs/latest/charts/area.html
-					'supports'  => array( 'Google Charts' ),
-				),
-				'geo'         => array(
-					'name'    => esc_html__( 'Geo', 'visualizer' ),
-					'enabled' => true,
-					'supports'  => array( 'Google Charts' ),
-				),
 				'bar'         => array(
 					'name'    => esc_html__( 'Bar', 'visualizer' ),
 					'enabled' => true,
-					'supports'  => array( 'Google Charts', 'ChartJS' ),
+					'supports'  => $enabled ? array( 'Google Charts', 'ChartJS' ) : array( 'Google Charts' ),
+				),
+				'area'        => array(
+					'name'    => esc_html__( 'Area', 'visualizer' ),
+					'enabled' => $enabled,
+					// in ChartJS, the fill option is used to make Line chart an area: https://www.chartjs.org/docs/latest/charts/area.html
+					'supports'  => array( 'Google Charts' ),
+					'demo_url'  => 'https://demo.themeisle.com/visualizer/area-chart/',
+				),
+				'geo'         => array(
+					'name'    => esc_html__( 'Geo', 'visualizer' ),
+					'enabled' => $enabled,
+					'supports'  => array( 'Google Charts' ),
+					'demo_url'  => 'https://demo.themeisle.com/visualizer/geo-chart/',
 				),
 				'column'      => array(
 					'name'    => esc_html__( 'Column', 'visualizer' ),
-					'enabled' => true,
+					'enabled' => $enabled,
 					'supports'  => array( 'Google Charts', 'ChartJS' ),
+					'demo_url'  => 'https://demo.themeisle.com/visualizer/column-chart/',
 				),
 				'bubble'         => array(
 					'name'    => esc_html__( 'Bubble', 'visualizer' ),
-					'enabled' => true,
+					'enabled' => $enabled,
 					// chartjs' bubble is ugly looking (and it won't work off the default bubble.csv) so it is being excluded for the time being.
 					'supports'  => array( 'Google Charts' ),
+					'demo_url'  => 'https://demo.themeisle.com/visualizer/bubble-chart/',
 				),
 				'scatter'     => array(
 					'name'    => esc_html__( 'Scatter', 'visualizer' ),
-					'enabled' => true,
+					'enabled' => $enabled,
 					'supports'  => array( 'Google Charts' ),
+					'demo_url'  => 'https://demo.themeisle.com/visualizer/scatter-chart/',
 				),
 				'gauge'       => array(
 					'name'    => esc_html__( 'Gauge', 'visualizer' ),
-					'enabled' => true,
+					'enabled' => $enabled,
 					'supports'  => array( 'Google Charts' ),
+					'demo_url'  => 'https://demo.themeisle.com/visualizer/gauge-chart/',
 				),
 				'candlestick' => array(
 					'name'    => esc_html__( 'Candlestick', 'visualizer' ),
-					'enabled' => true,
+					'enabled' => $enabled,
 					'supports'  => array( 'Google Charts' ),
+					'demo_url'  => 'https://demo.themeisle.com/visualizer/candlestick-chart/',
 				),
 				// pro types
 				'timeline'    => array(
 					'name'    => esc_html__( 'Timeline', 'visualizer' ),
 					'enabled' => false,
 					'supports'  => array( 'Google Charts', 'ChartJS' ),
+					'demo_url'  => 'https://demo.themeisle.com/visualizer/timeline-chart/',
 				),
 				'combo'       => array(
 					'name'    => esc_html__( 'Combo', 'visualizer' ),
 					'enabled' => false,
 					'supports'  => array( 'Google Charts' ),
+					'demo_url'  => 'https://demo.themeisle.com/visualizer/combo-chart/',
 				),
 				'polarArea'       => array(
 					'name'    => esc_html__( 'Polar Area', 'visualizer' ),
 					'enabled' => false,
 					'supports' => array( 'ChartJS' ),
+					'demo_url'  => 'https://demo.themeisle.com/visualizer/polar-area-chart/',
 				),
 				'radar'       => array(
 					'name'    => esc_html__( 'Radar/Spider', 'visualizer' ),
 					'enabled' => false,
 					'supports' => array( 'ChartJS' ),
+					'demo_url'  => 'https://demo.themeisle.com/visualizer/radar-spider-chart/',
 				),
 			)
 		);
@@ -667,14 +705,14 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 			__( 'Chart Library', 'visualizer' ),
 			__( 'Chart Library', 'visualizer' ),
 			'edit_posts',
-			admin_url( 'admin.php?page=' . Visualizer_Plugin::NAME )
+			'admin.php?page=' . Visualizer_Plugin::NAME
 		);
 		add_submenu_page(
 			Visualizer_Plugin::NAME,
 			__( 'Add New Chart', 'visualizer' ),
 			__( 'Add New Chart', 'visualizer' ),
 			'edit_posts',
-			admin_url( 'admin.php?page=' . Visualizer_Plugin::NAME . '&vaction=addnew' )
+			'admin.php?page=' . Visualizer_Plugin::NAME . '&vaction=addnew'
 		);
 		add_submenu_page(
 			Visualizer_Plugin::NAME,
@@ -684,9 +722,44 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 			'viz-support',
 			array( $this, 'renderSupportPage' )
 		);
+
 		remove_submenu_page( Visualizer_Plugin::NAME, Visualizer_Plugin::NAME );
 
 		add_action( "load-{$this->_libraryPage}", array( $this, 'addScreenOptions' ) );
+		add_action( 'admin_footer', array( $this, 'handleGetProSubMenu' ) );
+	}
+
+	/**
+	 * Handle get pro plugin submenu.
+	 */
+	public function handleGetProSubMenu() {
+		if ( ! Visualizer_Module::is_pro() ) {
+			?>
+		<style type="text/css">
+			#toplevel_page_visualizer ul.wp-submenu li:last-child {
+				background: #FF7E65;
+				font-size: 14px;
+				font-weight: 600;
+				color: #fff;
+			}
+			#toplevel_page_visualizer ul.wp-submenu li:last-child > a > span {
+				color: #fff !important;
+			}
+			#toplevel_page_visualizer ul.wp-submenu li:last-child > a:hover {
+				box-shadow: inherit;
+			}
+		</style>
+			<?php
+			if ( get_option( 'visualizer_fresh_install', false ) ) {
+				?>
+			<style type="text/css">
+				#toplevel_page_visualizer ul.wp-submenu li.wp-first-item + li + li + li {
+					display: none;
+				}
+			</style>
+				<?php
+			}
+		}
 	}
 
 	/**
@@ -703,7 +776,7 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 		$args = array(
 			'label' => __( 'Number of charts per page:', 'visualizer' ),
 			'default' => 6,
-			'option' => 'visualizer_per_page_library',
+			'option' => 'visualizer_library_per_page',
 		);
 		add_screen_option( 'per_page', $args );
 	}
@@ -712,7 +785,7 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 	 * Returns the screen option for pagination.
 	 */
 	function setScreenOptions( $status, $option, $value ) {
-		if ( 'visualizer_per_page_library' === $option ) {
+		if ( 'visualizer_library_per_page' === $option ) {
 			return $value;
 		}
 	}
@@ -722,6 +795,22 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 	 */
 	private function getDisplayFilters( &$query_args ) {
 		$query  = array();
+		global $sitepress;
+		if ( Visualizer_Module::is_pro() && ( function_exists( 'icl_get_languages' ) && $sitepress instanceof \SitePress ) ) {
+			$current_lang = icl_get_current_language();
+			if ( in_array( $current_lang, array( 'all', icl_get_default_language() ), true ) ) {
+				$query[] = array(
+					'key'     => 'chart_lang',
+					'compare' => 'NOT EXISTS',
+				);
+			} else {
+				$query[] = array(
+					'key'     => 'chart_lang',
+					'value'   => $current_lang,
+					'compare' => '=',
+				);
+			}
+		}
 
 		// add chart type filter to the query arguments
 		$type = filter_input( INPUT_GET, 'type' );
@@ -821,7 +910,7 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 		$this->getDisplayFilters( $query_args );
 
 		// Added by Ash/Upwork
-		$filterByMeta = filter_input( INPUT_GET, 's', FILTER_SANITIZE_STRING );
+		$filterByMeta = ! empty( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( $filterByMeta ) {
 			$query                    = array(
 				'key'     => Visualizer_Plugin::CF_SETTINGS,
@@ -845,6 +934,7 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 	 */
 	public function renderSupportPage() {
 		wp_enqueue_style( 'visualizer-upsell', VISUALIZER_ABSURL . 'css/upsell.css', array(), Visualizer_Plugin::VERSION );
+		$this->load_survey();
 		include_once VISUALIZER_ABSPATH . '/templates/support.php';
 	}
 
@@ -903,6 +993,18 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 			$series = apply_filters( Visualizer_Plugin::FILTER_GET_CHART_SERIES, get_post_meta( $chart->ID, Visualizer_Plugin::CF_SERIES, true ), $chart->ID, $type );
 			$data   = self::get_chart_data( $chart, $type );
 
+			// Set default setting series when add manual chart data - Only during first creation.
+			if ( isset( $settings['series'] ) && ! empty( $series ) ) {
+				$count_series = count( $series ) - count( $settings['series'] );
+				if ( $count_series > 1 ) {
+					$clone_last_series = end( $settings['series'] );
+					$clone_last_series = array_fill_keys( array_keys( $clone_last_series ), '' );
+					foreach ( range( 1, $count_series ) as $item ) {
+						$settings['series'][] = $clone_last_series;
+					}
+				}
+			}
+
 			$library = $this->load_chart_type( $chart->ID );
 
 			$id         = 'visualizer-' . $chart->ID;
@@ -910,6 +1012,13 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 			if ( ! empty( $arguments ) ) {
 				$css        .= $arguments[0];
 				$settings   = $arguments[1];
+			}
+
+			if ( isset( $settings['controls']['ui']['labelStacking'] ) ) {
+				unset( $settings['controls']['ui']['labelStacking'] );
+			}
+			if ( isset( $settings['controls']['ui']['orientation'] ) ) {
+				unset( $settings['controls']['ui']['orientation'] );
 			}
 
 			// add chart to the array
@@ -924,6 +1033,7 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 		}
 		// enqueue charts array
 		$ajaxurl = admin_url( 'admin-ajax.php' );
+
 		wp_localize_script(
 			'visualizer-library',
 			'visualizer',
@@ -932,24 +1042,28 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 				'map_api_key' => get_option( 'visualizer-map-api-key' ),
 				'charts' => $charts,
 				'urls'   => array(
-					'base'   => add_query_arg( array( 'vpage' => false, 'vaction' => false ) ),
-					'create' => add_query_arg(
-						array(
-							'action'  => Visualizer_Plugin::ACTION_CREATE_CHART,
-							'library' => 'yes',
-							'type'      => isset( $_GET['type'] ) ? $_GET['type'] : '',
-							'chart-library'      => isset( $_GET['chart-library'] ) ? $_GET['chart-library'] : '',
-							'vaction' => false,
-						),
-						$ajaxurl
+					'base'   => esc_url( add_query_arg( array( 'vpage' => false, 'vaction' => false ) ) ),
+					'create' => esc_url(
+						add_query_arg(
+							array(
+								'action'  => Visualizer_Plugin::ACTION_CREATE_CHART,
+								'library' => 'yes',
+								'type'      => isset( $_GET['type'] ) ? $_GET['type'] : '',
+								'chart-library'      => isset( $_GET['chart-library'] ) ? $_GET['chart-library'] : '',
+								'vaction' => false,
+							),
+							$ajaxurl
+						)
 					),
-					'edit'   => add_query_arg(
-						array(
-							'action'  => Visualizer_Plugin::ACTION_EDIT_CHART,
-							'library' => 'yes',
-							'vaction' => false,
-						),
-						$ajaxurl
+					'edit'   => esc_url(
+						add_query_arg(
+							array(
+								'action'  => Visualizer_Plugin::ACTION_EDIT_CHART,
+								'library' => 'yes',
+								'vaction' => false,
+							),
+							$ajaxurl
+						)
 					),
 				),
 				'page_type' => 'library',
@@ -958,6 +1072,7 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 					'copied'        => __( 'The shortcode has been copied to your clipboard. Hit Ctrl-V/Cmd-V to paste it.', 'visualizer' ),
 					'conflict' => __( 'We have detected a potential conflict with another component that prevents Visualizer from functioning properly. Please disable any of the following components if they are activated on your instance: Modern Events Calendar plugin, Acronix plugin. In case the aforementioned components are not activated or you continue to see this error message, please disable all other plugins and enable them one by one to find out the component that is causing the conflict.', 'visualizer' ),
 				),
+				'is_pro_user' => Visualizer_Module::is_pro(),
 			)
 		);
 		// render library page
@@ -975,6 +1090,13 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 				'type'    => 'array',
 			)
 		);
+
+		$this->load_survey();
+
+		if ( ! apply_filters( 'visualizer_is_business', false ) ) {
+			do_action( 'themeisle_sdk_load_banner', 'visualizer' );
+		}
+
 		$render->render();
 	}
 
@@ -1026,12 +1148,153 @@ class Visualizer_Module_Admin extends Visualizer_Module {
 			);
 			// flattr link
 			$plugin_meta[] = sprintf(
-				'<a style="color:red" href="' . Visualizer_Plugin::PRO_TEASER_URL . '" target="_blank">%s</a>',
-				esc_html__( 'Pro Addon', 'visualizer' )
+				'<a style="color:red" href="' . tsdk_utmify( Visualizer_Plugin::PRO_TEASER_URL, 'pluginrow' ) . '" target="_blank">%s</a>',
+				esc_html__( 'Get Visualizer Pro', 'visualizer' )
 			);
 		}
 
 		return $plugin_meta;
 	}
 
+	/**
+	 * If check is existing user.
+	 *
+	 * @return bool Default false
+	 */
+	public static function proFeaturesLocked() {
+		if ( Visualizer_Module::is_pro() ) {
+			return true;
+		}
+		return 'yes' === get_option( 'visualizer-new-user', 'yes' ) ? false : true;
+	}
+
+	/**
+	 * Multilingual Support.
+	 *
+	 * @param int $chart_id Chart ID.
+	 * @return bool Default false
+	 */
+	public function addMultilingualSupport( $chart_id ) {
+		global $sitepress;
+		if ( Visualizer_Module::is_pro() ) {
+			return;
+		}
+		if ( function_exists( 'icl_get_languages' ) && $sitepress instanceof \SitePress ) {
+			$language     = icl_get_languages();
+			$current_lang = icl_get_current_language();
+			$default_lang = icl_get_default_language();
+			$post_info    = wpml_get_language_information( null, $chart_id );
+			$translations = array();
+			if ( ! empty( $post_info ) && ( $default_lang === $post_info['language_code'] ) ) {
+				$trid         = $sitepress->get_element_trid( $chart_id, 'post_' . Visualizer_Plugin::CPT_VISUALIZER );
+				$translations = $sitepress->get_element_translations( $trid );
+			}
+			if ( empty( $translations ) ) {
+				return;
+			}
+			?>
+			<hr><div class="visualizer-languages-list only-pro">
+				<?php
+				foreach ( $language as $lang ) {
+					$lang_code = $lang['code'];
+					if ( $current_lang !== $lang_code ) {
+						?>
+						<a href="javascript:;">
+							<img src="<?php echo esc_url( $lang['country_flag_url'] ); ?>" alt="<?php echo esc_attr( $lang['translated_name'] ); ?>">
+						</a>
+						<?php
+					}
+				}
+				?>
+				<a href="<?php echo tsdk_utmify( Visualizer_Plugin::PRO_TEASER_URL, 'wpml-support', 'visualizer_render_char' ); ?>"target="_blank"><?php esc_html_e( 'Upgrade to PRO to active this translation for charts', 'visualizer' ); ?></a>
+			</div>
+			<?php
+		}
+	}
+
+	/**
+	 * Check chart is enabled or not.
+	 *
+	 * @param string $type Chart ID.
+	 *
+	 * @return bool Default false
+	 */
+	public static function checkChartStatus( $type ) {
+		$types = self::_getChartTypesLocalized( false, false, false, true );
+		if ( isset( $types[ $type ] ) ) {
+			return ! empty( $types[ $type ]['enabled'] );
+		}
+		return false;
+	}
+
+	/**
+	 * Get the survey metadata.
+	 *
+	 * @return array The survey metadata.
+	 */
+	private function get_survey_metadata() {
+		$install_date     = get_option( 'visualizer_install', false );
+		$install_category = 0;
+
+		if ( false !== $install_date ) {
+			$days_since_install = round( ( time() - $install_date ) / DAY_IN_SECONDS );
+
+			if ( 0 === $days_since_install || 1 === $days_since_install ) {
+				$install_category = 0;
+			} elseif ( 1 < $days_since_install && 8 > $days_since_install ) {
+				$install_category = 7;
+			} elseif ( 8 <= $days_since_install && 31 > $days_since_install ) {
+				$install_category = 30;
+			} elseif ( 30 < $days_since_install && 90 > $days_since_install ) {
+				$install_category = 90;
+			} elseif ( 90 <= $days_since_install ) {
+				$install_category = 91;
+			}
+		}
+
+		$plugin_data    = get_plugin_data( VISUALIZER_BASEFILE, false, false );
+		$plugin_version = '';
+		if ( ! empty( $plugin_data['Version'] ) ) {
+			$plugin_version = $plugin_data['Version'];
+		}
+
+		$user_id = 'visualizer_' . preg_replace( '/[^\w\d]*/', '', get_site_url() ); // Use a normalized version of the site URL as a user ID.
+
+		$license_data = get_option( 'visualizer_pro_license_data', false );
+		if ( false !== $license_data && isset( $license_data->key ) ) {
+			$user_id = 'visualizer_' . $license_data->key;
+		}
+
+		return array(
+			'userId' => $user_id,
+			'attributes' => array(
+				'days_since_install' => strval( $install_category ),
+				'free_version'       => $plugin_version,
+				'pro_version'        => defined( 'VISUALIZER_PRO_VERSION' ) ? VISUALIZER_PRO_VERSION : '',
+				'license_status'     => apply_filters( 'product_visualizer_license_status', 'invalid' ),
+			),
+		);
+	}
+
+	/**
+	 * Load the survey.
+	 */
+	private function load_survey() {
+
+		if ( defined( 'TI_CYPRESS_TESTING' ) ) {
+			return;
+		}
+
+		$survey_handler = apply_filters( 'themeisle_sdk_dependency_script_handler', 'survey' );
+
+		if ( empty( $survey_handler ) ) {
+			return;
+		}
+
+		$metadata = $this->get_survey_metadata();
+
+		do_action( 'themeisle_sdk_dependency_enqueue_script', 'survey' );
+		wp_enqueue_script( 'visualizer_chart_survey', VISUALIZER_ABSURL . 'js/survey.js', array( $survey_handler ), $metadata['attributes']['free_version'], true );
+		wp_localize_script( 'visualizer_chart_survey', 'visualizerSurveyData', $metadata );
+	}
 }

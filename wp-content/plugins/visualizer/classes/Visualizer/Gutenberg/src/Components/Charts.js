@@ -5,7 +5,7 @@ import { Chart } from 'react-google-charts';
 
 import DataTable from './DataTable.js';
 
-import { formatDate, filterCharts, formatData } from '../utils.js';
+import { formatDate, filterCharts, formatData, googleChartPackages } from '../utils.js';
 
 /**
  * WordPress dependencies
@@ -73,6 +73,8 @@ class Charts extends Component {
 	}
 
 	render() {
+
+		let chartVersion = 'undefined' !== typeof google ? google.visualization.Version : 'current';
 
 		const { charts, isBusy, chartsLoaded, perPage } = this.state;
 
@@ -148,19 +150,23 @@ class Charts extends Component {
 													/>
 												) : ( '' !== data['visualizer-data-exploded'] ? (
 													<Chart
+														chartVersion={ chartVersion }
 														chartType={ chart }
 														rows={ data['visualizer-data'] }
 														columns={ data['visualizer-series'] }
 														options={ filterCharts( data['visualizer-settings']) }
                                                         formatters={ formatData( data ) }
+														chartPackages={ googleChartPackages }
 													/>
 												) : (
 													<Chart
+														chartVersion={ chartVersion }
 														chartType={ chart }
 														rows={ data['visualizer-data'] }
 														columns={ data['visualizer-series'] }
 														options={ filterCharts( data['visualizer-settings']) }
                                                         formatters={ formatData( data ) }
+														chartPackages={ googleChartPackages }
 													/>
 												) ) }
 

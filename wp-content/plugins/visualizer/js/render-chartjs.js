@@ -47,7 +47,8 @@
                 type = 'bar';
                 break;
             case 'bar':
-                type = 'horizontalBar';
+                type = 'bar';
+                settings.indexAxis = 'y';
                 break;
             case 'pie':
                 // donut is not a setting but a separate chart type.
@@ -64,7 +65,7 @@
         for (i = 0; i < data.length; i++) {
 			row = [];
 			for (j = 0; j < series.length; j++) {
-				if (series[j].type === 'date' || series[j].type === 'datetime') {                  
+				if (series[j].type === 'date' || series[j].type === 'datetime') {
 					date = new Date(data[i][j]);
 					data[i][j] = null;
 					if (Object.prototype.toString.call(date) === "[object Date]") {
@@ -112,13 +113,56 @@
 
         handleSettings(settings, chart);
 
+        const getChart = Chart.getChart(context);
+        if ( getChart ) {
+            return;
+        }
+
+        // Format series label.
+        settings.plugins.tooltip = {
+            callbacks: {
+                label: function(context) {
+                    var label = '';
+                    if ( 'object' === typeof context.dataset.label ) {
+                        label = context.label || '';
+                    } else {
+                        label = context.dataset.label || '';
+                    }
+                    if ( label ) {
+                        label += ': ';
+                    }
+                    var format = context.dataset.format || '';
+                    if ( format ) {
+                        var lastSuffix = numeral(context.formattedValue).format(format).replace(/[0-9]/g, '');
+                        label += context.formattedValue + lastSuffix;
+                    } else {
+                        format = 'undefined' !== typeof context.chart.config._config.options.format ? context.chart.config._config.options.format : '';
+                        if ( format ) {
+                            label += format_datum( context.formattedValue, format );
+                        } else {
+                            label += context.formattedValue;
+                        }
+                    }
+                    return label;
+                }
+            }
+        };
+
         var chartjs = new Chart(context, {
             type: type,
             data: {
                 labels: labels,
                 datasets: datasets
             },
-            options: settings
+            options: settings,
+            plugins: [{
+                afterRender: function () {
+                    var canvas = $( 'canvas' )[0];
+                    if ( $( '#chart-img' ).length ) {
+                        $( '#chart-img' ).val( canvas.toDataURL() );
+                    }
+                }
+            }],
         });
 
         // this line needs to be included twice. This is not an error.
@@ -155,22 +199,18 @@
             settings['animation']['duration'] = 1000;
         }
 
-        if(typeof settings['title'] !== 'undefined' && settings['title']['text'] !== ''){
-            settings['title']['display'] = true;
-        }
-
         if(typeof settings['tooltip'] !== 'undefined' && typeof settings['tooltip']['intersect'] !== 'undefined'){
             // jshint ignore:line
             settings['tooltip']['intersect'] = settings['tooltip']['intersect'] == true || parseInt(settings['tooltip']['intersect']) === 1;  // jshint ignore:line
         }
 
         if(typeof settings['fontName'] !== 'undefined' && settings['fontName'] !== ''){
-            Chart.defaults.global.defaultFontFamily = settings['fontName'];
+            Chart.defaults.font.family = settings['fontName'];
             delete settings['fontName'];
         }
 
         if(typeof settings['fontSize'] !== 'undefined' && settings['fontSize'] !== ''){
-            Chart.defaults.global.defaultFontSize = settings['fontSize'];
+            Chart.defaults.font.size = parseInt(settings['fontSize']);
             delete settings['fontSize'];
         }
 
@@ -183,6 +223,16 @@
             }
         }
 
+        settings.plugins = {
+            legend: settings.legend,
+        };
+
+        if(typeof settings['title'] !== 'undefined' && settings['title']['text'] !== ''){
+            settings.plugins['title'] = {};
+            settings.plugins['title']['display'] = true;
+            settings.plugins['title']['text'] = settings['title']['text'];
+        }
+
         handleAxes(settings, chart);
 
         override(settings, chart);
@@ -192,10 +242,24 @@
         if(typeof settings['yAxes'] !== 'undefined' && typeof settings['xAxes'] !== 'undefined'){
             // stacking has to be defined on both axes.
             if(typeof settings['yAxes']['stacked_bool'] !== 'undefined'){
-                settings['xAxes']['stacked_bool'] = 'true';
+                settings['yAxes']['stacked_bool'] = 'true';
             }
             if(typeof settings['xAxes']['stacked_bool'] !== 'undefined'){
-                settings['yAxes']['stacked_bool'] = 'true';
+                settings['xAxes']['stacked_bool'] = 'true';
+            }
+            // Bar percentage.
+            if (typeof settings['yAxes']['barPercentage_int'] !=='undefined' && ''!== settings['yAxes']['barPercentage_int']){
+                settings['barPercentage'] = settings['yAxes']['barPercentage_int'];
+            }
+            if (typeof settings['xAxes']['barPercentage_int'] !=='undefined' && ''!== settings['xAxes']['barPercentage_int']){
+                settings['barPercentage'] = settings['xAxes']['barPercentage_int'];
+            }
+            // Bar thickness.
+            if (typeof settings['yAxes']['barThickness'] !=='undefined' && ''!== settings['yAxes']['barThickness']){
+                settings['barThickness'] = settings['yAxes']['barThickness'];
+            }
+            if (typeof settings['xAxes']['barThickness'] !=='undefined' && ''!== settings['xAxes']['barThickness']){
+                settings['barThickness'] = settings['xAxes']['barThickness'];
             }
         }
         configureAxes(settings, 'yAxes', chart);
@@ -210,7 +274,7 @@
                 if(Array.isArray(settings[axis][i]) || typeof settings[axis][i] === 'object'){
                     for(var j in settings[axis][i]){
                         var $val = '';
-                        if(j === 'labelString'){ 
+                        if(j === 'labelString'){
                             $o['display'] = true;
                             $val = settings[axis][i][j];
                         }else if(i === 'ticks'){
@@ -267,6 +331,54 @@
             var $axis = $scales['scales'][axis];
 
             $axis.push($features);
+            // Migrate xAxes settings to v3.0+
+            if ( $scales.scales && $scales.scales.xAxes ) {
+                for (var x in $scales.scales.xAxes) {
+                    $scales.scales.x = {
+                        display: $scales.scales.xAxes[x].scaleLabel.display,
+                        title: {
+                            display:true,
+                            text: $scales.scales.xAxes[x].scaleLabel.labelString,
+                            color: $scales.scales.xAxes[x].scaleLabel.fontColor,
+                            font: {
+                                family: $scales.scales.xAxes[x].scaleLabel.fontFamily,
+                                size: $scales.scales.xAxes[x].scaleLabel.fontSize
+                            }
+                        },
+                        suggestedMax: $scales.scales.xAxes[x].ticks.suggestedMax || '',
+                        suggestedMin: $scales.scales.xAxes[x].ticks.suggestedMin || '',
+                        ticks: {
+                            maxTicksLimit: $scales.scales.xAxes[x].ticks.maxTicksLimit
+                        },
+                        stacked: $scales.scales.xAxes[x].stacked || false
+                    }
+                }
+                delete $scales.scales.xAxes;
+            }
+            // Migrate yAxes settings to v3.0+
+            if ( $scales.scales && $scales.scales.yAxes ) {
+                for (var y in $scales.scales.yAxes) {
+                    $scales.scales.y = {
+                        display: $scales.scales.yAxes[y].scaleLabel.display,
+                        title: {
+                            display:true,
+                            text: $scales.scales.yAxes[y].scaleLabel.labelString,
+                            color: $scales.scales.yAxes[y].scaleLabel.fontColor,
+                            font: {
+                                family: $scales.scales.yAxes[y].scaleLabel.fontFamily,
+                                size: $scales.scales.yAxes[y].scaleLabel.fontSize
+                            }
+                        },
+                        suggestedMax: $scales.scales.yAxes[y].ticks.suggestedMax || '',
+                        suggestedMin: $scales.scales.yAxes[y].ticks.suggestedMin || '',
+                        ticks: {
+                            maxTicksLimit: $scales.scales.yAxes[y].ticks.maxTicksLimit
+                        },
+                        stacked: $scales.scales.yAxes[y].stacked || false
+                    }
+                }
+                delete $scales.scales.yAxes;
+            }
             $.extend(settings, $scales);
 
             // to prevent duplication, indicates that the axis has been set.
@@ -278,19 +390,22 @@
         // format the axes labels.
         if(typeof settings[axis + '_format'] !== 'undefined' && settings[axis + '_format'] !== ''){
             var format = settings[axis + '_format'];
-            switch(axis){
-                case 'xAxes':
-                    settings.scales.xAxes[0].ticks.callback = function(value, index, values){
-                        return format_datum(value, format);
-                    };
-                    break;
-                case 'yAxes':
-                    settings.scales.yAxes[0].ticks.callback = function(value, index, values){
-                        return format_datum(value, format);
-                    };
-                    break;
-            }
-            delete settings[axis + '_format'];
+            var isDateFormat = moment( moment().format( format ),format, true ).isValid();
+            if ( ! isDateFormat ) {
+	            switch(axis){
+	                case 'xAxes':
+	                    settings.scales.x.ticks.callback = function(value, index, values){
+	                        return format_datum(value, format);
+	                    };
+	                    break;
+	                case 'yAxes':
+	                    settings.scales.y.ticks.callback = function(value, index, values){
+	                        return format_datum(value, format);
+	                    };
+	                    break;
+	            }
+	            delete settings[axis + '_format'];
+	        }
         }
         delete settings[axis];
     }
@@ -329,6 +444,9 @@
         }
         for(var i in settings.series[j]){
             var $attribute = {};
+            if ( settings.series[j].backgroundColor == '' ) {
+                delete settings.series[j].backgroundColor;
+            }
             $attribute[i] = settings.series[j][i];
             $.extend($attributes, $attribute);
         }
@@ -352,7 +470,7 @@
         switch(type) {
             case 'number':
                 // numeral.js works on 0 instead of # so we just replace that in the ICU pattern set.
-                format = format.replace(/#/g, '0');
+                format = format.replace(/#/g, '0').replace(/%/g, '');
                 // we also replace all instance of '$' as that is more relevant for ticks.
                 if(removeDollar){
                     format = format.replace(/\$/g, '');
@@ -371,6 +489,11 @@
     function format_data(datum, j, settings, series){
         j = j - 1;
         var format = typeof settings.series !== 'undefined' && typeof settings.series[j] !== 'undefined' ? settings.series[j].format : '';
+        if ( '' === format && typeof settings.yAxes_format !== 'undefined' ) {
+        	format = settings.yAxes_format;
+        } else if ( '' === format && typeof settings.xAxes_format !== 'undefined' ) {
+        	format = settings.xAxes_format;
+        }
         return format_datum(datum, format, series[j + 1].type);
     }
 

@@ -242,6 +242,7 @@ if ( !class_exists( 'PT_Options_Framework' ) ) {
 				case 'password':
 				case 'number':
 				case 'url':
+				case 'hidden':
 					$value = !empty( $value ) ? (($type === 'number') ? intval( $value ) : esc_attr( $value )) : $value;
 
 					$prepend_text	 = !empty( $param[ 'prepend_text' ] ) ? $param[ 'prepend_text' ] : '';

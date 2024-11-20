@@ -22,7 +22,7 @@ preg_match( '/href="([^"]+)"/', $heading, $matches );
 $href	 = !empty( $matches[ 1 ] ) ? "href='" . esc_url( $matches[ 1 ] ) . "' onclick='event.preventDefault()'" : '';
 ?>
 
-<div class="panel-heading">
+<div class="panel-heading <?php echo PT_CV_PREFIX . 'title'; ?>">
     <a class="panel-title" data-toggle="cvcollapse" data-parent="#<?php echo esc_attr( PT_CV_PREFIX_UPPER . 'ID' ); ?>" data-target="#<?php echo esc_attr( $random_id ); ?>" <?php echo $href; ?>>
 		<?php
 		// Remove title wrapper and anchor tags, remain original post's title

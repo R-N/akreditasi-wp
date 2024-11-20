@@ -1,11 +1,12 @@
 <?php 
-	$post_type_object = get_post_type_object( $this->post_type->name );
-	$can_publish = current_user_can( $post_type_object->cap->publish_posts );
-	$wpml_pages = ( $this->integrations->plugins->wpml->installed && $this->integrations->plugins->wpml->isDefaultLanguage()) ? true : false;
-	$has_menu_options = ( $this->user->canSortPosts($this->post_type->name) && $this->post_type->name == 'page' && !$this->listing_repo->isSearch() && !$this->settings->menusDisabled()  ) ? true : false;
+$post_type_object = get_post_type_object( $this->post_type->name );
+$can_publish = current_user_can( $post_type_object->cap->publish_posts );
+$wpml_pages = ( $this->integrations->plugins->wpml->installed && $this->integrations->plugins->wpml->isDefaultLanguage()) ? true : false;
+$has_menu_options = ( $this->user->canSortPosts($this->post_type->name) && $this->post_type->name == 'page' && !$this->listing_repo->isSearch() && !$this->settings->menusDisabled()  ) ? true : false;
 ?>
 <form data-np-bulk-edit-form class="nestedpages-bulk-edit" action="<?php echo admin_url('admin-post.php'); ?>" method="post">
 	<input type="hidden" name="action" value="npBulkEdit">
+	<?php wp_nonce_field('nestedpages-nonce', 'nonce'); ?>
 	<input type="hidden" name="page" value="<?php echo $this->pageURL(); ?>">
 	<input type="hidden" name="post_type" value="<?php echo $this->post_type->name; ?>">
 
@@ -26,7 +27,7 @@
 					$users_opt = [
 						'show_option_none' => '&mdash; ' . __('No Change', 'wp-nested-pages') . ' &mdash;',
 						'hide_if_only_one_author' => false,
-						'who' => 'authors',
+						'capability' => 'edit_posts',
 						'name' => 'post_author',
 						'id' => 'post_author',
 						'class'=> 'authors',
@@ -82,6 +83,11 @@
 				</div>
 				<?php endif; ?>
 
+				<?php
+				$custom_fields_left = $this->custom_fields_repo->outputBulkEditFields($this->post_type, 'left');
+				if ( $custom_fields_left ) echo $custom_fields_left;
+				?>
+
 			</div><!-- .left -->
 
 			<div class="right">
@@ -116,6 +122,11 @@
 				</div>
 				<?php endif; endif; // Edit theme options ?>
 
+				<?php
+				$custom_fields_right = $this->custom_fields_repo->outputBulkEditFields($this->post_type, 'right');
+				if ( $custom_fields_right ) echo $custom_fields_right;
+				?>
+
 			</div><!-- .right -->
 		</div><!-- .fields -->
 
@@ -123,9 +134,9 @@
 		<div class="np-taxonomies">
 			<?php foreach ( $this->h_taxonomies as $taxonomy ) : ?>
 			<div class="np-taxonomy">
-				<span class="title"><?php echo esc_html__( $taxonomy->labels->name ) ?></span>
+				<span class="title"><?php esc_html_e( $taxonomy->labels->name ) ?></span>
 				<input type="hidden" name="<?php echo ( $taxonomy->name == 'category' ) ? 'post_category[]' : 'tax_input[' . esc_attr( $taxonomy->name ) . '][]'; ?>" value="0" />
-				<ul class="cat-checklist <?php echo esc_attr( $taxonomy->name )?>-checklist">
+				<ul class="cat-checklist <?php esc_attr_e( $taxonomy->name )?>-checklist">
 					<?php wp_terms_checklist( null, array( 'taxonomy' => $taxonomy->name ) ) ?>
 				</ul>
 			</div><!-- .np-taxonomy -->
@@ -133,8 +144,8 @@
 
 			<?php foreach ( $this->f_taxonomies as $taxonomy ) : ?>
 			<div class="np-taxonomy">
-				<span class="title"><?php echo esc_html__( $taxonomy->labels->name ) ?></span>
-				<textarea id="<?php echo esc_attr($taxonomy->name); ?>" cols="22" rows="1" name="tax_input[<?php echo esc_attr( $taxonomy->name )?>]" class="tax_input_<?php echo esc_attr( $taxonomy->name )?>" data-autotag data-taxonomy="<?php echo esc_attr($taxonomy->name); ?>"></textarea>
+				<span class="title"><?php esc_html_e( $taxonomy->labels->name ) ?></span>
+				<textarea id="<?php esc_attr_e($taxonomy->name); ?>" cols="22" rows="1" name="tax_input[<?php esc_attr_e( $taxonomy->name )?>]" class="tax_input_<?php esc_attr_e( $taxonomy->name )?>" data-autotag data-taxonomy="<?php esc_attr_e($taxonomy->name); ?>"></textarea>
 			</div><!-- .np-taxonomy -->
 			<?php endforeach; ?>
 		</div><!-- .taxonomies -->

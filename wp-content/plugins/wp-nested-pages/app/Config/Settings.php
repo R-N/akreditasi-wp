@@ -64,7 +64,6 @@ class Settings
 	{
 		add_action( 'admin_menu', [$this, 'registerSettingsPage' ]);
 		add_action( 'admin_init', [$this, 'registerSettings']);
-		add_action( 'updated_option', [$this, 'updateMenuName'], 10, 3);
 		$this->user_repo = new UserRepository;
 		$this->settings = new SettingsRepository;
 		$this->post_type_repo = new PostTypeRepository;
@@ -105,27 +104,6 @@ class Settings
 	}
 
 	/**
-	* Update the menu name if option is updated
-	* @see updated_option in wp-includes/option.php
-	* @since 1.1.5
-	*/
-	public function updateMenuName($option, $old_value, $value)
-	{
-		if ( $option == 'nestedpages_menu' ){
-
-			$menu = get_term_by('id', $old_value, 'nav_menu');
-			if ( $menu ) {
-				delete_option('nestedpages_menu'); // Delete the option to prevent infinite loop
-				update_option('nestedpages_menu', $old_value);
-				wp_update_term($menu->term_id, 'nav_menu', [
-					'name' => $value,
-					'slug' => sanitize_title($value)
-				]);
-			}
-		}
-	}
-
-	/**
 	* Set the Menu Object
 	* @since 1.1.5
 	*/
@@ -151,7 +129,7 @@ class Settings
 	public function settingsPage()
 	{
 		$this->setMenu();
-		$tab = ( isset($_GET['tab']) ) ? sanitize_text_field($_GET['tab']) : 'general';
+		$tab = ( isset($_GET['tab']) ) ? sanitize_file_name($_GET['tab']) : 'general';
 		include( Helpers::view('settings/settings') );
 	}
 }

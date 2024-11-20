@@ -9,15 +9,14 @@
  * @wordpress-plugin
  * Plugin Name:       Content Views
  * Plugin URI:        http://wordpress.org/plugins/content-views-query-and-display-post-page/
- * Description:       Query and display <strong>posts, pages</strong> in awesome layouts (<strong>grid, scrollable list, collapsible list</strong>) easier than ever, without coding!
- * Version:           2.3.3.1
+ * Description:       Display your posts, pages, custom posts, media files in beautiful Grid, List, Slider, and other layouts easily. With a powerful shortcode feature for the Classic Editor & page builders, 16 blocks & 76+ patterns for the Block Editor, and 16 widgets for the Elementor page builder.
+ * Version:           4.0.1
  * Author:            Content Views
  * Author URI:        http://profiles.wordpress.org/pt-guy
  * Text Domain:       content-views-query-and-display-post-page
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  * Domain Path:       /languages
- * GitHub Plugin URI: https://github.com/<owner>/<repo>
  */
 // Exit if accessed directly
 if ( !defined( 'ABSPATH' ) ) {
@@ -25,9 +24,10 @@ if ( !defined( 'ABSPATH' ) ) {
 }
 
 // Define Constant
-define( 'PT_CV_VERSION', '2.3.3.1' );
+define( 'PT_CV_VERSION', '4.0.1' );
 define( 'PT_CV_FILE', __FILE__ );
 define( 'PT_CV_PATH', plugin_dir_path( __FILE__ ) );
+define( 'PT_CV_URL', plugin_dir_url( __FILE__ ) );
 include_once( PT_CV_PATH . 'includes/defines.php' );
 
 // Include library files
@@ -41,6 +41,9 @@ include_once( PT_CV_PATH . 'includes/html.php' );
 include_once( PT_CV_PATH . 'includes/settings.php' );
 include_once( PT_CV_PATH . 'includes/update.php' );
 include_once( PT_CV_PATH . 'includes/values.php' );
+include_once( PT_CV_PATH . 'block/init.php' );
+include_once( PT_CV_PATH . 'includes/block_view.php' );
+include_once( PT_CV_PATH . 'elementor/main.php' );
 
 // Main file
 include_once( PT_CV_PATH . 'public/content-views.php' );

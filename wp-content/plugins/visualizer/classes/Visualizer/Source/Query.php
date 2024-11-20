@@ -60,9 +60,26 @@ class Visualizer_Source_Query extends Visualizer_Source {
 	 * @param array  $params Any additional parameters (e.g. for connecting to a remote db).
 	 */
 	public function __construct( $query = null, $chart_id = null, $params = null ) {
-		$this->_query = $query;
+		$this->_query = $this->strip_sql_comments( $query );
 		$this->_chart_id = $chart_id;
 		$this->_params = $params;
+	}
+
+	/**
+	 * Strips SQL comments from the query.
+	 *
+	 * @param string $query The query.
+	 *
+	 * @return string
+	 */
+	private function strip_sql_comments( $query = '' ) {
+		if ( empty( $query ) ) {
+			return $query;
+		}
+
+		// Regex https://regex101.com/r/xd5Vrg/1
+		$sql_comments_regex = '@(--[^\r\n]*)|(\#[^\r\n]*)|(/\*[\w\W]*?(?=\*/)\*/)@ms';
+		return trim( preg_replace( $sql_comments_regex, '', $query ) );
 	}
 
 	/**
@@ -79,8 +96,47 @@ class Visualizer_Source_Query extends Visualizer_Source {
 			return false;
 		}
 
-		// only select queries allowed.
-		if ( preg_match( '/^\s*(insert|delete|update|replace|create|alter|drop|truncate)\s/i', $this->_query ) ) {
+		// only select queries allowed. must start with SELECT keyword.
+		if ( ! preg_match( '/^(\bselect\b)\s/i', $this->_query ) ) {
+			$this->_error = __( 'Only SELECT queries are allowed', 'visualizer' );
+			return false;
+		}
+
+		// if previous check passed, check for disallowed query parts to prevent subqueries and other harmful queries.
+		$disallow_query_parts = array(
+			'CREATE',
+			'ALTER',
+			'TRUNCATE',
+			'DROP',
+
+			'INSERT',
+			'DELETE',
+			'UPDATE',
+			'REPLACE',
+
+			'RENAME',
+			'COMMIT',
+			'ROLLBACK',
+			'MERGE',
+			'CALL',
+			'EXPLAIN',
+			'LOCK',
+			'GRANT',
+			'REVOKE',
+			'SAVEPOINT',
+			'TRANSACTION',
+			'SET',
+		);
+		$disallow_regex = implode(
+			'|',
+			array_map(
+				function ( $value ) {
+					return '\b' . $value . '\b';
+				}, $disallow_query_parts
+			)
+		);
+
+		if ( preg_match( '/(' . $disallow_regex . ')/i', $this->_query) !== 0 ) {
 			$this->_error = __( 'Only SELECT queries are allowed', 'visualizer' );
 			return false;
 		}
@@ -115,12 +171,16 @@ class Visualizer_Source_Query extends Visualizer_Source {
 			$wpdb->hide_errors();
 			// @codingStandardsIgnoreStart
 			$rows       = $wpdb->get_results( $this->_query, $results_as_numeric_array ? ARRAY_N : ARRAY_A );
-			do_action( 'themeisle_log_event', Visualizer_Plugin::NAME, sprintf( 'Firing query %s to get results %s with error %s', $this->_query, print_r( $rows, true ), print_r( $wpdb->last_error, true ) ), 'debug', __FILE__, __LINE__ );
 			// @codingStandardsIgnoreEnd
 			$wpdb->show_errors();
 
 			if ( $raw_results ) {
 				return $rows;
+			}
+
+			if ( $wpdb->last_error ) {
+				$this->_error = $wpdb->last_error;
+				return [];
 			}
 
 			if ( $rows ) {
@@ -145,6 +205,8 @@ class Visualizer_Source_Query extends Visualizer_Source {
 				$this->_error = $wpdb->last_error;
 			}
 		}
+		// Query log.
+		do_action( 'themeisle_log_event', Visualizer_Plugin::NAME, sprintf( 'Firing query %s to get results %s with error %s', $this->_query, print_r( $rows, true ), print_r( $wpdb->last_error, true ) ), 'debug', __FILE__, __LINE__ );
 
 		if ( $as_html ) {
 			$results = $this->html( $headers, $results );
@@ -216,8 +278,7 @@ class Visualizer_Source_Query extends Visualizer_Source {
 			$data[] = $this->_normalizeData( $row );
 		}
 		$this->_data = $data;
-
-		return true;
+		return $this->_data;
 	}
 
 	/**

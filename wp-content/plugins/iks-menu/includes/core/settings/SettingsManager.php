@@ -88,6 +88,10 @@ class SettingsManager {
 		return null;
 	}
 
+	public function has_setting( $key ) {
+		return isset( $this->post_settings[ $key ] );
+	}
+
 	private function init_validators_handles() {
 		$this->validators_handles[ SettingsTypes::$checkbox ] = function ( $value, $validator ) {
 			return $validator[ (int) $value ];

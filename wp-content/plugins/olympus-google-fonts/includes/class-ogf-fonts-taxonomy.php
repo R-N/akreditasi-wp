@@ -12,28 +12,28 @@ class OGF_Fonts_Taxonomy {
 	/**
 	 * Instance of OGF_Fonts_Taxonomy
 	 *
-	 * @var (Object) OGF_Fonts_Taxonomy
+	 * @var object OGF_Fonts_Taxonomy
 	 */
 	private static $instance = null;
 
 	/**
 	 * Fonts
 	 *
-	 * @var (string) $fonts
+	 * @var array $fonts
 	 */
 	public static $fonts = null;
 
 	/**
 	 * Capability required for this menu to be displayed
 	 *
-	 * @var (string) $capability
+	 * @var string $capability
 	 */
 	public static $capability = 'edit_theme_options';
 
 	/**
 	 * Register Taxonomy
 	 *
-	 * @var (string) $register_taxonomy
+	 * @var string $register_taxonomy
 	 */
 	public static $taxonomy_slug = 'ogf_custom_fonts';
 
@@ -98,15 +98,20 @@ class OGF_Fonts_Taxonomy {
 	 * Default fonts
 	 *
 	 * @param array $fonts fonts array of fonts.
+	 * @return array
 	 */
 	protected static function default_args( $fonts ) {
 		return wp_parse_args(
 			$fonts,
 			array(
-				'woff'  => '',
-				'woff2' => '',
-				'ttf'   => '',
-				'otf'   => '',
+				'woff'    => '',
+				'woff2'   => '',
+				'ttf'     => '',
+				'otf'     => '',
+				'weight'  => '',
+				'style'   => '',
+				'family'  => '',
+				'preload' => '1',
 			)
 		);
 	}
@@ -130,10 +135,12 @@ class OGF_Fonts_Taxonomy {
 
 			if ( ! empty( $terms ) ) {
 				foreach ( $terms as $term ) {
-					self::$fonts[ $term->slug ]['id'] = $term->slug;
+					self::$fonts[ $term->slug ]['id']    = $term->slug;
 					self::$fonts[ $term->slug ]['label'] = $term->name;
 					self::$fonts[ $term->slug ]['stack'] = $term->slug;
-					self::$fonts[ $term->slug ]['files'] = self::get_font_links( $term->term_id );
+					self::$fonts[ $term->slug ]['files'] = self::get_font_data( $term->term_id );
+					self::$fonts[ $term->slug ]['family'] = self::$fonts[ $term->slug ]['files']['family'];
+
 				}
 			}
 		}
@@ -144,30 +151,18 @@ class OGF_Fonts_Taxonomy {
 	 * Get font data from name
 	 *
 	 * @param string $name custom font name.
-	 * @return array $font_links custom font data.
+	 * @return array $font_data custom font data.
 	 */
-	public static function get_links_by_name( $name ) {
+	public static function get_by_name( $name ) {
 
-		$terms = get_terms(
-			self::$taxonomy_slug,
-			array(
-				'hide_empty' => false,
-			)
-		);
-
-		$font_links = array();
-
-		if ( ! empty( $terms ) ) {
-
-			foreach ( $terms as $term ) {
-				if ( $term->name == $name ) {
-					$font_links[ $term->slug ] = self::get_font_links( $term->term_id );
-				}
-			}
+		$term = get_term_by('slug', $name, self::$taxonomy_slug);
+		if ( ! $term ) {
+			return false;
 		}
 
-		return $font_links;
+		$font_data = self::get_font_data( $term->term_id );
 
+		return $font_data;
 	}
 
 	/**
@@ -176,9 +171,9 @@ class OGF_Fonts_Taxonomy {
 	 * @param int $term_id custom font term id.
 	 * @return array $links custom font data links.
 	 */
-	public static function get_font_links( $term_id ) {
-		$links = get_option( 'taxonomy_' . self::$taxonomy_slug . "_{$term_id}", array() );
-		return self::default_args( $links );
+	public static function get_font_data( $term_id ) {
+		$data = get_option( 'taxonomy_' . self::$taxonomy_slug . "_{$term_id}", array() );
+		return self::default_args( $data );
 	}
 
 	/**
@@ -187,19 +182,17 @@ class OGF_Fonts_Taxonomy {
 	 * @param array $posted custom font data.
 	 * @param int   $term_id custom font term id.
 	 */
-	public static function update_font_links( $posted, $term_id ) {
-
-		$links = self::get_font_links( $term_id );
-		foreach ( array_keys( $links ) as $key ) {
+	public static function update_font_data( $posted, $term_id ) {
+		$data = self::get_font_data( $term_id );
+		foreach ( array_keys( $data ) as $key ) {
 			if ( isset( $posted[ $key ] ) ) {
-				$links[ $key ] = $posted[ $key ];
+				$data[ $key ] = $posted[ $key ];
 			} else {
-				$links[ $key ] = '';
+				$data[ $key ] = '';
 			}
 		}
-		update_option( 'taxonomy_' . self::$taxonomy_slug . "_{$term_id}", $links );
+		update_option( 'taxonomy_' . self::$taxonomy_slug . "_{$term_id}", $data );
 	}
-
 }
 
 OGF_Fonts_Taxonomy::get_instance();

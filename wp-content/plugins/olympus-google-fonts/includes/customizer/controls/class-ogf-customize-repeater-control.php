@@ -29,21 +29,19 @@ class OGF_Customize_Repeater_Control extends WP_Customize_Control {
 	 */
 	public function enqueue() {
 		wp_enqueue_script( 'customizer-repeater-script', OGF_DIR_URL . 'assets/js/customizer-repeater.js', array( 'jquery', 'jquery-ui-draggable', 'wp-color-picker' ), OGF_VERSION, true );
-		$custom_selectors_url = esc_url( admin_url( '/customize.php?autofocus[section]=ogf_custom' ) );
-		wp_localize_script( 'customizer-repeater-script', 'ogf_custom_selectors_url', $custom_selectors_url );
-
+		$ogf_repeater = array( 'return_url' => esc_url( admin_url( '/customize.php?autofocus[section]=ogf_custom' ) ) );
+		wp_localize_script( 'customizer-repeater-script', 'ogf_repeater', $ogf_repeater );
 	}
 
 	/**
 	 * Render the control.
 	 */
 	public function render_content() {
-
-		/*Get default options*/
+		// Get default options.
 		$default = json_decode( $this->setting->default );
-		/*Get values (json format)*/
+		// Get values (json format).
 		$values = $this->value();
-		/*Decode values*/
+		// Decode values.
 		$json = json_decode( $values );
 		if ( ! is_array( $json ) ) {
 			$json = array( $values );
@@ -57,23 +55,23 @@ class OGF_Customize_Repeater_Control extends WP_Customize_Control {
 					$this->iterate_array( $default );
 					?>
 					<input type="hidden"
-					id="customizer-repeater-<?php echo esc_attr( $this->id ); ?>-colector" <?php esc_attr( $this->link() ); ?>
-					class="customizer-repeater-colector"
+					id="customizer-repeater-<?php echo esc_attr( $this->id ); ?>-collector" <?php esc_attr( $this->link() ); ?>
+					class="customizer-repeater-collector"
 					value="<?php echo esc_textarea( wp_json_encode( $default ) ); ?>"/>
 					<?php
 				} else {
 					$this->iterate_array();
 					?>
 					<input type="hidden"
-					id="customizer-repeater-<?php echo esc_attr( $this->id ); ?>-colector" <?php esc_attr( $this->link() ); ?>
-					class="customizer-repeater-colector"/>
+					id="customizer-repeater-<?php echo esc_attr( $this->id ); ?>-collector" <?php esc_attr( $this->link() ); ?>
+					class="customizer-repeater-collector"/>
 					<?php
 				}
 			} else {
 				$this->iterate_array( $json );
 				?>
-				<input type="hidden" id="customizer-repeater-<?php echo esc_attr( $this->id ); ?>-colector" <?php esc_attr( $this->link() ); ?>
-				class="customizer-repeater-colector" value="<?php echo esc_textarea( $this->value() ); ?>"/>
+				<input type="hidden" id="customizer-repeater-<?php echo esc_attr( $this->id ); ?>-collector" <?php esc_attr( $this->link() ); ?>
+				class="customizer-repeater-collector" value="<?php echo esc_textarea( $this->value() ); ?>"/>
 				<?php
 			}
 			?>
@@ -95,7 +93,7 @@ class OGF_Customize_Repeater_Control extends WP_Customize_Control {
 	 * @param array $array The array.
 	 */
 	private function iterate_array( $array = array() ) {
-		/*Counter that helps checking if the box is first and should have the delete button disabled*/
+		// Counter that helps checking if the box is first and should have the delete button disabled.
 		$count = 0;
 		if ( ! empty( $array ) ) {
 			foreach ( $array as $icon ) {
@@ -105,7 +103,7 @@ class OGF_Customize_Repeater_Control extends WP_Customize_Control {
 				</div>
 
 				<?php
-				$count++;
+				++$count;
 			}
 		} else {
 			?>
@@ -119,10 +117,9 @@ class OGF_Customize_Repeater_Control extends WP_Customize_Control {
 	 * Input Control
 	 *
 	 * @param object $values Values for the controls.
-	 * @param string $count   Count how many controls have been displayed so far.
+	 * @param int    $count  Count how many controls have been displayed so far.
 	 */
 	private function input_control( $values = '', $count = 0 ) {
-
 		$label       = ( isset( $values->label ) ? $values->label : '' );
 		$description = ( isset( $values->description ) ? $values->description : '' );
 		$selectors   = ( isset( $values->selectors ) ? $values->selectors : '' );
@@ -168,5 +165,4 @@ class OGF_Customize_Repeater_Control extends WP_Customize_Control {
 		</ul>
 		<?php
 	}
-
 }

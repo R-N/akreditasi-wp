@@ -42,9 +42,9 @@ class WordPress_Module extends Red_Module {
 	/**
 	 * Matched redirect
 	 *
-	 * @var Red_Item|null
+	 * @var Red_Item|false
 	 */
-	private $matched = null;
+	private $matched = false;
 
 	/**
 	 * Return the module ID
@@ -83,6 +83,13 @@ class WordPress_Module extends Red_Module {
 
 			// Redirect HTTP headers and server-specific overrides
 			add_filter( 'wp_redirect', [ $this, 'wp_redirect' ], 1, 2 );
+
+			// Allow permalinks to be redirected
+			add_filter( 'pre_handle_404', [ $this, 'pre_handle_404' ], 10, 2 );
+
+			// Cache support
+			add_action( 'redirection_matched', [ $this, 'cache_redirects' ], 10, 3 );
+			add_action( 'redirection_last', [ $this, 'cache_unmatched_redirects' ], 10, 3 );
 		}
 
 		// Setup the various filters and actions that allow Redirection to happen
@@ -101,6 +108,55 @@ class WordPress_Module extends Red_Module {
 
 		// Record the redirect agent
 		add_filter( 'x_redirect_by', [ $this, 'record_redirect_by' ], 90 );
+	}
+
+	/**
+	 * Called after no redirect is matched. This allows us to cache a negative result/
+	 *
+	 * @param string           $url URL.
+	 * @param WordPress_Module $wp This.
+	 * @param array            $redirects Array of redirects.
+	 * @return void
+	 */
+	public function cache_unmatched_redirects( $url, $wp, $redirects ) {
+		if ( $this->matched ) {
+			return;
+		}
+
+		$this->cache_redirects( $url, $this->matched, $redirects );
+	}
+
+	/**
+	 * Called when a redirect is matched. This allows us to cache a positive result.
+	 *
+	 * @param string         $url URL.
+	 * @param Red_Item|false $matched_redirect Matched redirect.
+	 * @param array          $redirects Array of redirects.
+	 * @return void
+	 */
+	public function cache_redirects( $url, $matched_redirect, $redirects ) {
+		$cache = Redirect_Cache::init();
+		$cache->set( $url, $matched_redirect, $redirects );
+	}
+
+	/**
+	 * If we have a 404 then check for any permalink migrations
+	 *
+	 * @param boolean  $result Return result.
+	 * @param WP_Query $query WP_Query object.
+	 * @return boolean
+	 */
+	public function pre_handle_404( $result, WP_Query $query ) {
+		$options = red_get_options();
+
+		if ( count( $options['permalinks'] ) > 0 ) {
+			include_once dirname( dirname( __FILE__ ) ) . '/models/permalinks.php';
+
+			$permalinks = new Red_Permalinks( $options['permalinks'] );
+			$permalinks->migrate( $query );
+		}
+
+		return $result;
 	}
 
 	/**
@@ -126,9 +182,9 @@ class WordPress_Module extends Red_Module {
 	 * This ensures that a matched URL is not overriddden by WordPress, if the URL happens to be a WordPress URL of some kind
 	 * For example: /?author=1 will be redirected to /author/name unless this returns false
 	 *
-	 * @param String $redirect_url The redirected URL.
-	 * @param String $requested_url The requested URL.
-	 * @return String|false
+	 * @param string $redirect_url The redirected URL.
+	 * @param string $requested_url The requested URL.
+	 * @return string|false
 	 */
 	public function redirect_canonical( $redirect_url, $requested_url ) {
 		if ( $this->matched ) {
@@ -148,11 +204,7 @@ class WordPress_Module extends Red_Module {
 			return;
 		}
 
-		// We are on a 404. Check if we have a 'URL and page type' match in any of the matched redirects.
-		if ( $this->is_url_and_page_type() ) {
-			// Don't log an intentionally redirected 404 as part of the 'url and page type'
-			return;
-		}
+		$this->is_url_and_page_type();
 
 		$options = red_get_options();
 
@@ -180,13 +232,27 @@ class WordPress_Module extends Red_Module {
 	 * @return boolean
 	 */
 	private function is_url_and_page_type() {
-		$page_types = array_values( array_filter( $this->redirects, function( Red_Item $redirect ) {
-			return $redirect->match->get_type() === 'page';
-		} ) );
+		$page_types = array_values(
+			array_filter(
+				$this->redirects,
+				function ( Red_Item $redirect ) {
+					return $redirect->match && $redirect->match->get_type() === 'page';
+				}
+			)
+		);
 
 		if ( count( $page_types ) > 0 ) {
 			$request = new Red_Url_Request( Redirection_Request::get_request_url() );
-			$page_types[0]->is_match( $request->get_decoded_url(), $request->get_original_url() );
+
+			foreach ( $page_types as $page_type ) {
+				$action = $page_type->get_match( $request->get_decoded_url(), $request->get_original_url() );
+
+				if ( $action ) {
+					$action->run();
+					return true;
+				}
+			}
+
 			return true;
 		}
 
@@ -207,8 +273,8 @@ class WordPress_Module extends Red_Module {
 	 * Action fired when a redirect is performed, and used to log the data
 	 *
 	 * @param Red_Item $redirect The redirect.
-	 * @param String   $url The source URL.
-	 * @param String   $target The target URL.
+	 * @param string   $url The source URL.
+	 * @param string   $target The target URL.
 	 * @return void
 	 */
 	public function redirection_visit( $redirect, $url, $target ) {
@@ -269,13 +335,20 @@ class WordPress_Module extends Red_Module {
 
 			// Redirects will be ordered by position. Run through the list until one fires
 			foreach ( (array) $redirects as $item ) {
-				if ( $item->is_match( $request->get_decoded_url(), $request->get_original_url() ) ) {
+				$action = $item->get_match( $request->get_decoded_url(), $request->get_original_url() );
+
+				if ( $action ) {
 					$this->matched = $item;
+
+					do_action( 'redirection_matched', $request->get_decoded_url(), $item, $redirects );
+
+					$action->run();
 					break;
 				}
 			}
 
-			do_action( 'redirection_last', $request->get_decoded_url(), $this );
+			// We will only get here if there is no match (check $this->matched) or the action does not result in redirecting away
+			do_action( 'redirection_last', $request->get_decoded_url(), $this, $redirects );
 
 			if ( ! $this->matched ) {
 				// Keep them for later
@@ -287,8 +360,8 @@ class WordPress_Module extends Red_Module {
 	/**
 	 * Fix for incorrect headers sent when using FastCGI/IIS
 	 *
-	 * @param String $status HTTP status line.
-	 * @return String
+	 * @param string $status HTTP status line.
+	 * @return string
 	 */
 	public function status_header( $status ) {
 		if ( substr( php_sapi_name(), 0, 3 ) === 'cgi' ) {
@@ -305,7 +378,7 @@ class WordPress_Module extends Red_Module {
 	 * @return void
 	 */
 	public function send_headers( $obj ) {
-		if ( ! empty( $this->matched ) && $this->matched->action->get_code() === 410 ) {
+		if ( ! empty( $this->matched ) && $this->matched->action && $this->matched->action->get_code() === 410 ) {
 			add_filter( 'status_header', [ $this, 'set_header_410' ] );
 		}
 
@@ -318,7 +391,7 @@ class WordPress_Module extends Red_Module {
 	/**
 	 * Add support for a 410 response.
 	 *
-	 * @return String
+	 * @return string
 	 */
 	public function set_header_410() {
 		return 'HTTP/1.1 410 Gone';
@@ -327,7 +400,7 @@ class WordPress_Module extends Red_Module {
 	/**
 	 * IIS fix. Don't know if this is still needed
 	 *
-	 * @param String $url URL.
+	 * @param string $url URL.
 	 * @return void
 	 */
 	private function iis_fix( $url ) {
@@ -341,16 +414,21 @@ class WordPress_Module extends Red_Module {
 	/**
 	 * Don't know if this is still needed
 	 *
-	 * @param String  $url URL.
+	 * @param string  $url URL.
 	 * @param integer $status HTTP status code.
 	 * @return void
 	 */
 	private function cgi_fix( $url, $status ) {
 		if ( $status === 301 && php_sapi_name() === 'cgi-fcgi' ) {
 			$servers_to_check = [ 'lighttpd', 'nginx' ];
+			$server = '';
+			if ( isset( $_SERVER['SERVER_SOFTWARE'] ) && is_string( $_SERVER['SERVER_SOFTWARE'] ) ) {
+				$server = sanitize_text_field( $_SERVER['SERVER_SOFTWARE'] );
+			}
 
 			foreach ( $servers_to_check as $name ) {
-				if ( isset( $_SERVER['SERVER_SOFTWARE'] ) && stripos( $_SERVER['SERVER_SOFTWARE'], $name ) !== false ) {
+
+				if ( stripos( $server, $name ) !== false ) {
 					status_header( $status );
 					header( "Location: $url" );
 					exit( 0 );
@@ -388,7 +466,7 @@ class WordPress_Module extends Red_Module {
 	/**
 	 * Record a redirect.
 	 *
-	 * @param String $agent Redirect agent.
+	 * @param string $agent Redirect agent.
 	 * @return string
 	 */
 	public function record_redirect_by( $agent ) {
@@ -427,7 +505,7 @@ class WordPress_Module extends Red_Module {
 	/**
 	 * Perform any pre-redirect processing, such as logging and header fixing.
 	 *
-	 * @param String  $url Target URL.
+	 * @param string  $url Target URL.
 	 * @param integer $status HTTP status.
 	 * @return string
 	 */
@@ -469,10 +547,10 @@ class WordPress_Module extends Red_Module {
 	/**
 	 * Reset the module. Used for unit tests
 	 *
-	 * @param Red_Item|null $matched Set the `matched` var.
+	 * @param Red_Item|false $matched Set the `matched` var.
 	 * @return void
 	 */
-	public function reset( $matched = null ) {
+	public function reset( $matched = false ) {
 		$this->can_log = true;
 		$this->matched = $matched;
 	}

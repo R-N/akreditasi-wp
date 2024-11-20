@@ -1,15 +1,16 @@
 <?php
 /**
- * Plugin Name: Advanced Gutenberg
- * Plugin URI: https://publishpress.com/advanced-gutenberg/
- * Description: Enhanced tools for Gutenberg editor
- * Version: 2.4.7
- * Tested up to: 5.5.1
+ * Plugin Name: PublishPress Blocks
+ * Plugin URI: https://publishpress.com/blocks/
+ * Description: PublishPress Blocks has everything you need to build professional websites with the Gutenberg editor.
+ * Version: 3.2.4
  * Author: PublishPress
  * Author URI: https://publishpress.com/
- * License: GPL2
  * Text Domain: advanced-gutenberg
  * Domain Path: /languages
+ * Requires at least: 5.5
+ * Requires PHP: 7.2.5
+ * License: GPL2
  */
 
 /**
@@ -17,7 +18,7 @@
  *
  * @copyright 2014-2020  Joomunited
  * @copyright 2020       Advanced Gutenberg. help@advancedgutenberg.com
- * @copyright 2020       PublishPress. help@publishpress.com
+ * @copyright 2020-2024  PublishPress. help@publishpress.com
  *
  *  Original development of this plugin was kindly funded by Joomunited
  *
@@ -36,98 +37,95 @@
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-defined('ABSPATH') || die;
+defined( 'ABSPATH' ) || die;
 
-//Check plugin requirements
-if (version_compare(PHP_VERSION, '5.6.20', '<')) {
-    if (! function_exists('advgb_disable_plugin')) {
-        /**
-         * Disable plugin
-         *
-         * @return void
-         */
-        function advgb_disable_plugin()
-        {
-            if (current_user_can('activate_plugins') && is_plugin_active(plugin_basename(__FILE__))) {
-                deactivate_plugins(__FILE__);
-                unset($_GET['activate']); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- No action, nonce is not required
-            }
-        }
-    }
+global $wp_version;
 
-    if (! function_exists('advgb_show_error')) {
-        /**
-         * Show error
-         *
-         * @return void
-         */
-        function advgb_show_error()
-        {
-            echo '<div class="error"><p><strong>Advanced Gutenberg</strong> needs at least PHP 5.6.20 version, please update php before installing the plugin.</p></div>';
-        }
-    }
+$min_php_version = '7.2.5';
+$min_wp_version  = '5.5';
 
-    //Add actions
-    add_action('admin_init', 'advgb_disable_plugin');
-    add_action('admin_notices', 'advgb_show_error');
+// If the PHP or WP version is not compatible, terminate the plugin execution.
+$invalid_php_version = version_compare( phpversion(), $min_php_version, '<' );
+$invalid_wp_version  = version_compare( $wp_version, $min_wp_version, '<' );
 
-    //Do not load anything more
-    return;
+if ( $invalid_php_version || $invalid_wp_version ) {
+	return;
 }
 
-if (! defined('ADVANCED_GUTENBERG_VERSION')) {
-    define('ADVANCED_GUTENBERG_VERSION', '2.4.7');
+$includeFileRelativePath = '/publishpress/instance-protection/include.php';
+if ( file_exists( __DIR__ . '/lib/vendor' . $includeFileRelativePath ) ) {
+	require_once __DIR__ . '/lib/vendor' . $includeFileRelativePath;
+} elseif ( defined( 'ADVANCED_GUTENBERG_LIB_VENDOR_PATH' ) && file_exists( ADVANCED_GUTENBERG_LIB_VENDOR_PATH . $includeFileRelativePath ) ) {
+	require_once ADVANCED_GUTENBERG_LIB_VENDOR_PATH . $includeFileRelativePath;
 }
 
-if (! defined('ADVANCED_GUTENBERG_PLUGIN')) {
-    define('ADVANCED_GUTENBERG_PLUGIN', __FILE__);
+if ( class_exists( 'PublishPressInstanceProtection\\Config' ) ) {
+	$pluginCheckerConfig             = new PublishPressInstanceProtection\Config();
+	$pluginCheckerConfig->pluginSlug = 'advanced-gutenberg';
+	$pluginCheckerConfig->pluginName = 'PublishPress Blocks';
+
+	$pluginChecker = new PublishPressInstanceProtection\InstanceChecker( $pluginCheckerConfig );
 }
 
-if (!defined('GUTENBERG_VERSION_REQUIRED')) {
-    define('GUTENBERG_VERSION_REQUIRED', '5.7.0');
+if ( ! defined( 'ADVANCED_GUTENBERG_LOADED' ) ) {
+	define( 'ADVANCED_GUTENBERG_LOADED', true );
+
+	if ( ! defined( 'ADVANCED_GUTENBERG_VERSION' ) ) {
+		define( 'ADVANCED_GUTENBERG_VERSION', '3.2.4' );
+	}
+
+	if ( ! defined( 'ADVANCED_GUTENBERG_PLUGIN' ) ) {
+		define( 'ADVANCED_GUTENBERG_PLUGIN', __FILE__ );
+	}
+
+	if ( ! defined( 'ADVANCED_GUTENBERG_BASE_PATH' ) ) {
+		define( 'ADVANCED_GUTENBERG_BASE_PATH', __DIR__ );
+	}
+
+	/**
+	 * @since 3.2.0
+	 */
+	if ( ! defined( 'ADVANCED_GUTENBERG_LIB_VENDOR_PATH' ) ) {
+		define( 'ADVANCED_GUTENBERG_LIB_VENDOR_PATH', ADVANCED_GUTENBERG_BASE_PATH . '/lib/vendor' );
+	}
+
+	/**
+	 * @deprecated 3.2.0 Use ADVANCED_GUTENBERG_LIB_VENDOR_PATH instead.
+	 */
+	if ( ! defined( 'ADVANCED_GUTENBERG_VENDOR_PATH' ) ) {
+		define( 'ADVANCED_GUTENBERG_VENDOR_PATH', ADVANCED_GUTENBERG_LIB_VENDOR_PATH );
+	}
+
+	if ( ! defined( 'ADVANCED_GUTENBERG_PLUGIN_DIR_URL' ) ) {
+		define( 'ADVANCED_GUTENBERG_PLUGIN_DIR_URL', plugin_dir_url( __FILE__ ) );
+	}
+
+	// Internal Vendor and Ask-for-Review
+	if ( ! defined( 'ADVANCED_GUTENBERG_PRO_LOADED_LIB_VENDOR_PATH' ) ) {
+		$autoloadFilePath = ADVANCED_GUTENBERG_LIB_VENDOR_PATH . '/autoload.php';
+		if ( ! class_exists( 'ComposerAutoloaderInitPPBlocks' )
+		     && is_file( $autoloadFilePath )
+		     && is_readable( $autoloadFilePath )
+		) {
+			require_once $autoloadFilePath;
+		}
+	}
+
+	// Activation
+	register_activation_hook( ADVANCED_GUTENBERG_PLUGIN, function () {
+		require_once __DIR__ . '/install.php';
+	});
+
+	add_action( 'plugins_loaded', function () {
+		if ( is_admin() 
+			&& class_exists( 'PublishPress\WordPressReviews\ReviewsController' ) 
+			&& file_exists( __DIR__ . '/review/review-request.php' )
+		) {
+			// Ask for review
+			require_once __DIR__ . '/review/review-request.php';
+		}
+
+		// Code shared with Pro version
+		require_once __DIR__ . '/init.php';
+	}, - 10 );
 }
-
-require_once(plugin_dir_path(__FILE__) . '/install.php');
-require_once(plugin_dir_path(__FILE__) . '/incl/advanced-gutenberg-main.php');
-new AdvancedGutenbergMain();
-
-if (! function_exists('advg_language_domain_init')) {
-    /**
-     * Load language translations
-     *
-     * @return void
-     */
-    function advg_language_domain_init()
-    {
-        // First, unload textdomain - Based on https://core.trac.wordpress.org/ticket/34213#comment:26
-        unload_textdomain('advanced-gutenberg');
-
-        // Load override language file first if available from version 2.3.11 and older
-        if (file_exists(WP_LANG_DIR . '/plugins/' . 'advanced-gutenberg' . '-' . get_locale() . '.override.mo')) {
-            load_textdomain(
-                'advanced-gutenberg',
-                WP_LANG_DIR . '/plugins/' . 'advanced-gutenberg' . '-' . get_locale() . '.override.mo'
-            );
-        }
-
-        // Call the core translations from plugins languages/ folder
-        if (file_exists(plugin_dir_path(__FILE__) . 'languages/' . 'advanced-gutenberg' . '-' . get_locale() . '.mo')) {
-            load_textdomain(
-                'advanced-gutenberg',
-                plugin_dir_path(__FILE__) . 'languages/' . 'advanced-gutenberg' . '-' . get_locale() . '.mo'
-            );
-        }
-    }
-}
-add_action( 'init', 'advg_language_domain_init' );
-
-// Include jufeedback helpers
-require_once('jufeedback'. DIRECTORY_SEPARATOR . 'jufeedback.php');
-call_user_func(
-    '\Joomunited\ADVGB\Jufeedback\Jufeedback::init',
-    __FILE__,
-    'advgb',
-    'advanced-gutenberg',
-    'Advanced Gutenberg',
-    'advanced-gutenberg'
-);

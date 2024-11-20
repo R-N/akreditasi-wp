@@ -152,6 +152,9 @@ add_action( 'pre_get_posts', 'cv_comp_no_view_found', 999 );
 function cv_comp_no_view_found( $query ) {
 	if ( $query->get( 'cv_get_view' ) ) {
 		$query->set( 'post_type', PT_CV_POST_TYPE );
+		// prevent /whp-hide-posts/ exclude_posts() from causing all views on same page to show the same content
+		$query->set( 'meta_key', PT_CV_META_ID );
+		$query->set( 'meta_compare', '=' );
 	}
 
 	return $query;
@@ -183,6 +186,15 @@ function cv_comp_theme_divi_scroll( $args ) {
 	if ( defined( 'ET_CORE_VERSION' ) ) {
 		$args .= ' ' . 'et_smooth_scroll_disabled';
 	}
+
+	/** Enfold theme
+	 * Hover effect causes content below thumbnail jumps
+	 * @since 2.4.0
+	 */
+	if ( strtolower( get_template() ) === 'enfold' ) {
+		$args .= ' noLightbox';
+	}
+
 	return $args;
 }
 
@@ -246,6 +258,7 @@ if ( cv_is_active_plugin( 'optimizePressPlugin' ) ) {
 			}
 			$oep[ $key ][]	 = 'content-views-query-and-display-post-page';
 			$oep[ $key ][]	 = 'pt-content-views-pro';
+			$oep[ $key ]	 = array_unique($oep[ $key ]);
 		}
 		update_option( 'opd_external_plugins', $oep );
 	}
@@ -429,23 +442,40 @@ function cvp_comp_plugin_easyfootnotes() {
 	}
 }
 
-/** Prevent "whp-hide-posts" from causing multiple views on same page show same output
- * @since 2.3.1
+/** Prevent unexpected conflicts with Elementor Pro (gap after images, hamburger menu)
+ * @since 2.5.0.2
  */
-add_action( 'pre_get_posts', 'cv_comp_plugin_wph', 1 );
-function cv_comp_plugin_wph( $query ) {
-	$hook		 = 'pre_get_posts';
-	$class		 = 'WHP_Post_Hide';
-	$priority	 = 10;
-	if ( $query->get( 'cv_get_view' ) && class_exists( $class ) && !empty( $GLOBALS[ 'wp_filter' ][ $hook ][ $priority ] ) ) {
-		$arr = (array) $GLOBALS[ 'wp_filter' ][ $hook ][ $priority ];
-		foreach ( array_keys( $arr ) as $filter ) {
-            if ( strpos( $filter, 'exclude_posts' ) !== false ) {
-                if ( !empty( $arr[ $filter ][ 'function' ][ 0 ] ) && is_a( $arr[ $filter ][ 'function' ][ 0 ], $class ) ) {
-					remove_filter( $hook, $filter, $priority );
-				}
-			}
-        }
-    }
-	return $query;
+add_filter( PT_CV_PREFIX_ . 'scripts_priority', 'cv_comp_scripts_priority' );
+function cv_comp_scripts_priority( $args ) {
+	if ( cv_is_active_plugin( 'elementor-pro' ) ) {
+		$args = 999999;
+	}
+
+	return $args;
+}
+
+/** Show notice for Elementor, when showing full content
+ * @since 3.7.0
+ */
+add_filter( PT_CV_PREFIX_ . 'full_content_notice', 'cv_comp_content_notice_for_elementor', 10, 2 );
+function cv_comp_content_notice_for_elementor( $settings, $prefix ) {
+	$settings = cv_is_active_plugin( 'elementor' ) ? array(
+		'label'			 => array(
+			'text' => '',
+		),
+		'extra_setting'	 => array(
+			'params' => array(
+				'width' => 12,
+			),
+		),
+		'params'	 => array(
+			array(
+				'type'		 => 'html',
+				'content'	 => sprintf( '<p class="cvp-notice" style="background: #ff00001a; display: inline-block; padding: 5px;">%s</p>', __( "To ensure correct rendering in Elementor, please add this view shortcode to the HTML widget (which has &lt;/&gt; icon)", 'content-views-query-and-display-post-page' ) ),
+			),
+		),
+		'dependence' => array( $prefix . 'content-show', 'full' ),
+	) : [];
+
+	return $settings;
 }

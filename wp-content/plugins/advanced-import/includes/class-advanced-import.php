@@ -76,6 +76,42 @@ class Advanced_Import {
 	public $plugin_i18n;
 
 	/**
+	 * The admin class object of the plugin.
+	 *
+	 * @since    1.4.1
+	 * @access   public
+	 * @var      object Advanced_Import_Admin    $actions
+	 */
+	public $actions;
+
+	/**
+	 * The admin class object of the plugin.
+	 *
+	 * @since    1.4.1
+	 * @access   public
+	 * @var      object Advanced_Import_Admin    $filters
+	 */
+	public $filters;
+
+	/**
+	 * The admin class object of the plugin.
+	 *
+	 * @since    1.4.1
+	 * @access   public
+	 * @var      object Advanced_Import_Admin    $domain
+	 */
+	public $domain;
+
+	/**
+	 * The admin class object of the plugin.
+	 *
+	 * @since    1.4.1
+	 * @access   public
+	 * @var      object Advanced_Import_Admin    $errors
+	 */
+	public $errors;
+
+	/**
 	 * Main Advanced_Import Instance
 	 *
 	 * Insures that only one instance of Advanced_Import exists in memory at any one
@@ -98,7 +134,7 @@ class Advanced_Import {
 
 		// Only run these methods if they haven't been ran previously
 		if ( null === $instance ) {
-			$instance = new Advanced_Import;
+			$instance = new Advanced_Import();
 
 			$instance->setup_globals();
 			$instance->load_dependencies();
@@ -128,18 +164,18 @@ class Advanced_Import {
 	 */
 	private function setup_globals() {
 
-		$this->version = defined('ADVANCED_IMPORT_VERSION')?ADVANCED_IMPORT_VERSION:'1.0.0';
+		$this->version     = defined( 'ADVANCED_IMPORT_VERSION' ) ? ADVANCED_IMPORT_VERSION : '1.0.0';
 		$this->plugin_name = ADVANCED_IMPORT_PLUGIN_NAME;
 
-		//The array of actions and filters registered with this plugins.
+		// The array of actions and filters registered with this plugins.
 		$this->actions = array();
 		$this->filters = array();
 
 		// Misc
-		$this->domain         = 'advanced-import';      // Unique identifier for retrieving translated strings
-		$this->errors         = new WP_Error(); // errors
+		$this->domain = 'advanced-import';      // Unique identifier for retrieving translated strings
+		$this->errors = new WP_Error(); // errors
 	}
-	
+
 	/**
 	 * Load the required dependencies for this plugin.
 	 *
@@ -175,10 +211,12 @@ class Advanced_Import {
 		 * of the plugin.
 		 */
 		require_once ADVANCED_IMPORT_PATH . 'includes/functions-advanced-import.php';
+		require_once ADVANCED_IMPORT_PATH . 'includes/class-advanced-import-cron.php';
 
 		/**
 		 * The class responsible for defining all actions that occur in the admin area.
 		 */
+		require_once ADVANCED_IMPORT_PATH . 'admin/class-advanced-import-tracking.php';
 		require_once ADVANCED_IMPORT_PATH . 'admin/class-advanced-import-admin.php';
 		require_once ADVANCED_IMPORT_PATH . 'admin/class-elementor-import.php';
 
@@ -188,14 +226,13 @@ class Advanced_Import {
 		require_once ADVANCED_IMPORT_PATH . 'admin/class-reset.php';
 
 		/*Theme Specific Setting*/
-        require_once ADVANCED_IMPORT_PATH . 'includes/class-theme-template-library-base.php';
+		require_once ADVANCED_IMPORT_PATH . 'includes/class-theme-template-library-base.php';
 
-        require_once ADVANCED_IMPORT_PATH . 'includes/theme-template-library/cosmoswp.php'; /*cosmoswp*/
-        require_once ADVANCED_IMPORT_PATH . 'includes/theme-template-library/acmethemes.php'; /*acmethemes*/
+		require_once ADVANCED_IMPORT_PATH . 'includes/theme-template-library/cosmoswp.php'; /*cosmoswp*/
+		require_once ADVANCED_IMPORT_PATH . 'includes/theme-template-library/acmethemes.php'; /*acmethemes*/
+		require_once ADVANCED_IMPORT_PATH . 'includes/theme-template-library/patternswp.php'; /*patternswp*/
 
-
-        $this->loader = new Advanced_Import_Loader();
-
+		$this->loader = new Advanced_Import_Loader();
 	}
 
 	/**
@@ -212,7 +249,6 @@ class Advanced_Import {
 		$this->plugin_i18n = new Advanced_Import_i18n();
 
 		$this->loader->add_action( 'plugins_loaded', $this->plugin_i18n, 'load_plugin_textdomain' );
-
 	}
 
 	/**
@@ -234,6 +270,7 @@ class Advanced_Import {
 
 		/*add menu*/
 		$this->loader->add_action( 'admin_menu', $this->admin, 'import_menu' );
+		$this->loader->add_filter( 'plugin_action_links_advanced-import/advanced-import.php', $this->admin, 'add_plugin_links', 10, 4 );
 		$this->loader->add_action( 'current_screen', $this->admin, 'help_tabs' );
 
 		/*ajax process*/
@@ -246,10 +283,10 @@ class Advanced_Import {
 		$this->loader->add_action( 'wp_ajax_complete_screen', $this->admin, 'complete_screen' );
 
 		/*Reset Process*/
-		$this->loader->add_action( 'wp_loaded', advanced_import_reset_wordpress(), 'hide_reset_notice',-1 );
+		$this->loader->add_action( 'wp_loaded', advanced_import_reset_wordpress(), 'hide_reset_notice', -1 );
 		$this->loader->add_action( 'admin_init', advanced_import_reset_wordpress(), 'reset_wizard_actions', -1 );
-		$this->loader->add_action( 'admin_notices', advanced_import_reset_wordpress(), 'reset_wizard_notice' ,-1);
-
+		$this->loader->add_action( 'admin_notices', advanced_import_reset_wordpress(), 'reset_wizard_notice', -1 );
+		$this->loader->add_action( 'wp_ajax_advanced_import_before_reset', advanced_import_reset_wordpress(), 'before_reset' );
 	}
 
 	/**

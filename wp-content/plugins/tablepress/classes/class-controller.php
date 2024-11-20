@@ -13,28 +13,13 @@ defined( 'ABSPATH' ) || die( 'No direct script access allowed!' );
 
 /**
  * Base Controller class
+ *
  * @package TablePress
  * @subpackage Controllers
  * @author Tobias Bäthge
  * @since 1.0.0
  */
 abstract class TablePress_Controller {
-
-	/**
-	 * Instance of the Options Model.
-	 *
-	 * @since 1.0.0
-	 * @var TablePress_Options_Model
-	 */
-	public $model_options;
-
-	/**
-	 * Instance of the Table Model.
-	 *
-	 * @since 1.0.0
-	 * @var TablePress_Table_Model
-	 */
-	public $model_table;
 
 	/**
 	 * File name of the admin screens' parent page in the admin menu.
@@ -58,18 +43,11 @@ abstract class TablePress_Controller {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		/*
-		 * References to the TablePress models (only for backwards compatibility in TablePress Extensions!).
-		 * Using `TablePress::$model_options` and `TablePress::$model_table` is recommended!
-		 */
-		$this->model_options = TablePress::$model_options;
-		$this->model_table = TablePress::$model_table;
-
 		// Update check, in all controllers (frontend and admin), to make sure we always have up-to-date options, should be done very early.
 		$this->plugin_update_check();
 
 		/**
-		 * Filter the admin menu parent page, which is needed for the construction of plugin URLs.
+		 * Filters the admin menu parent page, which is needed for the construction of plugin URLs.
 		 *
 		 * @since 1.0.0
 		 *
@@ -84,12 +62,14 @@ abstract class TablePress_Controller {
 	 *
 	 * @since 1.0.0
 	 */
-	protected function plugin_update_check() {
+	protected function plugin_update_check(): void {
 		// First activation or plugin update.
 		$current_plugin_options_db_version = TablePress::$model_options->get( 'plugin_options_db_version' );
 		if ( $current_plugin_options_db_version < TablePress::db_version ) {
 			// Allow more PHP execution time for update process.
-			@set_time_limit( 300 );
+			if ( function_exists( 'set_time_limit' ) ) {
+				@set_time_limit( 300 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			}
 
 			// Add TablePress capabilities to the WP_Roles objects, for new installations and all versions below 12.
 			if ( $current_plugin_options_db_version < 12 ) {
@@ -99,7 +79,7 @@ abstract class TablePress_Controller {
 			if ( 0 === TablePress::$model_options->get( 'first_activation' ) ) {
 				// Save initial set of plugin options, and time of first activation of the plugin, on first activation.
 				TablePress::$model_options->update( array(
-					'first_activation'          => current_time( 'timestamp' ),
+					'first_activation'          => time(),
 					'plugin_options_db_version' => TablePress::db_version,
 				) );
 			} else {
@@ -112,7 +92,7 @@ abstract class TablePress_Controller {
 					'message_plugin_update'     => true,
 				);
 
-				// Only write files, if "Custom CSS" is to be used, and if there is "Custom CSS".
+				// Only write files if "Custom CSS" is to be used, and if there is "Custom CSS".
 				if ( TablePress::$model_options->get( 'use_custom_css' ) && '' !== TablePress::$model_options->get( 'custom_css' ) ) {
 					// Re-save "Custom CSS" to re-create all files (as TablePress Default CSS might have changed).
 					/**
@@ -143,9 +123,9 @@ abstract class TablePress_Controller {
 					TablePress::$model_table->add_mime_type_to_posts();
 				}
 
-				// Convert old parameter names to new ones in DataTables "Custom Commands".
-				if ( $current_plugin_options_db_version < 26 ) {
-					TablePress::$model_table->convert_datatables_parameter_names_tp15();
+				// Add new access capabilities that were introduced in TablePress 2.3.2.
+				if ( $current_plugin_options_db_version < 77 ) {
+					TablePress::$model_options->add_access_capabilities_tp232();
 				}
 			}
 		}
@@ -153,21 +133,20 @@ abstract class TablePress_Controller {
 		// Maybe update the table scheme in each existing table, independently from updating the plugin options.
 		if ( TablePress::$model_options->get( 'table_scheme_db_version' ) < TablePress::table_scheme_version ) {
 			TablePress::$model_table->merge_table_options_defaults();
-
-			TablePress::$model_options->update( array(
-				'table_scheme_db_version' => TablePress::table_scheme_version,
-			) );
+			TablePress::$model_options->update( 'table_scheme_db_version', TablePress::table_scheme_version );
 		}
 
 		/*
 		 * Update User Options, if necessary.
 		 * User Options are not saved in DB until first change occurs.
 		 */
-		if ( is_user_logged_in() && ( TablePress::$model_options->get( 'user_options_db_version' ) < TablePress::db_version ) ) {
+		if ( is_user_logged_in() && TablePress::$model_options->get( 'user_options_db_version' ) < TablePress::db_version ) {
 			TablePress::$model_options->merge_user_options_defaults();
-			TablePress::$model_options->update( array(
-				'user_options_db_version' => TablePress::db_version,
-			) );
+			$updated_options = array(
+				'user_options_db_version'       => TablePress::db_version,
+				'message_superseded_extensions' => true,
+			);
+			TablePress::$model_options->update( $updated_options );
 		}
 	}
 

@@ -42,6 +42,24 @@ if ( !class_exists( 'PT_CV_Hooks' ) ) {
 			add_action( PT_CV_PREFIX_ . 'before_process_item', array( __CLASS__, 'action_before_process_item' ) );
 			add_action( PT_CV_PREFIX_ . 'after_process_item', array( __CLASS__, 'action_after_process_item' ) );
 			add_action( PT_CV_PREFIX_ . 'before_content', array( __CLASS__, 'action_before_content' ) );
+
+			// for Block
+			add_filter( PT_CV_PREFIX_ . 'field_meta_prefix_text', array( __CLASS__, 'filter_field_meta_prefix_text' ), 10, 2 );
+			add_filter( PT_CV_PREFIX_ . 'field_meta_date_format', array( __CLASS__, 'filter_field_meta_date_format' ), 10, 2 );
+			add_filter( PT_CV_PREFIX_ . 'view_class', array( __CLASS__, 'filter_view_class' ) );
+			add_filter( PT_CV_PREFIX_ . 'page_class', array( __CLASS__, 'filter_page_class' ) );
+			add_filter( PT_CV_PREFIX_ . 'content_item_class', array( __CLASS__, 'filter_content_item_class' ), 10, 2 );
+			add_filter( PT_CV_PREFIX_ . 'dargs_others', array( __CLASS__, 'filter_dargs_others' ), 10, 2 );
+			add_filter( PT_CV_PREFIX_ . 'fields_html', array( __CLASS__, 'filter_fields_html_overlay' ), 21, 2 );
+			add_filter( PT_CV_PREFIX_ . 'block_settings', array( __CLASS__, 'filter_block_settings' ) );
+			add_filter( PT_CV_PREFIX_ . 'pagination_data', array( __CLASS__, 'filter_pagination_data' ) );
+			// From Pro
+			add_filter( PT_CV_PREFIX_ . 'settings_args_offset', array( __CLASS__, 'filter_settings_args_offset' ) );
+			add_filter( PT_CV_PREFIX_ . 'field_thumbnail_not_found', array( __CLASS__, 'filter_field_thumbnail_not_found' ), 8, 4 );
+			add_filter( PT_CV_PREFIX_ . 'tax_list', array( __CLASS__, 'filter_tax_list' ) );
+			add_filter( PT_CV_PREFIX_ . 'field_content_excerpt', array( __CLASS__, 'filter_field_content_excerpt' ), 9, 3 );
+			add_filter( PT_CV_PREFIX_ . 'view_settings', array( __CLASS__, 'filter_view_settings' ), 9 );
+			add_filter( PT_CV_PREFIX_ . 'field_content_readmore_enable', array( __CLASS__, 'filter_field_content_readmore_enable' ), 9, 2 );
 		}
 
 		/**
@@ -256,6 +274,10 @@ if ( !class_exists( 'PT_CV_Hooks' ) ) {
 		 * @since 1.9.3
 		 */
 		public static function action_before_content() {
+			if ( ContentViews_Block::is_pure_block() ) {
+				return;
+			}
+
 			global $shortcode_tags, $cv_shortcode_tags_backup;
 
 			if ( !$cv_shortcode_tags_backup ) {
@@ -269,6 +291,419 @@ if ( !class_exists( 'PT_CV_Hooks' ) ) {
 				}
 			}
 		}
+
+		// @since Block
+		public static function filter_field_meta_prefix_text( $args, $meta_field ) {
+			$use_icon = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'metaIcon' );
+
+			// Use Icon
+			if ( $use_icon ) {
+				$class = '';
+
+				switch ( $meta_field ) {
+					case 'author':
+						$class	 = 'user';
+						break;
+					case 'date':
+						$class	 = 'calendar';
+						break;
+					case 'terms':
+						$class	 = 'folder-open';
+						break;
+					case 'comment':
+						$class	 = 'comment';
+						break;
+				}
+
+				$args = sprintf( '<span class="glyphicon glyphicon-%s"></span>', $class );
+			}
+
+			if ( $meta_field === 'author' ) {
+				if ( PT_CV_Functions::setting_value( PT_CV_PREFIX . 'authorAvatar' ) ) {
+					$args = '';
+				}
+			}
+
+			return $args;
+		}
+
+		public static function filter_field_meta_date_format( $args, $post ) {
+			$var = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'dateFormat' );
+			if ( !empty( $var ) ) {
+				if ( $var === 'custom' ) {
+					$var = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'dateFormatCustom' );
+				}
+				$args = $var;
+			}
+			return $args;
+		}
+
+
+		public static function filter_view_class( $args ) {
+			$view_type = PT_CV_Functions::get_global_variable( 'view_type' );
+
+
+			if ( ContentViews_Block::is_block() ) {
+				$args[] = 'iscvblock';
+
+				if ( ContentViews_Elementor_Init::is_widget() ) {
+					$args[] = 'iscvelementor';
+				} else if ( ContentViews_Block::is_hybrid() ) {
+					$args[] = 'iscvhybrid';
+				} else {
+					$args[] = 'iscvreal';
+				}
+			}
+
+			if ( strpos( $view_type, 'onebig' ) !== false ) {
+				$args[]	 = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'onePosition' );
+				$args[]	 = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'swapPosition' ) ? 'swap-position' : '';
+			}
+
+			if ( $view_type === 'overlaygrid' ) {
+				$show_thumb = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'show-field-thumbnail' );
+				if ( PT_CV_Functions::setting_value( PT_CV_PREFIX . 'overOnHover' ) && PT_CV_Functions::setting_value( PT_CV_PREFIX . 'overlaid' ) ) {
+					$args[] = PT_CV_PREFIX . 'onhover';
+				}
+				if ( ! PT_CV_Functions::setting_value( PT_CV_PREFIX . 'overlaid' ) || ! $show_thumb ) {
+					$args[] = PT_CV_PREFIX . 'nooverlay';
+				}
+				if ( ! $show_thumb ) {
+					$args[] = PT_CV_PREFIX . 'nothumb';
+				}
+				if ( PT_CV_Functions::setting_value( PT_CV_PREFIX . 'overlayClickable' ) ) {
+					$args[] = PT_CV_PREFIX . 'clickable';
+				}
+			}
+
+			if ( PT_CV_Functions::setting_value( PT_CV_PREFIX . 'pagingNoScroll' ) ) {
+				$args[] = 'paging-noscroll';
+			}
+
+			$args[] = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'blockName' );
+
+			$args[] = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'whichLayout' );
+
+			$args[] = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'thumbnailEffect' );
+
+			return $args;
+		}
+
+		public static function filter_page_class( $args ) {
+			$npf = PT_CV_Functions::get_global_variable( 'no_post_found' );
+
+			if ( $npf ) {
+				$args .= ' cv-npf';
+			}
+
+			return $args;
+		}
+
+		public static function filter_content_item_class( $args, $post_id ){
+			$mainp = PT_CV_Functions::get_global_variable( 'main_posts' );
+			if ( is_array( $mainp ) && in_array( $post_id, $mainp ) ) {
+				$args[] = 'cv-main-post';
+			}
+			return $args;
+		}
+
+		public static function filter_dargs_others( $args, $post_idx ) {
+			global $pt_cv_glb, $pt_cv_id, $post;
+			$view_type	 = PT_CV_Functions::get_global_variable( 'view_type' );
+			$block_name	 = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'blockName' );
+			$layout		 = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'whichLayout' );
+			if ( ($block_name === 'overlay5' && $layout === 'layout3') || ($block_name === 'overlay7' && $layout === 'layout4') ) {
+				$for_which = ($post_idx !== 1);
+			} else if ( ($block_name === 'overlay5' && $layout === 'layout4') || ($block_name === 'overlay7' && $layout === 'layout2') ) {
+				$for_which = ($post_idx !== 2);
+			} else if ( $block_name === 'overlay8' && ($layout === 'layout1' || $layout === 'layout4') ) {
+				$for_which = $post_idx > 1;
+			} else if ( $block_name === 'overlay3' && $layout === 'layout3' ) {
+				$for_which = $post_idx > 2;
+			} else if ( $block_name === 'overlay4' && ($layout === 'layout4' || $layout === 'layout5') ) {
+				$for_which = ($layout === 'layout4') ? $post_idx > 1 : $post_idx > 2;
+			} else if ( $block_name === 'overlay8' && $layout === 'layout2' ) {
+				$for_which = $post_idx !== 0 && $post_idx !== 5;
+			} else if ( $block_name === 'overlay8' && $layout === 'layout3' ) {
+				$for_which = $post_idx !== 0 && $post_idx !== 3;
+			} else {
+				$for_which = $post_idx > 0;
+			}
+
+			if ( PT_CV_Functions::setting_value( PT_CV_PREFIX . 'hasOne' ) && $for_which ) {
+				add_filter( PT_CV_PREFIX_ . 'field_title_class', array( __CLASS__, 'others_field_title_class' ) );
+
+				if ( $view_type === 'onebig' && !( $block_name === 'onebig2' && $layout === 'layout4' ) ) {
+					$args[ 'layout-format' ]													 = '2-col';
+					$pt_cv_glb[ $pt_cv_id ][ 'view_settings' ][ PT_CV_PREFIX . 'layout-format' ] = $args[ 'layout-format' ];
+				}
+
+				foreach ( $args[ 'fields' ] as $idx => $field ) {
+					if ( $field !== 'title' && strpos( $field, 'woo' ) === false && !PT_CV_Functions::setting_value( PT_CV_PREFIX . "show-field-$field-Others" ) ) {
+						unset( $args[ 'fields' ][ $idx ] );
+					}
+				}
+
+				$fields_to_show = $args[ 'fields' ];
+				PT_CV_Functions::set_global_variable( 'fields_others', $fields_to_show );
+
+				if ( in_array( 'thumbnail', $fields_to_show ) ) {
+					$args[ 'field-settings' ][ 'thumbnail' ][ 'size' ]		 = PT_CV_Functions::setting_value( PT_CV_PREFIX . "imgSizeOthers" );
+					$args[ 'field-settings' ][ 'thumbnail' ][ 'position' ]	 = PT_CV_Functions::setting_value( PT_CV_PREFIX . "thumbPositionOthers" );
+					$args[ 'field-settings' ][ 'thumbnail' ][ 'extra_class' ] = PT_CV_PREFIX . 'thumbnailsm';
+				}
+
+				if ( in_array( 'meta-fields', $fields_to_show ) ) {
+					unset( $args[ 'field-settings' ][ 'meta-fields' ] );
+
+					$metaWhich	 = PT_CV_Functions::setting_value( PT_CV_PREFIX . "metaWhichOthers" );
+					$meta		 = ContentViews_Block::values_from_block( array( 'tmp1' => $metaWhich ), 'tmp1', array() );
+					$meta		 = apply_filters( PT_CV_PREFIX_ . 'metafield_hybrid', $meta, $metaWhich );
+					foreach ( $meta as $field ) {
+						$args[ 'field-settings' ][ 'meta-fields' ][ $field ] = 'yes';
+					}
+				}
+
+				$excerp_length = PT_CV_Functions::setting_value( PT_CV_PREFIX . "excerptLengthOthers" );
+				if ( $excerp_length !== NULL ) {
+					$args[ 'field-settings' ][ 'content' ][ 'length' ] = $excerp_length;
+				}
+
+				$args = apply_filters( PT_CV_PREFIX_ . 'dargs_hybrid', $args );
+			} else {
+				remove_filter( PT_CV_PREFIX_ . 'field_title_class', array( __CLASS__, 'others_field_title_class' ) );
+
+				if ( PT_CV_Functions::setting_value( PT_CV_PREFIX . 'hasOne' ) ) {
+					if ( !isset( $pt_cv_glb[ $pt_cv_id ][ 'main_posts' ] ) ) {
+						$pt_cv_glb[ $pt_cv_id ][ 'main_posts' ] = [];
+					}
+					$pt_cv_glb[ $pt_cv_id ][ 'main_posts' ][] = $post->ID;
+				}
+			}
+
+			return $args;
+		}
+
+		public static function others_field_title_class( $args ) {
+			$args .= ' ' . PT_CV_PREFIX . 'titlesm';
+			return $args;
+		}
+
+		public static function filter_fields_html_overlay( $args, $post ) {
+			$view_type	 = PT_CV_Functions::get_global_variable( 'view_type' );
+			$layout		 = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'whichLayout' );
+			$is_overlay	 = ($view_type === 'overlaygrid');
+			if ( $is_overlay || ($view_type === 'blockgrid' && $layout !== 'layout1') ) {
+				// wrap for overlay when not showing image
+				$force_wrap = false;
+				if ( $is_overlay && ! PT_CV_Functions::setting_value( PT_CV_PREFIX . 'show-field-thumbnail' ) ) {
+					$force_wrap = true;
+				}
+
+				if ( !empty( $args[ 'thumbnail' ] ) || $force_wrap ) {
+					$exclude_fields = apply_filters( PT_CV_PREFIX_ . 'overlay_exclude', array( 'thumbnail' ) );
+
+					$others = array();
+					foreach ( $args as $field => $value ) {
+						if ( !in_array( $field, $exclude_fields ) ) {
+							$others[ $field ] = $value;
+							unset( $args[ $field ] );
+						}
+					}
+
+					if ( $others ) {
+						$args[ 'overlay-wrap' ] = '<div class="' . PT_CV_PREFIX . ($is_overlay ? 'overlay-wrapper' : 'remain-wrapper') . '">' . implode( '', $others ) . '</div>';
+					}
+				}
+			}
+
+			return $args;
+		}
+
+		public static function filter_block_settings( $attributes ) {
+			$layout = $attributes[ 'whichLayout' ];
+
+
+			if ( $attributes[ 'blockName' ] === 'overlay7' ) {
+				if ( $layout === 'layout5' ) {
+					$attributes[ 'postsPerPage' ] = 6;
+				}
+				if ( $layout === 'layout1' || $layout === 'layout2' ) {
+					$attributes[ 'postsPerPage' ] = 7;
+				}
+			}
+
+			if ( $attributes[ 'blockName' ] === 'overlay8' ) {
+				if ( $layout === 'layout4' ) {
+					$attributes[ 'postsPerPage' ] = 5;
+				} else {
+					$attributes[ 'postsPerPage' ] = 6;
+				}
+			}
+
+			if ( $attributes[ 'blockName' ] === 'onebig1' && $layout === 'layout1' ) {
+				$attributes[ 'showThumbnailOthers' ] = false;
+			}
+
+			if ( $attributes[ 'blockName' ] === 'list1' && $layout === 'layout2' ) {
+				$attributes[ 'zigzag' ] = 'yes';
+			}
+
+			if ( $attributes[ 'viewType' ] === 'scrollable' && !ContentViews_Elementor_Init::is_widget( $attributes ) ) {
+				$columns						 = (array) $attributes[ 'columns' ];
+				$rows							 = $attributes[ 'rowNum' ];
+				$attributes[ 'postsPerPage' ]	 = (int) $columns[ 'md' ] * (int) $rows * (int) $attributes[ 'slideNum' ];
+
+				if ( !$attributes[ 'scrollAuto' ] ) {
+					$attributes[ 'scrollInterval' ] = 0;
+				}
+			}
+
+			return $attributes;
+		}
+
+		// Add extra data to pagination for block
+		public static function filter_pagination_data( $args ) {
+			$isblock = ContentViews_Block::is_pure_block();
+			$postid	 = isset( $GLOBALS[ 'cv_current_post' ] ) ? $GLOBALS[ 'cv_current_post' ] : '';
+			$args	 = sprintf( 'data-isblock="%s" data-postid="%s"', esc_attr( $isblock ), esc_attr( $postid ) );
+			return $args;
+		}
+
+		public static function filter_post_types_list( $args ) {
+			if ( !get_option( 'pt_cv_version_pro' ) ) {
+				$args[ 'attachment' ]	 = __( 'Media' );
+				$args[ 'any' ]			 = __( 'All / Multi post types', 'content-views-query-and-display-post-page' );
+			}
+
+			unset( $args[ 'pt_view' ] );
+
+			return $args;
+		}
+
+		public static function filter_pagination_styles( $args ) {
+			if ( !get_option( 'pt_cv_version_pro' ) ) {
+				$args[ 'infinite' ]	 = __( 'Infinite scrolling', 'content-views-query-and-display-post-page' );
+				$args[ 'loadmore' ]	 = __( 'Load more button', 'content-views-query-and-display-post-page' );
+			}
+			return $args;
+		}
+
+		public static function filter_regular_orderby( $args ) {
+			$args = array_merge( $args, ContentViews_Block_Common::pro_sortby() );
+			return $args;
+		}
+
+		public static function filter_settings_args_offset( $offset ) {
+			if ( !get_option( 'pt_cv_version_pro' ) ) {
+				$offset_option = (int) PT_CV_Functions::setting_value( PT_CV_PREFIX . 'offset', null, 0 );
+				$offset_option = ( $offset_option < 0 ) ? 0 : $offset_option;
+				$offset        += $offset_option;
+			}
+
+			return $offset;
+        }
+
+		public static function filter_field_thumbnail_not_found( $args, $post, $dimensions, $gargs ) {
+			if ( !get_option( 'pt_cv_version_pro' ) && PT_CV_Functions::setting_value( PT_CV_PREFIX . 'defaultImg' ) ) {
+				$dimension_ready = $dimensions && !empty( $dimensions[ 0 ] ) && !empty( $dimensions[ 1 ] );				
+				$width	 = $dimension_ready ? esc_attr( $dimensions[ 0 ] ) : '';
+				$attr	 = array(
+					'src'	 => apply_filters( PT_CV_PREFIX_ . 'default_image', plugins_url( 'public/assets/images/default_image.png', PT_CV_FILE ) ),
+					'class'	 => $gargs[ 'class' ] . ' cv-default-img',
+					'alt'	 => !empty( $post->cvp_img_alt ) ? esc_attr( $post->cvp_img_alt ) : esc_attr( $post->post_title ),
+					'title'	 => !empty( $post->cvp_img_title ) ? esc_attr( $post->cvp_img_title ) : '',
+				);
+				$args = PT_CV_Html::image_output( $width, 0, $attr );
+			}
+			return $args;
+		}
+
+		/** Add Woocommerce hidden taxonomies to the list */
+        public static function filter_tax_list( $args ) {
+            if ( taxonomy_exists( 'product_visibility' ) ) {
+                $args[ 'product_visibility' ] = __( 'Visibility', 'content-views-pro' );
+            }
+
+			// Get Woocommerce attributes taxonomies
+			if ( function_exists( 'wc_get_attribute_taxonomies' ) ) {
+				$attributes = wc_get_attribute_taxonomies();
+				if ( !empty( $attributes ) ) {
+					// Don't include all if too many attributes, that cause slow/unable saving
+					if ( count( $attributes ) > 30 ) {
+						$attributes = array_slice( $attributes, 0, 30, true );
+					}
+
+					foreach ( $attributes as $tax ) {
+						$tslug = wc_attribute_taxonomy_name( $tax->attribute_name );
+						if ( !array_key_exists( $tslug, $args ) ) {
+							$args[ $tslug ] = $tax->attribute_name;
+						}
+
+					}
+				}
+			}
+
+			return $args;
+        }
+
+		/**
+         * Filter post excerpt
+         * @return string
+         */
+        public static function filter_field_content_excerpt( $args, $fargs, $post ) {
+            // Prevent recursive call
+            if ( empty( $fargs ) ) {
+                return $args;
+            }
+
+            // Get manual excerpt
+            if ( !empty( $fargs[ 'content' ][ 'manual' ] ) && !empty( $post->post_excerpt ) ) {
+                $args = $post->post_excerpt;
+            }
+
+            return $args;
+        }
+
+		 /**
+         * Filter View settings, for compatible with older versions
+         */
+		static function filter_view_settings( $args ) {
+			$view_version = !isset( $args[ PT_CV_PREFIX . 'version' ] ) ? 0 : ltrim( $args[ PT_CV_PREFIX . 'version' ], 'pro-' );
+
+			if ( strpos( $view_version, 'free' ) !== false ) {
+				$view_version = ltrim( $args[ PT_CV_PREFIX . 'version' ], 'free-' );
+				if ( version_compare( $view_version, '3.0.2', '<=' ) ) {
+					$args[ PT_CV_PREFIX . 'field-excerpt-readmore' ] = 'yes';
+				}
+
+				if ( version_compare( $view_version, '3.6.4', '>' ) ) {
+					if ( empty( $args[ PT_CV_PREFIX . 'defaultImg' ] ) ) {
+						$args[ PT_CV_PREFIX . 'field-thumbnail-nodefault' ] = 'yes';
+					}
+				} else {
+					// show default image for new layouts as previous versions
+					if ( in_array( $args[ PT_CV_PREFIX . 'view-type' ], [ 'grid1', 'list1', 'overlay1' ] ) ) {
+						$args[ PT_CV_PREFIX . 'defaultImg' ] = 'yes';
+					}
+				}
+			}
+
+			return $args;
+		}
+
+		/**
+         * Enable/Disable Read more button
+         *
+         * @param string $args  The readmore text
+         * @param array  $fargs The settings of Content
+         */
+        public static function filter_field_content_readmore_enable( $args, $fargs ) {
+            // not empty => true => show
+            $args = !empty( $fargs[ 'readmore' ] );
+
+            return $args;
+        }
 
 	}
 

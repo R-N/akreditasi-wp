@@ -17,7 +17,29 @@
 	bottom: 10px;
 	left: 10px;
 }
-
+#control_wrapper_canvas:not(:empty) {
+	margin: 15px 0 0 5px;
+	position: relative;
+	z-index: 1;
+}
+#control_wrapper_canvas:not(:empty) + #canvas .google-visualization-table {
+	top: 60px;
+}
+.vz-vertical .google-visualization-table {
+	left: 70px;
+}
+.google-visualization-controls-categoryfilter label.google-visualization-controls-label {
+	vertical-align: middle;
+}
+.google-visualization-controls-categoryfilter li.goog-inline-block {
+	margin: 0 0.2em;
+}
+.google-visualization-controls-categoryfilter li {
+	padding: 0 0.2em;
+}
+.goog-combobox input {
+	min-height: auto;
+}
 .loader {
 	position: absolute;
 	top: 50%;
@@ -370,6 +392,40 @@ div.viz-group-content .viz-group-description {
 	padding: 0;
 }
 
+#viz-tabs .wp-color-picker {
+  width: 4rem !important;
+}
+
+.viz-info-panel {
+	display: flex;
+	flex-direction: column;
+	padding: 10px;
+	gap: 10px;
+}
+
+.viz-info-panel label {
+	margin: 0;
+	padding: 0;
+	font-weight: bold;
+}
+
+.viz-info-panel input {
+	flex: 1;
+}
+
+.viz-info-panel .viz-info-item {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	gap: 3px;
+}
+
+.viz-info-panel .viz-info-row {
+	display: flex;
+	flex-direction: row;
+	gap: 5px;
+}
+
 /******************************************************************************/
 /********************************  TOOLBAR  ***********************************/
 /******************************************************************************/
@@ -406,6 +462,18 @@ div.viz-group-content .viz-group-description {
 	float: left;
 	width: 30%;
 	vertical-align: top;
+}
+
+#chart-select {
+	display: flex;
+	padding: 12px 8px;
+	justify-content: center;
+	align-items: center;
+	gap: 12px;
+}
+
+#chart-select label {
+	font-weight: bold;
 }
 
 /******************************************************************************/
@@ -446,7 +514,15 @@ div.viz-group-content .viz-group-description {
 	box-shadow: 0 0 8px #ddd;
 }
 
-.type-box:nth-child(3n+3) {
+.type-box.viz-hidden {
+	display: none;
+}
+
+.type-box.viz-hidden {
+	display: none;
+}
+
+.type-box:nth-child(3n+1) {
 	margin-right: 0;
 }
 
@@ -459,6 +535,7 @@ div.viz-group-content .viz-group-description {
 	height: 17px;
 	border: none;
 	color: #fff;
+	z-index: 4;
 	background: #c55555;
 }
 
@@ -469,18 +546,30 @@ div.viz-group-content .viz-group-description {
 	padding: 15px;
 	border: 1px solid #e0e0e0;
 	background-color: white;
-	background-image: url(../images/chart_types_v340_g.png);
+	background-image: url(../images/chart_types_v395.png);
 	background-repeat: no-repeat;
 	background-position: center center;
+	background-size: 900px 1150px;
+	filter: grayscale(100%);
+	cursor: pointer;
+}
+
+#type-picker.lib-ChartJS .type-label {
+	background-image: url(../images/chart_types_chartjs.png);
+}
+
+#type-picker.lib-DataTable .type-label {
+	background-image: url(../images/chart_types_datatable.png);
 }
 
 .type-label-selected,
-.type-box > .type-label:hover {
-	background-image: url(../images/chart_types_v340.png);
+.type-box .type-label:hover {
+/*	background-image: url(../images/chart_types_v340.png);*/
+	filter: grayscale(0);
 }
 
 .type-box-area .type-label {
-	background-position: 0 -225px;
+	background-position: -8px -225px;
 }
 
 .type-box-line .type-label {
@@ -496,7 +585,7 @@ div.viz-group-content .viz-group-description {
 }
 
 .type-box-gauge .type-label {
-	background-position: 0 -450px;
+	background-position: -7px -450px;
 }
 
 .type-box-geo .type-label {
@@ -504,7 +593,7 @@ div.viz-group-content .viz-group-description {
 }
 
 .type-box-candlestick .type-label {
-	background-position: -300px -450px;
+	background-position: -304px -450px;
 }
 
 .type-box-bar .type-label {
@@ -512,7 +601,7 @@ div.viz-group-content .viz-group-description {
 }
 
 .type-box-bubble .type-label {
-	background-position: -600px -906px;
+	background-position: -604px -906px;
 }
 
 .type-box-column .type-label {
@@ -526,11 +615,11 @@ div.viz-group-content .viz-group-description {
 }
 
 .type-box-timeline .type-label {
-	background-position: -2px -670px;
+	background-position: -8px -670px;
 }
 
 .type-box-combo .type-label {
-	background-position: -597px -670px;
+	background-position: -606px -670px;
 }
 
 .type-box-polarArea .type-label {
@@ -703,8 +792,8 @@ div.viz-group-content .viz-group-description {
 input#existing-chart {
 	/*left: 18px;
 		width: 110px;
-    position: relative;*/
-}
+		position: relative;*/
+	}
 
 select#chart-id {
 	float: right;
@@ -802,6 +891,9 @@ button#editor-chart-button {
 
 .viz-select-library {
 	color: #0085ba;
+}
+.viz-select-library.viz-hide-library {
+	display: none;
 }
 
 .viz-select-library option:first-child {
@@ -1030,14 +1122,18 @@ button#editor-chart-button {
 }
 
 .only-pro-container {
-	display: table;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	width: 100%;
 	height: 100%;
 }
 
 .only-pro-inner {
-	display: table-cell;
-	vertical-align: middle;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
 }
 
 .only-pro-content p {
@@ -1050,15 +1146,24 @@ button#editor-chart-button {
 	display: inline-block;
 	padding: 7px 12px;
 	color: #fff;
-	background: #ff595e;
+	background: #3F57E1;
 	font-weight: 600;
 	text-decoration: none;
-	text-transform: uppercase;
 	transition: 0.1s ease;
+	border-width: 1px;
+	border-style: solid;
+	border-radius: 3px;
+}
+.only-pro-content .only-pro-container a {
+	color: #fff !important;
 }
 
 .only-pro-content a:hover {
-	background: #ce484c;
+	background: #2D419B;
+}
+
+.only-pro-anchor {
+	position: relative;
 }
 
 #sidebar::-webkit-scrollbar {
@@ -1290,13 +1395,6 @@ span.viz-section-error {
 	background-color: #ff0d00;
 }
 
-#db-query-form .CodeMirror-scroll {
-	overflow: hidden !important;
-	height: 50%;
-	margin: 0;
-	padding: 0;
-}
-
 #db-query-form .CodeMirror-wrap {
 	height: 200px;
 	padding: 15px;
@@ -1318,7 +1416,11 @@ span.viz-section-error {
 }
 
 #db-query-form .CodeMirror-wrap pre .cm-keyword {
-	color: #f92472 !important;
+	color: #FF6188 !important;
+}
+
+#db-query-form .CodeMirror-wrap pre .cm-builtin {
+	color: #78DCE8 !important;
 }
 
 #db-query-form .CodeMirror-wrap pre .cm-comment {
@@ -1327,7 +1429,7 @@ span.viz-section-error {
 
 #db-query-form .CodeMirror-wrap pre .cm-number,
 #db-query-form .CodeMirror-wrap pre .cm-string {
-	color: #fff !important;
+	color: #A9DC76 !important;
 }
 
 .visualizer-db-query-form > div {
@@ -1347,6 +1449,7 @@ span.viz-section-error {
 
 .db-wizard-error {
 	color: #f00;
+	padding: 16px 0;
 }
 
 .db-wizard-hints,
@@ -1368,6 +1471,7 @@ span.viz-section-error {
 .html-table-editor-hints ul,
 .json-wizard-hints ul {
 	list-style: square;
+	padding: 0 16px;
 }
 
 .db-wizard-results .dataTables_wrapper .dataTables_info {
@@ -1461,6 +1565,10 @@ span.viz-section-error {
 	padding: 5px;
 }
 
+.json-wizard-header .field-title {
+	position: absolute;
+	left: 30px;
+}
 /******************************************************************************/
 /********************************  html table editor **************************/
 /******************************************************************************/
@@ -1507,10 +1615,68 @@ button#viz-text-editor-button {
 	vertical-align: middle;
 }
 
+.viz-simple-editor .viz-html-table {
+	width: 95%;
+}
+
 /******************************************************************************/
 /********************************  chartjs ***********************************/
 /******************************************************************************/
 
 canvas.chartjs-render-monitor {
 	height: 500px !important;
+}
+
+/******************************************************************************/
+/********************************  Frontend Actions ***********************************/
+/******************************************************************************/
+#vz-frontend-actions .only-pro-inner, #vz-data-controls .only-pro-inner {
+	text-align: center;
+}
+
+/******************************************************************************/
+/******************************** chart type box upsell ***********************/
+/******************************************************************************/
+
+.pro-upsell .pro-upsell-overlay {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	left: 0;
+	top: 0;
+	display: grid;
+	place-items: center;
+	background-color: rgba(255, 255, 255, 0.7);
+	z-index: 1;
+	opacity: 0;
+	visibility: hidden;
+	transition: all .3s ease-in-out;
+}
+.pro-upsell:hover .pro-upsell-overlay{
+	opacity: 1;
+	visibility: visible;
+}
+
+.pro-upsell .pro-upsell-overlay .button {
+    width: 155px;
+    height: 39px;
+    background: #007CBA;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #FFFFFF;
+    justify-content: center;
+}
+.pro-upsell .pro-upsell-overlay .button.button-secondary{
+	background: #ffffff;
+	color: #007CBA;
+}
+.pro-upsell .pro-upsell-overlay .pro-upsell-action {
+	display: flex;
+	gap: 20px;
+}
+.pro-upsell .pro-upsell-overlay .pro-upsell-action .button{
+	width: 100%;
+	text-align: center;
 }

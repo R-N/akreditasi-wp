@@ -190,6 +190,7 @@ class To_Top {
 
 		$this->loader->add_action( 'wp_footer', $plugin_public, 'public_display' );
 		$this->loader->add_action( 'admin_footer', $plugin_public, 'public_display' );
+		$this->loader->add_filter( 'script_loader_tag', $plugin_public, 'make_script_async', 10, 3 );
 	}
 
 	/**

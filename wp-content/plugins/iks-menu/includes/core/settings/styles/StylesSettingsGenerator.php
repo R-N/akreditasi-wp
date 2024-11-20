@@ -12,12 +12,10 @@
  */
 namespace IksStudio\IKSM_CORE\settings\styles;
 
-use  IksStudio\IKSM_CORE\Plugin ;
-use  IksStudio\IKSM_CORE\utils\Utils ;
-class StylesSettingsGenerator
-{
-    public static function generate_settings( $settings_map, $settings_by_type )
-    {
+use IksStudio\IKSM_CORE\Plugin;
+use IksStudio\IKSM_CORE\utils\Utils;
+class StylesSettingsGenerator {
+    public static function generate_settings( $settings_map, $settings_by_type ) {
         $settings = [];
         foreach ( $settings_map as $main_key => $data ) {
             $type = $data["type"];
@@ -27,7 +25,7 @@ class StylesSettingsGenerator
             /* Filtering "exclude" settings */
             $settings_to_generate = $settings_by_type[$type];
             if ( isset( $data["exclude"] ) ) {
-                $settings_to_generate = array_filter( $settings_to_generate, function ( $item ) use( $data ) {
+                $settings_to_generate = array_filter( $settings_to_generate, function ( $item ) use($data) {
                     return !in_array( $item["key"], $data["exclude"] );
                 } );
             }
@@ -72,7 +70,7 @@ class StylesSettingsGenerator
         }
         return $settings;
     }
-    
+
     /**
      * @param $settings
      * @param $main_key
@@ -90,8 +88,7 @@ class StylesSettingsGenerator
         $selector,
         $custom_selectors,
         $defaults = null
-    )
-    {
+    ) {
         $result = [];
         foreach ( $settings as $index => $setting ) {
             $key = $setting["key"];
@@ -99,13 +96,11 @@ class StylesSettingsGenerator
             $new_key = StylesSettingsGenerator::generate_setting_key( $main_key, $state_key, $key );
             $setting["key"] = $new_key;
             if ( isset( $setting["property"] ) ) {
-                
                 if ( isset( $custom_selectors[$key] ) ) {
                     $setting["selector"] = $custom_selectors[$key];
                 } else {
                     $setting["selector"] = $selector . $selector_postfix;
                 }
-            
             }
             if ( isset( $setting["depends_on"] ) ) {
                 $setting["depends_on"] = StylesSettingsGenerator::generate_setting_key( $main_key, $state_key, $setting["depends_on"] );
@@ -119,9 +114,8 @@ class StylesSettingsGenerator
         }
         return $result;
     }
-    
-    public static function generate_setting_key( $main_key, $state_key, $inner_key )
-    {
+
+    public static function generate_setting_key( $main_key, $state_key, $inner_key ) {
         return "{$main_key}_{$state_key}_{$inner_key}";
     }
 

@@ -5,7 +5,7 @@ if ( ! Visualizer_Module::is_pro() ) {
 		<div class="pro-feature-inner">
 			<div class="pro-feature-features">
 				<h2>More charts!</h2>
-				<p>Gain access to 6 more charts right away, and more in the future. So far these include the gauge, candlestick, timeline, combo, polar area and radar charts.</p>
+				<p>Gain access to 11 more charts right away, and more in the future. So far these include the area, geo, column, bubble, scatter, gauge, candlestick, timeline, combo, polar area and radar/spider charts.</p>
 				<p>Of course, these are fully customizable!</p>
 			</div>
 			<div class="pro-feature-image"><img src="<?php echo VISUALIZER_ABSURL; ?>/images/pro/more_charts.png"></div>
@@ -50,7 +50,7 @@ if ( ! apply_filters( 'visualizer_is_business', false ) ) {
 		<div class="pro-feature-features">
 			<h2>Import any data from your database!</h2>
 			<p>Do you want to create a chart based on custom queries? Or display data about WordPress statistics? Do you want to import data periodically (every day, every hour, etc.) ?</p>
-			<p>With Pro you can do all of these, and much more. <a href="<?php echo Visualizer_Plugin::PRO_TEASER_URL; ?>">Visit our site to know more.</a></p>
+			<p>With Pro you can do all of these, and much more. <a href="<?php echo tsdk_utmify( Visualizer_Plugin::PRO_TEASER_URL, 'import' ); ?>">Visit our site to know more.</a></p>
 		</div>
 			<div class="pro-feature-image"><img src="<?php echo VISUALIZER_ABSURL; ?>/images/pro/import.png"></div>
 		<div class="clear"></div>

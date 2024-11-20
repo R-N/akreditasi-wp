@@ -1,0 +1,9 @@
+# START YOAST BLOCK
+# ---------------------------
+User-agent: *
+Disallow:
+
+Sitemap: http://akreditasi.test/page-sitemap.xml
+Sitemap: http://akreditasi.test/category-sitemap.xml
+# ---------------------------
+# END YOAST BLOCK

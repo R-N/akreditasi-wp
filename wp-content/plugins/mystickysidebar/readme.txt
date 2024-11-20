@@ -1,14 +1,14 @@
 ﻿=== WP Sticky Sidebar - Floating Sidebar On Scroll for Any Theme ===
 Contributors: tomeraharon, galdub, premio
 Donate link: http://wordpress.transformnews.com/contact
-Tags: sticky sidebar, fixed sidebar, floating sidebar, sidebar, sticky, sidebar menu, custom sidebar, disable sidebar
+Tags: sticky sidebar, fixed sidebar, floating sidebar, sidebar, sticky
 Requires at least: 3.5.1
-Tested up to: 5.5
-Stable tag: 1.3.5
-License: GPLv2 or later
-License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Tested up to: 6.7
+Stable tag: 1.4.1
+License: GPLv3
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-WP Sticky Sidebar plugin will make your menu or header stick to the side of page, after desired number of pixels when scrolled down and up. 
+📌 WP Sticky Sidebar plugin will make your menu or header stick to the side of page, after desired number of pixels when scrolled🔥
 
 == Description ==
 WP Sticky Sidebar plugin will make your floating sidebar menu visible at all times, making it permanently visible while scrolling. The biggest problem with default sidebars is that they can be seen only when the user is in a particular viewport where the sidebar appears. So what's wrong with that? The biggest problem is that your visitors can’t navigate easily from anywhere on the site using the sidebar menu, and in many cases your bounce rate will skyrocket because you will find that your website’s visitors are leaving the site because they did not find what they were looking for. 
@@ -90,6 +90,18 @@ Just follow our <a href="https://premio.io/wordpress-premio-pro-version-installa
 2. Check WP Sticky Sidebar in action
 
 == Changelog ==
+= 1.4.1 =
+Added plugin recommendations
+= 1.4 =
+WordPress 6.5 compatibility
+= 1.3.9 =
+Flow changes
+= 1.3.8 =
+Bugs fixed
+= 1.3.7 =
+Security update
+= 1.3.6 =
+jQuery minor bugs fixed
 = 1.3.5 =
 Infrastructure improvements
 = 1.3.4 =

@@ -18,6 +18,12 @@
  * @package WordPress
  */
 
+define('WP_DEBUG_LOG', true);
+define('WP_DEBUG_DISPLAY', false);
+ini_set('max_execution_time', 36000);
+ini_set('memory_limit', '2048M');
+define('WP_MEMORY_LIMIT', '2048M');
+
 // ** MySQL settings - You can get this info from your web host ** //
 /** The name of the database for WordPress */
 define( 'DB_NAME', 'akreditasi2' );
@@ -77,7 +83,7 @@ $table_prefix = 'aksi20_';
  *
  * @link https://wordpress.org/support/article/debugging-in-wordpress/
  */
-define( 'WP_DEBUG', false );
+define( 'WP_DEBUG', true );
 
 /* That's all, stop editing! Happy publishing. */
 

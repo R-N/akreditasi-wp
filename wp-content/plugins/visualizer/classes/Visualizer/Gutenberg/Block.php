@@ -67,7 +67,7 @@ class Visualizer_Gutenberg_Block {
 	 * Enqueue front end and editor JavaScript and CSS
 	 */
 	public function enqueue_gutenberg_scripts() {
-		global $wp_version;
+		global $wp_version, $pagenow;
 
 		$blockPath = VISUALIZER_ABSURL . 'classes/Visualizer/Gutenberg/build/block.js';
 		$handsontableJS = VISUALIZER_ABSURL . 'classes/Visualizer/Gutenberg/build/handsontable.js';
@@ -80,9 +80,17 @@ class Visualizer_Gutenberg_Block {
 			$version = $this->version;
 		}
 
+		if ( ! wp_script_is( 'visualizer-datatables', 'registered' ) ) {
+			wp_register_script( 'visualizer-datatables', VISUALIZER_ABSURL . 'js/lib/datatables.min.js', array( 'jquery-ui-core' ), Visualizer_Plugin::VERSION );
+		}
+
+		if ( ! wp_style_is( 'visualizer-datatables', 'registered' ) ) {
+			wp_register_style( 'visualizer-datatables', VISUALIZER_ABSURL . 'css/lib/datatables.min.css', array(), Visualizer_Plugin::VERSION );
+		}
+
 		// Enqueue the bundled block JS file
 		wp_enqueue_script( 'handsontable', $handsontableJS );
-		wp_enqueue_script( 'visualizer-gutenberg-block', $blockPath, array( 'wp-api', 'handsontable', 'visualizer-datatables', 'moment' ), $version, true );
+		wp_enqueue_script( 'visualizer-gutenberg-block', $blockPath, array( 'wp-api', 'handsontable', 'visualizer-datatables', 'moment', 'lodash' ), $version, true );
 
 		$type = 'community';
 
@@ -97,12 +105,19 @@ class Visualizer_Gutenberg_Block {
 
 		$translation_array = array(
 			'isPro'     => $type,
-			'proTeaser' => Visualizer_Plugin::PRO_TEASER_URL,
+			'proTeaser' => tsdk_utmify( Visualizer_Plugin::PRO_TEASER_URL, 'blockupsell'),
 			'absurl'    => VISUALIZER_ABSURL,
 			'charts'    => Visualizer_Module_Admin::_getChartTypesLocalized(),
 			'adminPage' => menu_page_url( 'visualizer', false ),
+			'createChart' => add_query_arg( array( 'action' => 'visualizer-create-chart', 'library' => 'yes', 'type' => '', 'chart-library' => '', 'tab' => 'visualizer' ), admin_url( 'admin-ajax.php' ) ),
 			'sqlTable'  => $table_col_mapping,
 			'chartsPerPage' => defined( 'TI_CYPRESS_TESTING' ) ? 20 : 6,
+			'proFeaturesLocked' => Visualizer_Module_Admin::proFeaturesLocked(),
+			'isFullSiteEditor'  => 'site-editor.php' === $pagenow,
+			'legacyBlockEdit'   => apply_filters( 'visualizer_legacy_block_edit', false ),
+			/* translators: %1$s: opening tag, %2$s: closing tag */
+			'blockEditDoc'      => sprintf( __( 'The editor for managing chart settings has been removed from the block editor. You can find more information in this %1$sdocumentation%2$s', 'visualizer' ), '<a href="https://docs.themeisle.com/article/1705-how-can-i-display-a-chart#using-visualizer-block" target="_blank">', '</a>' ),
+			'chartEditUrl'      => admin_url( 'admin-ajax.php' ),
 		);
 		wp_localize_script( 'visualizer-gutenberg-block', 'visualizerLocalize', $translation_array );
 
@@ -121,7 +136,7 @@ class Visualizer_Gutenberg_Block {
 						'dragDrop'          => false,
 						'matchBrackets'     => true,
 						'autoCloseBrackets' => true,
-						'extraKeys'         => array( 'Ctrl-Space' => 'autocomplete' ),
+						'extraKeys'         => array( 'Shift-Space' => 'autocomplete' ),
 						'hintOptions'       => array( 'tables' => $table_col_mapping ),
 					),
 				)
@@ -342,7 +357,9 @@ class Visualizer_Gutenberg_Block {
 
 		// faetch and update settings
 		$data['visualizer-settings'] = get_post_meta( $post_id, Visualizer_Plugin::CF_SETTINGS, true );
-
+		if ( empty( $data['visualizer-settings']['pagination'] ) ) {
+			$data['visualizer-settings']['pageSize'] = '';
+		}
 		// handle series filter hooks
 		$data['visualizer-series'] = apply_filters( Visualizer_Plugin::FILTER_GET_CHART_SERIES, get_post_meta( $post_id, Visualizer_Plugin::CF_SERIES, true ), $post_id, $data['visualizer-chart-type'] );
 
@@ -356,6 +373,10 @@ class Visualizer_Gutenberg_Block {
 		// this is to solve the case where boolean data shows up as all-ticks on gutenberg.
 		if ( in_array( $data['visualizer-chart-type'], array( 'tabular' ), true ) ) {
 			$data['visualizer-data'] = $this->format_chart_data( $data['visualizer-data'], $data['visualizer-series'] );
+		}
+
+		if ( ! isset( $data['visualizer-settings']['hAxis']['format'] ) ) {
+			$data['visualizer-settings']['hAxis']['format'] = '';
 		}
 
 		$data['visualizer-data-exploded'] = '';
@@ -376,6 +397,10 @@ class Visualizer_Gutenberg_Block {
 						// this series is some kind of annotation, so let's collect its index.
 						// the index will be +1 because the X axis value is index 0, which is being ignored.
 						$annotations[ 'role' . ( intval( $index ) + 1 ) ] = $serie['role'];
+
+						if ( isset( $data['visualizer-series'][ intval( $index ) + 1 ] ) ) {
+							$data['visualizer-series'][ intval( $index ) + 1 ]['role'] = $serie['role'];
+						}
 					}
 				}
 			}
@@ -422,8 +447,8 @@ class Visualizer_Gutenberg_Block {
 
 		$json_paging = get_post_meta( $post_id, Visualizer_Plugin::CF_JSON_PAGING, true );
 
-		if ( ! empty( $import ) && ! empty( $schedule ) ) {
-			$data['visualizer-chart-url'] = $import;
+		if ( ! empty( $import ) && $schedule >= 0 ) {
+			$data['visualizer-chart-url']      = $import;
 			$data['visualizer-chart-schedule'] = $schedule;
 		}
 
@@ -578,7 +603,7 @@ class Visualizer_Gutenberg_Block {
 			update_post_meta( $data['id'], Visualizer_Plugin::CF_SERIES, $data['visualizer-series'] );
 			update_post_meta( $data['id'], Visualizer_Plugin::CF_SETTINGS, $data['visualizer-settings'] );
 
-			if ( $data['visualizer-chart-url'] && $data['visualizer-chart-schedule'] ) {
+			if ( $data['visualizer-chart-url'] && $data['visualizer-chart-schedule'] >= 0 ) {
 				$chart_url = esc_url_raw( $data['visualizer-chart-url'] );
 				$chart_schedule = intval( $data['visualizer-chart-schedule'] );
 				update_post_meta( $data['id'], Visualizer_Plugin::CF_CHART_URL, $chart_url );
@@ -588,14 +613,29 @@ class Visualizer_Gutenberg_Block {
 				apply_filters( 'visualizer_pro_remove_schedule', $data['id'] );
 			}
 
-			if ( $source_type === 'Visualizer_Source_Query' ) {
-				$db_schedule = intval( $data['visualizer-db-schedule'] );
-				$db_query = $data['visualizer-db-query'];
-				update_post_meta( $data['id'], Visualizer_Plugin::CF_DB_SCHEDULE, $db_schedule );
-				update_post_meta( $data['id'], Visualizer_Plugin::CF_DB_QUERY, stripslashes( $db_query ) );
-			} else {
-				delete_post_meta( $data['id'], Visualizer_Plugin::CF_DB_SCHEDULE );
-				delete_post_meta( $data['id'], Visualizer_Plugin::CF_DB_QUERY );
+			// let's check if this is not an external db chart
+			// as there is no support for that in the block editor interface
+			$external_params = get_post_meta( $data['id'], Visualizer_Plugin::CF_REMOTE_DB_PARAMS, true );
+			if ( empty( $external_params ) ) {
+				if ( $source_type === 'Visualizer_Source_Query' ) {
+					$db_schedule = intval( $data['visualizer-db-schedule'] );
+					$db_query = $data['visualizer-db-query'];
+					update_post_meta( $data['id'], Visualizer_Plugin::CF_DB_SCHEDULE, $db_schedule );
+					update_post_meta( $data['id'], Visualizer_Plugin::CF_DB_QUERY, stripslashes( $db_query ) );
+				} else {
+					delete_post_meta( $data['id'], Visualizer_Plugin::CF_DB_SCHEDULE );
+					delete_post_meta( $data['id'], Visualizer_Plugin::CF_DB_QUERY );
+				}
+
+				if ( 'Visualizer_Source_Csv_Remote' === $source_type ) {
+					$schedule_url = $data['visualizer-chart-url'];
+					$schedule_id  = $data['visualizer-chart-schedule'];
+					update_post_meta( $data['id'], Visualizer_Plugin::CF_CHART_URL, $schedule_url );
+					update_post_meta( $data['id'], Visualizer_Plugin::CF_CHART_SCHEDULE, $schedule_id );
+				} else {
+					delete_post_meta( $data['id'], Visualizer_Plugin::CF_CHART_URL );
+					delete_post_meta( $data['id'], Visualizer_Plugin::CF_CHART_SCHEDULE );
+				}
 			}
 
 			if ( $source_type === 'Visualizer_Source_Json' ) {
@@ -641,6 +681,12 @@ class Visualizer_Gutenberg_Block {
 			);
 
 			wp_update_post( $chart );
+
+			// Clear existing chart cache.
+			$cache_key = Visualizer_Plugin::CF_CHART_CACHE . '_' . $data['id'];
+			if ( get_transient( $cache_key ) ) {
+				delete_transient( $cache_key );
+			}
 
 			$revisions = wp_get_post_revisions( $data['id'], array( 'order' => 'ASC' ) );
 
@@ -726,8 +772,12 @@ class Visualizer_Gutenberg_Block {
 			return false;
 		}
 
-		if ( $data['url'] && ! is_wp_error( $data['url'] ) && filter_var( $data['url'], FILTER_VALIDATE_URL ) ) {
-			$source = new Visualizer_Source_Csv_Remote( $data['url'] );
+		$remote_data = false;
+		if ( isset( $data['url'] ) && function_exists( 'wp_http_validate_url' ) ) {
+			$remote_data = wp_http_validate_url( $data['url'] );
+		}
+		if ( false !== $remote_data && ! is_wp_error( $remote_data ) ) {
+			$source = new Visualizer_Source_Csv_Remote( $remote_data );
 			if ( $source->fetch() ) {
 				$temp = $source->getData();
 				if ( is_string( $temp ) && is_array( unserialize( $temp ) ) ) {

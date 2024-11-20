@@ -47,8 +47,8 @@ class Visualizer_Source_Csv extends Visualizer_Source {
 	 * @access public
 	 * @param string $filename The path to the file.
 	 */
-	public function __construct( $filename = null ) {
-		$this->_filename = trim( $filename );
+	public function __construct( $filename = '' ) {
+		$this->_filename = trim( (string) $filename );
 	}
 
 	/**
@@ -115,8 +115,6 @@ class Visualizer_Source_Csv extends Visualizer_Source {
 	 * @return resource File handle resource on success, otherwise FALSE.
 	 */
 	protected function _get_file_handle( $filename = false ) {
-		// set line endings auto detect mode
-		ini_set( 'auto_detect_line_endings', true );
 		// open file and return handle
 		return fopen( $filename ? $filename : $this->_filename, 'rb' );
 	}

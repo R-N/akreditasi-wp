@@ -7,7 +7,7 @@ import ChartSelect from './Components/ChartSelect.js';
 
 import ChartRender from './Components/ChartRender.js';
 
-import { CSVToArray } from './utils.js';
+import { CSVToArray, buildChartPopup, tryGetPublishedChartData } from './utils.js';
 
 /**
  * WordPress dependencies
@@ -56,6 +56,7 @@ class Editor extends Component {
 		this.getChartData = this.getChartData.bind( this );
 		this.editChartData = this.editChartData.bind( this );
 		this.updateChart = this.updateChart.bind( this );
+		this.createChart = this.createChart.bind( this );
 
 		this.state = {
 
@@ -101,12 +102,19 @@ class Editor extends Component {
 			isLoading: 'getChart'
 		});
 
-		let result = await apiFetch({ path: `wp/v2/visualizer/${id}` });
+		const chartDataRequest = await tryGetPublishedChartData( id );
+
+		if ( 'publish' !== chartDataRequest.chartStatus ) {
+			this.setState({ route: 'showCharts', isLoading: false });
+			this.props.setAttributes({ route: 'showCharts' });
+			return;
+		}
 
 		this.setState({
 			route: 'chartSelect',
-			chart: result['chart_data'],
-			isLoading: false
+			chart: chartDataRequest.result['chart_data'],
+			isLoading: true,
+			isModified: true
 		});
 
 		this.props.setAttributes({
@@ -123,6 +131,9 @@ class Editor extends Component {
 
 	editSettings( settings ) {
 		let chart = { ...this.state.chart };
+		if ( '1' !== settings.pagination ) {
+			delete settings.pageSize;
+		}
 		chart['visualizer-settings'] = settings;
 		this.setState({
 			chart,
@@ -417,19 +428,22 @@ class Editor extends Component {
 			data['visualizer-chart-schedule'] = '';
 		}
 
-		let fieldName = 'series';
+		let dataChartStylingOption = 'series';
 
 		if ( 'pie' === data['visualizer-chart-type']) {
-			fieldName = 'slices';
+			dataChartStylingOption = 'slices';
 		}
 
         // no series for bubble and timeline charts.
-		if ( -1 >= [ 'bubble', 'timeline' ].indexOf( data['visualizer-chart-type']) ) {
-            Object.keys( data['visualizer-settings'][fieldName])
+		if (
+			undefined !== data['visualizer-settings'][dataChartStylingOption] &&
+			-1 >= [ 'bubble', 'timeline' ].indexOf( data['visualizer-chart-type'])
+		) {
+            Object.keys( data['visualizer-settings'][dataChartStylingOption])
                 .map( i => {
-                    if ( data['visualizer-settings'][fieldName][i] !== undefined ) {
-                        if ( data['visualizer-settings'][fieldName][i].temp !== undefined ) {
-                            delete data['visualizer-settings'][fieldName][i].temp;
+                    if ( data['visualizer-settings'][dataChartStylingOption][i] !== undefined ) {
+                        if ( data['visualizer-settings'][dataChartStylingOption][i].temp !== undefined ) {
+                            delete data['visualizer-settings'][dataChartStylingOption][i].temp;
                         }
                     }
                 }
@@ -452,6 +466,35 @@ class Editor extends Component {
 		);
 	}
 
+	/**
+	 * Create a new chart via popup.
+	 *
+	 * @returns {void}
+	 */
+	async createChart() {
+
+		// Use the same popup like in Chart Library.
+		const createChartPopup = new ( buildChartPopup() )({
+			action: visualizerLocalize.createChart
+		});
+
+		// eslint-disable-next-line camelcase
+		window.send_to_editor = () => {
+			createChartPopup.close();
+		};
+
+		window.parent.addEventListener( 'message', ( event ) => {
+			if ( 'visualizer:mediaframe:close' === event.data ) {
+				createChartPopup.close();
+			} else if ( event.data.chartID && null === this.state.chart ) {
+				const chartID = parseInt(  event.data.chartID, 10 );
+				this.getChart( chartID );
+			}
+		}, false );
+
+		createChartPopup.open();
+	}
+
 	render() {
 		if ( 'error' === this.state.route ) {
 			return (
@@ -461,6 +504,18 @@ class Editor extends Component {
 				>
                         <Dashicon icon="chart-pie" />
                         { __( 'This chart is not available; it might have been deleted. Please delete this block and resubmit your chart.' ) }
+				</Notice>
+			);
+		}
+
+		if ( '1' === visualizerLocalize.isFullSiteEditor ) {
+			return (
+				<Notice
+					status="error"
+					isDismissible={ false }
+				>
+                        <Dashicon icon="chart-pie" />
+                        { __( 'Visualizer block charts are currently not available for selection here, you must visit the library, get the shortcode, and add the chart here in a shortcode tag.' ) }
 				</Notice>
 			);
 		}
@@ -495,7 +550,7 @@ class Editor extends Component {
 						{ /* You can apply "locked" class to lock any of the following list items. */ }
 
 						<a
-							href={ visualizerLocalize.adminPage }
+							onClick={ this.createChart }
 							target="_blank"
 							className="visualizer-settings__content-option"
 						>
@@ -571,7 +626,7 @@ class Editor extends Component {
 						<ButtonGroup>
 
 							<Button
-								isDefault
+								variant="secondary"
 								isLarge
 								onClick={ () => {
 									let route;
@@ -580,7 +635,7 @@ class Editor extends Component {
 									} else if ( 'chartSelect' === this.state.route ) {
 										route = 'showCharts';
 									}
-									this.setState({ route });
+									this.setState({ route, isLoading: false });
 									this.props.setAttributes({ route });
 								} }
 							>
@@ -592,11 +647,11 @@ class Editor extends Component {
 
 									{ false === this.state.isModified ?
 										<Button
-											isDefault
+											variant="secondary"
 											isLarge
                                             className="visualizer-bttn-done"
 											onClick={ () => {
-												this.setState({ route: 'renderChart' });
+												this.setState({ route: 'renderChart', isModified: true });
 												this.props.setAttributes({ route: 'renderChart' });
 											} }
 										>

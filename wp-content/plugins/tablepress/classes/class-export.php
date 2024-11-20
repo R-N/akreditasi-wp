@@ -13,6 +13,7 @@ defined( 'ABSPATH' ) || die( 'No direct script access allowed!' );
 
 /**
  * TablePress Table Export Class
+ *
  * @package TablePress
  * @subpackage Export/Import
  * @author Tobias Bäthge
@@ -24,7 +25,7 @@ class TablePress_Export {
 	 * File/Data Formats that are available for the export.
 	 *
 	 * @since 1.0.0
-	 * @var array
+	 * @var array<string, string>
 	 */
 	public $export_formats = array();
 
@@ -32,7 +33,7 @@ class TablePress_Export {
 	 * Delimiters for the CSV export.
 	 *
 	 * @since 1.0.0
-	 * @var array
+	 * @var array<string, string>
 	 */
 	public $csv_delimiters = array();
 
@@ -62,8 +63,7 @@ class TablePress_Export {
 			'tab' => __( '\t (tabulator)', 'tablepress' ),
 		);
 
-		/** This filter is documented in the WordPress function unzip_file() in wp-admin/includes/file.php */
-		if ( class_exists( 'ZipArchive', false ) && apply_filters( 'unzip_file_use_ziparchive', true ) ) {
+		if ( class_exists( 'ZipArchive', false ) ) {
 			$this->zip_support_available = true;
 		}
 	}
@@ -73,12 +73,12 @@ class TablePress_Export {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param array  $table         Table to be exported.
-	 * @param string $export_format Format for the export ('csv', 'html', 'json').
-	 * @param string $csv_delimiter Delimiter for CSV export.
+	 * @param array<string, mixed> $table         Table to be exported.
+	 * @param string               $export_format Format for the export ('csv', 'html', 'json').
+	 * @param string               $csv_delimiter Delimiter for CSV export.
 	 * @return string Exported table (only data for CSV and HTML, full tables (including options) for JSON).
 	 */
-	public function export_table( array $table, $export_format, $csv_delimiter ) {
+	public function export_table( array $table, string $export_format, string $csv_delimiter ): string {
 		switch ( $export_format ) {
 			case 'csv':
 				$output = '';
@@ -129,6 +129,9 @@ class TablePress_Export {
 				break;
 			case 'json':
 				$output = wp_json_encode( $table, TABLEPRESS_JSON_OPTIONS );
+				if ( false === $output ) {
+					$output = '';
+				}
 				break;
 			default:
 				$output = '';
@@ -142,20 +145,50 @@ class TablePress_Export {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param string $string    Content of a cell.
-	 * @param string $delimiter CSV delimiter character.
-	 * @return string Wrapped string for CSV export
+	 * @param string $cell_content Content of a cell.
+	 * @param string $delimiter    CSV delimiter character.
+	 * @return string Wrapped string for CSV export.
 	 */
-	protected function csv_wrap_and_escape( $string, $delimiter ) {
+	protected function csv_wrap_and_escape( string $cell_content, string $delimiter ): string {
+		// Return early if the cell is empty. No escaping or wrapping is needed then.
+		if ( '' === $cell_content ) {
+			return $cell_content;
+		}
+
+		// Escape potentially dangerous functions that could be used for CSV injection attacks in external spreadsheet software.
+		$active_content_triggers = array( '=', '+', '-', '@' );
+		if ( in_array( $cell_content[0], $active_content_triggers, true ) ) {
+			$functions_to_escape = array(
+				'cmd|',
+				'rundll32',
+				'DDE(',
+				'IMPORTXML(',
+				'IMPORTFEED(',
+				'IMPORTHTML(',
+				'IMPORTRANGE(',
+				'IMPORTDATA(',
+				'IMAGE(',
+				'HYPERLINK(',
+				'WEBSERVICE(',
+			);
+			foreach ( $functions_to_escape as $function ) {
+				if ( false !== stripos( $cell_content, $function ) ) {
+					$cell_content = "'" . $cell_content; // Prepend a ' to indicate that the cell format is a text string.
+					break;
+				}
+			}
+		}
+
 		// Escape CSV delimiter for RegExp (e.g. '|').
 		$delimiter = preg_quote( $delimiter, '#' );
-		if ( 1 === preg_match( '#' . $delimiter . '|"|\n|\r#i', $string ) || ' ' === substr( $string, 0, 1 ) || ' ' === substr( $string, -1 ) ) {
+		if ( 1 === preg_match( '#' . $delimiter . '|"|\n|\r#i', $cell_content ) || str_starts_with( $cell_content, ' ' ) || str_ends_with( $cell_content, ' ' ) ) {
 			// Escape single " as double "".
-			$string = str_replace( '"', '""', $string );
+			$cell_content = str_replace( '"', '""', $cell_content );
 			// Wrap string in "".
-			$string = '"' . $string . '"';
+			$cell_content = '"' . $cell_content . '"';
 		}
-		return $string;
+
+		return $cell_content;
 	}
 
 	/**
@@ -163,11 +196,11 @@ class TablePress_Export {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param array  $row Cells of the row to be rendered.
-	 * @param string $tag HTML tag to use for the cells (td or th).
+	 * @param string[] $row Cells of the row to be rendered.
+	 * @param string   $tag HTML tag to use for the cells (td or th).
 	 * @return string HTML code for the row.
 	 */
-	protected function html_render_row( array $row, $tag ) {
+	protected function html_render_row( array $row, string $tag ): string {
 		$output = "\t\t<tr>\n";
 		array_walk( $row, array( $this, 'html_wrap_and_escape' ), $tag );
 		$output .= implode( '', $row );
@@ -180,11 +213,11 @@ class TablePress_Export {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param string   $cell_content Content of a cell.
-	 * @param int|null $column_idx   Column index, or null if omitted. Unused, but defined to be able to use function as callback in array_walk().
-	 * @param string   $html_tag     HTML tag that shall be used for the cell.
+	 * @param string $cell_content Content of a cell.
+	 * @param int    $column_idx   Column index, or -1 if omitted. Unused, but defined to be able to use function as callback in array_walk().
+	 * @param string $html_tag     HTML tag that shall be used for the cell.
 	 */
-	protected function html_wrap_and_escape( &$cell_content, $column_idx, $html_tag ) {
+	protected function html_wrap_and_escape( string &$cell_content, int $column_idx, string $html_tag ): void {
 		/*
 		 * Replace any & with &amp; that is not already an encoded entity (from function htmlentities2 in WP 2.8).
 		 * A complete htmlentities2() or htmlspecialchars() would encode <HTML> tags, which we don't want.

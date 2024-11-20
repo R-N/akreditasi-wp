@@ -150,6 +150,31 @@ abstract class Visualizer_Render_Sidebar_Graph extends Visualizer_Render_Sidebar
 		);
 
 		self::_renderSelectItem(
+			esc_html__( 'Slanted Text', 'visualizer' ),
+			'hAxis[slantedText]',
+			isset( $this->hAxis['slantedText'] ) ? $this->hAxis['slantedText'] : false,
+			array(
+				false => 'False',
+				true  => 'True',
+			),
+			'',
+			false
+		);
+
+		self::_renderTextItem(
+			esc_html__( 'Slanted Text Angle', 'visualizer' ),
+			'hAxis[slantedTextAngle]',
+			isset( $this->hAxis['slantedTextAngle'] ) ? $this->hAxis['slantedTextAngle'] : 45,
+			'',
+			45,
+			'number',
+			array(
+				'min'  => 1,
+				'step' => 15,
+			)
+		);
+
+		self::_renderSelectItem(
 			esc_html__( 'Text Position', 'visualizer' ),
 			'hAxis[textPosition]',
 			isset( $this->hAxis['textPosition'] ) ? $this->hAxis['textPosition'] : '',
@@ -189,7 +214,6 @@ abstract class Visualizer_Render_Sidebar_Graph extends Visualizer_Render_Sidebar
 			self::_renderSectionStart( esc_html__( 'General Settings', 'visualizer' ), false );
 				$this->_renderHorizontalAxisGeneralSettings();
 			self::_renderSectionEnd();
-
 		if ( $this->_horizontalGridLines ) {
 			self::_renderSectionStart( esc_html__( 'Grid Lines', 'visualizer' ), false );
 			self::_renderTextItem(
@@ -213,18 +237,18 @@ abstract class Visualizer_Render_Sidebar_Graph extends Visualizer_Render_Sidebar
 			self::_renderSectionStart( esc_html__( 'Minor Grid Lines', 'visualizer' ), false );
 			self::_renderTextItem(
 				esc_html__( 'Count', 'visualizer' ),
-				'vAxis[minorGridlines][count]',
-				isset( $this->vAxis['minorGridlines']['count'] ) ? $this->vAxis['minorGridlines']['count'] : '',
+				'hAxis[minorGridlines][count]',
+				isset( $this->hAxis['minorGridlines']['count'] ) ? $this->hAxis['minorGridlines']['count'] : '',
 				esc_html__( 'Specify 0 to disable the minor gridlines.', 'visualizer' ),
 				0,
 				'number',
-				array( 'min' => 0, 'max' => 1, 'step' => 1 )
+				array( 'min' => 0, 'step' => 1 )
 			);
 
 			self::_renderColorPickerItem(
 				esc_html__( 'Color', 'visualizer' ),
-				'vAxis[minorGridlines][color]',
-				isset( $this->vAxis['minorGridlines']['color'] ) ? $this->vAxis['minorGridlines']['color'] : null,
+				'hAxis[minorGridlines][color]',
+				isset( $this->hAxis['minorGridlines']['color'] ) ? $this->hAxis['minorGridlines']['color'] : null,
 				null
 			);
 			self::_renderSectionEnd();
@@ -329,18 +353,18 @@ abstract class Visualizer_Render_Sidebar_Graph extends Visualizer_Render_Sidebar
 			self::_renderSectionStart( esc_html__( 'Minor Grid Lines', 'visualizer' ), false );
 			self::_renderTextItem(
 				esc_html__( 'Count', 'visualizer' ),
-				'hAxis[minorGridlines][count]',
-				isset( $this->hAxis['minorGridlines']['count'] ) ? $this->hAxis['minorGridlines']['count'] : '',
+				'vAxis[minorGridlines][count]',
+				isset( $this->vAxis['minorGridlines']['count'] ) ? $this->vAxis['minorGridlines']['count'] : '',
 				esc_html__( 'Specify 0 to disable the minor gridlines.', 'visualizer' ),
 				0,
 				'number',
-				array( 'min' => 0, 'max' => 1, 'step' => 1 )
+				array( 'min' => 0, 'step' => 1 )
 			);
 
 			self::_renderColorPickerItem(
 				esc_html__( 'Color', 'visualizer' ),
-				'hAxis[minorGridlines][color]',
-				isset( $this->hAxis['minorGridlines']['color'] ) ? $this->hAxis['minorGridlines']['color'] : null,
+				'vAxis[minorGridlines][color]',
+				isset( $this->vAxis['minorGridlines']['color'] ) ? $this->vAxis['minorGridlines']['color'] : null,
 				null
 			);
 			self::_renderSectionEnd();
@@ -457,7 +481,7 @@ abstract class Visualizer_Render_Sidebar_Graph extends Visualizer_Render_Sidebar
 				),
 				sprintf(
 					esc_html__( 'For date axis labels, this is a subset of the date formatting %1$sICU date and time format%2$s.', 'visualizer' ),
-					'<a href="http://userguide.icu-project.org/formatparse/datetime#TOC-Date-Time-Format-Syntax" target="_blank">',
+					'<a href="https://unicode-org.github.io/icu/userguide/format_parse/datetime/#datetime-format-syntax" target="_blank">',
 					'</a>'
 				)
 			)
@@ -486,7 +510,7 @@ abstract class Visualizer_Render_Sidebar_Graph extends Visualizer_Render_Sidebar
 				),
 				sprintf(
 					esc_html__( 'For date axis labels, this is a subset of the date formatting %1$sICU date and time format%2$s.', 'visualizer' ),
-					'<a href="http://userguide.icu-project.org/formatparse/datetime#TOC-Date-Time-Format-Syntax" target="_blank">',
+					'<a href="https://unicode-org.github.io/icu/userguide/format_parse/datetime/#datetime-format-syntax" target="_blank">',
 					'</a>'
 				)
 			)

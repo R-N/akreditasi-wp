@@ -58,17 +58,20 @@
 			// Toggle dependencies
 			this.dependence_do_all();
 
+			// Disable Pro options
+			$( '.pt-cv-ispro select option' ).attr( 'disabled', 'disabled' );
+
 			// Prevent click on links
 			$( '#' + _prefix + 'preview-box' ).on( 'click', 'a', function ( e ) {
 				e.preventDefault();
 			} );
-			$( '.pt-accordion-a' ).click( function ( e ) {
+			$( '.pt-accordion-a' ).on( 'click', function ( e ) {
 				e.preventDefault();
 			} );
 
 			// Show alert when leave page without saving View
 			var checked = 0;
-			$( '#' + _prefix + 'form-view input[type="submit"]' + ',' + 'a[href*="action=duplicate"]' ).click( function () {
+			$( '#' + _prefix + 'form-view input[type="submit"]' + ',' + 'a[href*="action=duplicate"]' ).on( 'click', function () {
 				checked = 1;
 			} );
 			window.onbeforeunload = function ( event ) {
@@ -85,7 +88,7 @@
 			};
 
 			// Handle Pagination actions
-			$( 'body' ).bind( _prefix + 'admin-preview', function () {
+			$( 'body' ).on( _prefix + 'admin-preview', function () {
 				new $.PT_CV_Public();
 			} );
 		},
@@ -120,7 +123,7 @@
 		_toggle_taxonomy_relation: function () {
 			var $self = this;
 			$self._do_toggle_taxonomy_relation();
-			$( '.' + _prefix + 'taxonomy-item' ).change( function () {
+			$( '.' + _prefix + 'taxonomy-item' ).on( 'change', function () {
 				$self._do_toggle_taxonomy_relation();
 			} );
 		},
@@ -169,7 +172,7 @@
 		 */
 		dependence_do_all: function () {
 			var $self = this;
-			var $toggle_data_js = $.parseJSON( $self.options._toggle_data );
+			var $toggle_data_js = JSON.parse( $self.options._toggle_data );
 
 			$.each( $toggle_data_js, function ( idx, obj ) {
 				// Obj_sub: an object contains (dependence_id, operator, expect_val)
@@ -183,13 +186,16 @@
 					$self._dependence_group( $self._get_field_val( el ), obj_sub );
 
 					// Run on change
-					$( el ).change( function () {
+					$( el ).on( 'change', function () {
 						$self._dependence_group( $self._get_field_val( el ), obj_sub );
 					} );
 				} );
 			} );
 
-			$( '.pt-wrap' ).trigger( 'finish-do-dependence' );
+			// @since WP 6.0: need timeout, otherwise it triggers before custom events registered by on('finish-do-dependence') in Pro admin.js were attached, so these events are not executed
+			setTimeout( function () {
+				$( '.pt-wrap' ).trigger( 'finish-do-dependence' );
+			}, 1000 );
 		},
 		/**
 		 * Toggle each dependency group
@@ -270,7 +276,7 @@
 			} );
 			// Run on change
 			$( selector ).each( function () {
-				$( this ).change( function () {
+				$( this ).on( 'change', function () {
 					var this_ = $( this );
 					setTimeout( function () {
 						$self._toggle_each_group( this_, toggle );
@@ -409,7 +415,7 @@
 			fn_content_type();
 
 			// Run on change
-			$( content_type ).change( function () {
+			$( content_type ).on( 'change', function () {
 				fn_content_type( 1 );
 			} );
 		},
@@ -422,7 +428,7 @@
 			var $self = this;
 			var offset_top;
 
-			$( '#' + _prefix + 'show-preview' ).click( function ( e ) {
+			$( '#' + _prefix + 'show-preview' ).on( 'click', function ( e ) {
 				e.stopPropagation();
 				e.preventDefault();
 
@@ -450,7 +456,7 @@
 
 					// Scroll to preview box
 					$( 'html, body' ).animate( {
-						scrollTop: $preview.offset().top - 100
+						scrollTop: $preview.offset().top - 145
 					}, $self.options.scroll_time );
 
 					/// Send request
@@ -590,7 +596,7 @@
 			fn_layout_format( layout_format );
 
 			// Run on change
-			$( view_type ).change( function () {
+			$( view_type ).on( 'change', function () {
 				fn_layout_format( layout_format );
 			} );
 		},
@@ -617,7 +623,7 @@
 				_fn( is_trigger );
 			} );
 
-			$( 'body' ).bind( _prefix + 'preview-btn-toggle', function () {
+			$( 'body' ).on( _prefix + 'preview-btn-toggle', function () {
 				_fn();
 			} );
 		},

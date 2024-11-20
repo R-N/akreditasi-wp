@@ -67,6 +67,11 @@ if ( !class_exists( 'PT_CV_Functions' ) ) {
 				$language = $q_config[ 'language' ];
 			}
 
+			// Polylang
+			if ( empty( $language ) && function_exists( 'pll_current_language' ) ) {
+				$language = pll_current_language();
+			}
+
 			return $language;
 		}
 
@@ -94,6 +99,8 @@ if ( !class_exists( 'PT_CV_Functions' ) ) {
 			if ( $q_config ) {
 				$q_config[ 'language' ] = $language;
 			}
+
+			// If 'lang' variable in POST/GET is set, Polylang automatically load it
 		}
 
 		/**
@@ -208,7 +215,7 @@ if ( !class_exists( 'PT_CV_Functions' ) ) {
 		 * @return array
 		 */
 		static function string_to_array( $string, $delimiter = ',' ) {
-			return is_array( $string ) ? $string : (array) explode( $delimiter, (string) str_replace( ' ', '', $string ) );
+			return is_array( $string ) ? $string : (array) explode( $delimiter, (string) str_replace( ' ', '', (string) $string ) );
 		}
 
 		/**
@@ -293,6 +300,7 @@ if ( !class_exists( 'PT_CV_Functions' ) ) {
 		static function trim_words( $text, $num_words ) {
 			$more	 = '';
 			$text	 = apply_filters( PT_CV_PREFIX_ . 'before_trim_words', $text );
+			$num_words	 = apply_filters( PT_CV_PREFIX_ . 'trim_words_number', $num_words );
 
 			/*
 			 * translators: If your word count is based on single characters (e.g. East Asian characters),
@@ -469,14 +477,14 @@ if ( !class_exists( 'PT_CV_Functions' ) ) {
 		 *
 		 * @return string
 		 */
-		static function post_terms( $post ) {
+		static function post_terms( $post, $taxo = null, $sepechar = ', ' ) {
 			global $pt_cv_glb;
 
 			$links				 = array();
 			$taxonomy_terms		 = array();
 			$post_terms			 = array();
-			$taxonomies			 = get_taxonomies( array( 'public' => true ), 'names' );
-			$taxonomies_to_show	 = apply_filters( PT_CV_PREFIX_ . 'taxonomies_to_show', $taxonomies );
+			$taxonomies			 = $taxo ? (array) $taxo : get_taxonomies( array( 'public' => true ), 'names' );
+			$taxonomies_to_show	 = $taxo ? $taxonomies : apply_filters( PT_CV_PREFIX_ . 'taxonomies_to_show', $taxonomies );
 			$post_id			 = is_object( $post ) ? $post->ID : $post;
 			$terms				 = wp_get_object_terms( $post_id, $taxonomies );
 
@@ -510,7 +518,7 @@ if ( !class_exists( 'PT_CV_Functions' ) ) {
 				$pt_cv_glb[ 'item_terms' ][ $post_id ] = $post_terms;
 			}
 
-			return apply_filters( PT_CV_PREFIX_ . 'post_terms_output', implode( ', ', $links ), $links, $taxonomy_terms );
+			return apply_filters( PT_CV_PREFIX_ . 'post_terms_output', implode( $sepechar, $links ), $links, $taxonomy_terms );
 		}
 
 		/**
@@ -598,13 +606,16 @@ if ( !class_exists( 'PT_CV_Functions' ) ) {
 
 			do_action( PT_CV_PREFIX_ . 'get_view_settings' );
 
-			$view_settings = array();
+			$view_settings = apply_filters( PT_CV_PREFIX_ . 'set_view_settings', array() );
 
-			$post_id = PT_CV_Functions::post_id_from_meta_id( $meta_id );
-			if ( $post_id ) {
-				$view_settings = get_post_meta( $post_id, PT_CV_META_SETTINGS, true );
+			if ( !$view_settings ) {
+				$post_id = PT_CV_Functions::post_id_from_meta_id( $meta_id );
+				if ( $post_id ) {
+					$view_settings = get_post_meta( $post_id, PT_CV_META_SETTINGS, true );
+				}
 			}
 
+			$GLOBALS[ 'cv_current_view' ] = $meta_id;
 			return apply_filters( PT_CV_PREFIX_ . 'view_settings', $view_settings );
 		}
 
@@ -768,9 +779,9 @@ if ( !class_exists( 'PT_CV_Functions' ) ) {
 
 				do_action( PT_CV_PREFIX_ . 'after_process_item' );
 			} else {
-				$_class			 = apply_filters( PT_CV_PREFIX_ . 'content_no_post_found_class', 'alert alert-warning ' . PT_CV_PREFIX . 'no-post' );
-				$_text			 = PT_CV_Html::no_post_found();
-				$content_items[] = sprintf( '<div class="%s">%s</div>', esc_attr( $_class ), $_text );
+				$_class			 = apply_filters( PT_CV_PREFIX_ . 'content_no_post_found_class', PT_CV_PREFIX . 'no-post' );
+				$_text			 = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'noPostFound' ) ? trim( PT_CV_Functions::setting_value( PT_CV_PREFIX . 'noPostText' ) ) : PT_CV_Html::no_post_found();
+				$content_items[] = sprintf( '<div class="%s">%s</div>', esc_attr( $_class ), wp_kses_post( $_text ) );
 				$empty_result	 = true;
 				PT_CV_Functions::set_global_variable( 'no_post_found', $empty_result );
 			}
@@ -920,7 +931,7 @@ if ( !class_exists( 'PT_CV_Functions' ) ) {
 								$terms	 = apply_filters( PT_CV_PREFIX_ . 'selected_terms', $terms, $taxonomy );
 								if ( $terms ) {
 									$operator = PT_CV_Functions::setting_value( PT_CV_PREFIX . $taxonomy . '-operator', $view_settings, 'IN' );
-									if ( $operator === 'AND' && count( $terms ) == 1 ) {
+									if ( empty( $operator ) || ($operator === 'AND' && count( $terms ) == 1) ) {
 										$operator = 'IN';
 									}
 
@@ -1035,7 +1046,7 @@ if ( !class_exists( 'PT_CV_Functions' ) ) {
 			$offset						 = 0;
 
 			$pagination = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'enable-pagination', $view_settings );
-			if ( $pagination ) {
+			if ( $pagination || ContentViews_Block::is_pure_block() ) {
 				$prefix							 = PT_CV_PREFIX . 'pagination-';
 				$field_setting					 = PT_CV_Functions::settings_values_by_prefix( $prefix );
 				$dargs[ 'pagination-settings' ]	 = apply_filters( PT_CV_PREFIX_ . 'pagination_settings', $field_setting, $prefix );
@@ -1206,6 +1217,8 @@ if ( !class_exists( 'PT_CV_Functions' ) ) {
 				if ( empty( $view_id ) ) {
 					$view_id = PT_CV_Functions::string_random();
 				}
+
+				$settings = apply_filters( PT_CV_PREFIX_ . 'preview_settings', $settings, $view_id );
 
 				// Show output
 				echo PT_CV_Functions::view_process_settings( $view_id, $settings );
@@ -1532,6 +1545,39 @@ if ( !class_exists( 'PT_CV_Functions' ) ) {
 					$shortcode_tags = $shortcode_tags_backup;
 				}
 			}
+		}
+
+		static function is_view( $arr = null ) {
+			// is 0 (not saved view), string (saved view), null (block)
+			$view_id = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'view-id', $arr );
+			return ($view_id === null) ? false : true;
+		}
+
+		/* Get taxonomies of selected post type
+		 * @since 4.0
+		 */
+		static function get_taxonomies_by_post_type( $data ) {
+			$post_types = $data[ 'postType' ];
+			if ( $post_types === 'any' ) {
+				$post_types = $data[ 'multipostType' ];
+			}
+
+			// Ensure to get all post types, for both Elementor widget & Block
+			// Elementor: cvElementor available in both widget/preview/frontend
+			// Block: cvBlock available in editor only
+			$arr			 = PT_CV_Values::post_types_vs_taxonomies( true );
+			$matched_taxo	 = [];
+			foreach ( (array) $post_types as $post_type ) {
+				if ( is_array( $arr[ $post_type ] ) ) {
+					$matched_taxo = array_merge( $matched_taxo, $arr[ $post_type ] );
+				}
+			}
+
+			return $matched_taxo;
+		}
+
+		static function has_pro() {
+			return class_exists( 'PT_Content_Views_Pro' ) || get_option( 'pt_cv_version_pro' );
 		}
 
 	}

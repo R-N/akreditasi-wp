@@ -31,6 +31,7 @@ class Advanced_Import_Activator {
 	 */
 	public static function activate() {
 
+		advanced_import_add_installed_time();
 	}
 
 }

@@ -73,6 +73,7 @@ class ChartPermissions extends Component {
 					<PanelBody
 						title={ __( 'Who can see this chart?' ) }
 						initialOpen={ false }
+						className="vz-permission-tab"
 					>
 
 						<SelectControl
@@ -118,7 +119,7 @@ class ChartPermissions extends Component {
 							href={ visualizerLocalize.proTeaser }
 							target="_blank"
 						>
-							{ __( 'Buy Now' ) }
+							{ __( 'Upgrade Now' ) }
 						</Button>
 
 					</PanelBody>
@@ -128,6 +129,7 @@ class ChartPermissions extends Component {
 					<PanelBody
 						title={ __( 'Who can edit this chart?' ) }
 						initialOpen={ false }
+						className="vz-permission-tab"
 					>
 
 						<SelectControl
@@ -173,7 +175,7 @@ class ChartPermissions extends Component {
 							href={ visualizerLocalize.proTeaser }
 							target="_blank"
 						>
-							{ __( 'Buy Now' ) }
+							{ __( 'Upgrade Now' ) }
 						</Button>
 
 					</PanelBody>

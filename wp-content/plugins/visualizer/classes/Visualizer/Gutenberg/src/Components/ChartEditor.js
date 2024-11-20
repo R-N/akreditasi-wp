@@ -57,6 +57,7 @@ class ChartEditor extends Component {
 					colHeaders={ true }
 					allowInvalid={ false }
 					className="htEditor"
+					height="auto"
 					cells={ ( row, col, prop ) => {
 						let cellProperties;
 						if ( 1 === row ) {
@@ -79,7 +80,7 @@ class ChartEditor extends Component {
 
 				<ButtonGroup>
 					<Button
-						isDefault
+						variant="secondary"
 						isLarge
 						onClick={ this.props.toggleModal }
 					>

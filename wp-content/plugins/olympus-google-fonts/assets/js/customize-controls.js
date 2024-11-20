@@ -1,9 +1,41 @@
 /* global ogf_font_variants, ogf_font_array, ajaxurl, fontsReset, location */
 ( function( api ) {
-	api.controlConstructor[ 'typography' ] = api.Control.extend(
+	api.controlConstructor[ 'ogf-typography' ] = api.Control.extend(
 		{
 			ready: function() {
 				const control = this;
+				const controlClass = '.customize-control-ogf-typography';
+				const footerActions = jQuery( '#customize-footer-actions' );
+
+				// Do stuff when device icons are clicked
+				jQuery( control.selector + ' .ogf-device-controls > div' ).on( 'click', function( event ) {
+					var device = jQuery( this ).data( 'option' );
+					wp.customize.previewedDevice.set( device );
+
+					jQuery( controlClass + ' .ogf-device-controls div' ).each( function() {
+						var _this = jQuery( this );
+
+						if ( device === _this.attr( 'data-option' ) ) {
+							_this.addClass( 'selected' );
+							_this.siblings().removeClass( 'selected' );
+						}
+					} );
+
+				});
+
+				// Set the selected devices in our control when the Customizer devices are clicked
+				footerActions.find( '.devices button' ).on( 'click', function() {
+					var device = jQuery( this ).data( 'device' );
+
+					jQuery( controlClass + ' .ogf-device-controls div' ).each( function() {
+						var _this = jQuery( this );
+
+						if ( device === _this.attr( 'data-option' ) ) {
+							_this.addClass( 'selected' );
+							_this.siblings().removeClass( 'selected' );
+						}
+					} );
+				});
 
 				// Load the Google Font for the preview.
 				function addGoogleFont( fontName ) {
@@ -21,6 +53,13 @@
 
 				function isSystemFont( fontID ) {
 					if ( fontID.indexOf( 'sf-' ) !== -1 ) {
+						return true;
+					}
+					return false;
+				}
+
+				function isTypekitFont( fontID ) {
+					if ( fontID.indexOf( 'tk-' ) !== -1 ) {
 						return true;
 					}
 					return false;
@@ -46,14 +85,43 @@
 
 							const defaultWeights = {
 								0: "- Default -",
+								100: "Thin",
+								200: "Extra Light",
+								300: "Light",
 								400: "Normal",
+								500: "Medium",
+								600: "SemiBold",
 								700: "Bold",
+								800: "Extra Bold",
+								900: "Black",
 							}
 
 							// replace the 'Font Weight' select field values.
 							weightsSelect.empty();
 							jQuery.each(
 								defaultWeights,
+								function( key, val ) {
+									weightsSelect.append(
+										jQuery( '<option></option>' )
+											.attr( 'value', key ).text( val )
+									);
+								}
+							);
+						} else if ( isTypekitFont( value ) ) {
+							const font = ogf_typekit_fonts[ value ];
+							const newWeights = font.variants;
+							newWeights.unshift("0");
+
+							// remove variants the font doesn't support.
+							var finalWeights = new Object();
+							newWeights.forEach( function(i) {
+								finalWeights[i] = ogf_font_variants[i];
+							});
+
+							const weightsSelect = jQuery( '.typography-font-weight select' );
+							weightsSelect.empty();
+							jQuery.each(
+								finalWeights,
 								function( key, val ) {
 									weightsSelect.append(
 										jQuery( '<option></option>' )
@@ -72,9 +140,11 @@
 
 							// remove variants the font doesn't support.
 							var finalWeights = new Object();
-							for( var i in newWeights ) {
-								finalWeights[i] = ogf_font_variants[i];
-							}
+							Object.keys(newWeights).forEach( function(val, i) {
+								if ( ! val.endsWith('0i') ) {
+									finalWeights[val] = ogf_font_variants[val];
+								}
+							});
 
 							// replace the 'Font Weight' select field values.
 							const weightsSelect = jQuery( '.typography-font-weight select' );
@@ -240,6 +310,28 @@
 			} );
 		} );
 	} );
+
+	wp.customize.control( 'ogf_clear_cache', function( control ) {
+		control.container.find( '.button' ).on( 'click', function( event ) {
+			event.preventDefault();
+
+			console.log('clicked clear cache');
+
+			const data = {
+				wp_customize: 'on',
+				action: 'customizer_clear_cache',
+				security: clearCache.nonce,
+			};
+
+			jQuery( this ).attr( 'disabled', 'disabled' );
+
+			jQuery.post( ajaxurl, data, function( result ) {
+				wp.customize.state( 'saved' ).set( true );
+				alert('Cache successfully cleared.');
+				location.reload();
+			} );
+		} );
+	} );
 }( wp.customize ) );
 
 /* === Checkbox Multiple Control === */
@@ -257,14 +349,19 @@ jQuery( document ).ready( function() {
 	);
 } );
 
+/* === Optimization Controls === */
+jQuery( document ).ready( function() {
+	jQuery( '#_customize-input-ogf_host_locally, #_customize-input-ogf_preloading, #_customize-input-ogf_removal, #_customize-input-ogf_rewrite' ).attr( 'disabled', 'true' );
+} );
+
 /* === Multiple Fonts Control === */
 ( function( api ) {
-	api.controlConstructor[ 'typography-multiselect' ] = api.Control.extend( {
+	api.controlConstructor[ 'ogf-typography-multiselect' ] = api.Control.extend( {
 		ready: function() {
 			const control = this;
 			// Initialize chosen.js
 			jQuery( '.ogf-select', control.container ).chosen( { width: '85%' } );
-			jQuery( 'select', control.container ).change(
+			jQuery( 'select', control.container ).on('change',
 				function() {
 					let selectValue = jQuery( this ).val();
 					selectValue = ( null === selectValue ) ? [] : selectValue;

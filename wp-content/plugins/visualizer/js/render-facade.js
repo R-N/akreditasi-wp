@@ -1,14 +1,15 @@
 /* global console */
 /* global visualizer */
 /* global jQuery */
-
+var vizClipboard1=null;
 (function($, visualizer){
-
+    
     function initActionsButtons(v) {
-        if($('a.visualizer-chart-shortcode').length > 0) {
-            var clipboard1 = new ClipboardJS('a.visualizer-chart-shortcode'); // jshint ignore:line
-            clipboard1.on('success', function(e) {
+        if($('a.visualizer-chart-shortcode').length > 0 && vizClipboard1 === null) {
+            vizClipboard1 = new ClipboardJS('a.visualizer-chart-shortcode'); // jshint ignore:line
+            vizClipboard1.on('success', function(e) {
                 window.alert(v.i10n['copied']);
+
             });
         }
 
@@ -101,23 +102,6 @@
             document.body.dispatchEvent(event);
         };
 
-        // facade loads N times in the library and front end (where N = the number of different chart libraries supported)
-        // so all charts are also loaded N times
-        // this will ensure that no matter how many times facade is loaded, it initializes all charts only once.
-        // fixed as part of the issue to add annotations.
-        if(localStorage.getItem( 'viz-facade-loaded' ) === '1'){
-            // prevent library from hanging.
-            setTimeout( function(){
-                localStorage.removeItem( 'viz-facade-loaded' );
-            }, 2000);
-            return;
-        }
-        localStorage.setItem( 'viz-facade-loaded', '1');
-        // remove the flag so that repeated loading of the library does not cause problems.
-        setTimeout( function(){
-            localStorage.removeItem( 'viz-facade-loaded' );
-        }, 2000);
-        
         initChartDisplay();
         initActionsButtons(visualizer);
         registerDefaultActions();
@@ -126,7 +110,7 @@
     function initChartDisplay() {
         if(visualizer.is_front == true){ // jshint ignore:line
             displayChartsOnFrontEnd();
-        }else{
+        } else {
             showChart();
         }
     }
@@ -136,7 +120,7 @@
      */
     function showChart(id) {
         // clone the visualizer object so that the original object is not affected.
-        var viz = Object.assign({}, visualizer);
+        var viz = Object.assign(visualizer, window.visualizer || {});
         if(id){
             viz.id = id;
         }
@@ -144,10 +128,20 @@
     }
 
     function displayChartsOnFrontEnd() {
-        // display all charts that are NOT to be lazy-loaded.
-        $('div.visualizer-front:not(.visualizer-lazy)').each(function(index, element){
-            var id = $(element).attr('id');
-            showChart(id);
+
+        $('div.visualizer-front:not(.viz-facade-loaded):not(.visualizer-lazy):not(.visualizer-cw-error):empty').each(function(index, element){
+
+            // Do not render charts that are intentionally hidden.
+            var style = window.getComputedStyle(element);
+            if (style.display === 'none' || style.visibility === 'hidden') {
+                return;
+            }
+           
+            var id = $(element).addClass('viz-facade-loaded').attr('id');
+            setTimeout(function(){
+                // Add a short delay between each chart to avoid overloading the browser event loop.
+                showChart(id);
+            }, ( index + 1 ) * 100);
         });
 
         // interate through all charts that are to be lazy-loaded and observe each one.

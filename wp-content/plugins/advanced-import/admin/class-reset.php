@@ -13,6 +13,7 @@
 /**
  * The admin-specific functionality of the plugin.
  * Reset WordPress
+ *
  * @package    Advanced_Import
  * @subpackage Advanced_Import/admin
  * @author     Addons Press <addonspress.com>
@@ -24,7 +25,7 @@ class Advanced_Import_Reset_WordPress {
 	 *
 	 * @since    1.0.0
 	 */
-	public function __construct( ) {}
+	public function __construct() {}
 
 	/**
 	 * Main Advanced_Import_Reset_WordPress Instance
@@ -40,7 +41,7 @@ class Advanced_Import_Reset_WordPress {
 
 		// Only run these methods if they haven't been ran previously
 		if ( null === $instance ) {
-			$instance = new Advanced_Import_Reset_WordPress;
+			$instance = new Advanced_Import_Reset_WordPress();
 
 		}
 
@@ -49,12 +50,45 @@ class Advanced_Import_Reset_WordPress {
 	}
 
 	/**
+	 * Check if user can reset
+	 */
+	private function can_reset() {
+		if ( ! empty( $_GET['ai_reset_wordpress'] ) && ! empty( $_GET['ai_reset_wordpress_nonce'] ) ) {
+			/*Security*/
+			if ( ! wp_verify_nonce( wp_unslash( $_GET['ai_reset_wordpress_nonce'] ), 'ai_reset_wordpress' ) ) { // WPCS: input var ok, sanitization ok.
+				return false;
+			}
+			if ( ! current_user_can( 'manage_options' ) ) {
+				return false;
+			}
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Attempt to deactivate the plugins which gives errors while reseting.
+	 * We may add other plugins after testing/reported
+	 */
+	private function deactivate_plugins() {
+		include_once ABSPATH . 'wp-admin/includes/plugin.php';
+		if ( ! function_exists( 'deactivate_plugins' ) ) {
+			return;
+		}
+
+		if ( is_plugin_active( 'elementor/elementor.php' ) ) {
+			deactivate_plugins( 'elementor/elementor.php' );
+		}
+
+	}
+
+	/**
 	 * Hide a notice if the GET variable is set.
 	 */
 	public function hide_reset_notice() {
 		if ( isset( $_GET['advanced-import-hide-notice'] ) && isset( $_GET['_advanced_import_notice_nonce'] ) ) {
-		    /*Security*/
-		    if ( ! wp_verify_nonce( $_GET['_advanced_import_notice_nonce'], 'advanced_import_hide_notice_nonce' ) ) {
+			/*Security*/
+			if ( ! wp_verify_nonce( $_GET['_advanced_import_notice_nonce'], 'advanced_import_hide_notice_nonce' ) ) {
 				wp_die( __( 'Action failed. Please refresh the page and retry.', 'advanced-import' ) );
 			}
 
@@ -65,7 +99,7 @@ class Advanced_Import_Reset_WordPress {
 			$hide_notice = sanitize_text_field( $_GET['advanced-import-hide-notice'] );
 
 			if ( ! empty( $hide_notice ) && 'reset_notice' == $hide_notice ) {
-				update_option( 'advanced_import_reset_notice', 1 );
+				advanced_import_update_option( 'advanced_import_reset_notice', 1 );
 			}
 		}
 	}
@@ -76,21 +110,21 @@ class Advanced_Import_Reset_WordPress {
 	public function reset_wizard_actions() {
 		global $wpdb, $current_user;
 
-		if ( ! empty( $_GET['ai_reset_wordpress'] ) && !empty($_GET['ai_reset_wordpress_nonce'] )) {
-		    /*Security*/
-            if ( ! wp_verify_nonce( wp_unslash( $_GET['ai_reset_wordpress_nonce'] ), 'ai_reset_wordpress' ) ) { // WPCS: input var ok, sanitization ok.
-                wp_die( esc_html__( 'Action failed. Please refresh the page and retry.', 'advanced-import' ) );
-            }
-            if ( ! current_user_can( 'manage_options' ) ) {
-                wp_die( esc_html__( 'No permission to reset WordPress', 'advanced-import' ) );
-            }
+		if ( ! empty( $_GET['ai_reset_wordpress'] ) && ! empty( $_GET['ai_reset_wordpress_nonce'] ) && $this->can_reset() ) {
+			/*Security*/
+			if ( ! wp_verify_nonce( wp_unslash( $_GET['ai_reset_wordpress_nonce'] ), 'ai_reset_wordpress' ) ) { // WPCS: input var ok, sanitization ok.
+				wp_die( esc_html__( 'Action failed. Please refresh the page and retry.', 'advanced-import' ) );
+			}
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_die( esc_html__( 'No permission to reset WordPress', 'advanced-import' ) );
+			}
 
 			require_once ABSPATH . '/wp-admin/includes/upgrade.php';
 
-			$template     = get_option( 'template' );
-			$blogname     = get_option( 'blogname' );
-			$admin_email  = get_option( 'admin_email' );
-			$blog_public  = get_option( 'blog_public' );
+			$template    = get_option( 'template' );
+			$blogname    = get_option( 'blogname' );
+			$admin_email = get_option( 'admin_email' );
+			$blog_public = get_option( 'blog_public' );
 
 			$current_url = advanced_import_current_url();
 
@@ -136,8 +170,8 @@ class Advanced_Import_Reset_WordPress {
 			// Activate required plugins.
 			$required_plugins = (array) apply_filters( 'advanced_import_' . $template . '_required_plugins', array() );
 			if ( is_array( $required_plugins ) ) {
-				if ( ! in_array( plugin_basename( ADVANCED_IMPORT_PATH.'/advanced-import.php'), $required_plugins ) ) {
-					$required_plugins = array_merge( $required_plugins, array( ADVANCED_IMPORT_PATH.'/advanced-import.php') );
+				if ( ! in_array( plugin_basename( ADVANCED_IMPORT_PATH . '/advanced-import.php' ), $required_plugins ) ) {
+					$required_plugins = array_merge( $required_plugins, array( ADVANCED_IMPORT_PATH . '/advanced-import.php' ) );
 				}
 				activate_plugins( $required_plugins, '', is_network_admin(), true );
 			}
@@ -147,7 +181,7 @@ class Advanced_Import_Reset_WordPress {
 			wp_set_auth_cookie( $result['user_id'] );
 
 			// Redirect to demo importer page to display reset success notice.
-			wp_safe_redirect($current_url.'&reset=true&from=ai-reset-wp');
+			wp_safe_redirect( $current_url . '&reset=true&from=ai-reset-wp' );
 			exit();
 		}
 	}
@@ -158,15 +192,15 @@ class Advanced_Import_Reset_WordPress {
 	public function reset_wizard_notice() {
 
 		$screen = get_current_screen();
-		if (!in_array( $screen->base, advanced_import_admin()->hook_suffix )){
+		if ( ! in_array( $screen->base, advanced_import_admin()->hook_suffix ) ) {
 			return;
 		}
 		$current_url = advanced_import_current_url();
-        $reset_url = wp_nonce_url(
-            add_query_arg( 'ai_reset_wordpress', 'true', $current_url ),
-            'ai_reset_wordpress',
-            'ai_reset_wordpress_nonce'
-        );
+		$reset_url   = wp_nonce_url(
+			add_query_arg( 'ai_reset_wordpress', 'true', $current_url ),
+			'ai_reset_wordpress',
+			'ai_reset_wordpress_nonce'
+		);
 
 		$demo_notice_dismiss = get_option( 'advanced_import_reset_notice' );
 
@@ -175,7 +209,7 @@ class Advanced_Import_Reset_WordPress {
 			?>
 			<div id="message" class="updated ai-import-message">
 				<p><?php _e( '<strong>WordPress Reset</strong> &#8211; If no important data on your site. You can reset the WordPress back to default again!', 'advanced-import' ); ?></p>
-				<p class="submit"><a href="<?php echo esc_url( $reset_url ); ?>" class="button button-primary ai-wp-reset"><?php esc_html_e( 'Run the Reset Wizard', 'advanced-import' ); ?></a> <a class="button-secondary skip" href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'advanced-import-hide-notice', 'reset_notice', $current_url ), 'advanced_import_hide_notice_nonce', '_advanced_import_notice_nonce' ) ); ?>"><?php esc_attr_e( 'Hide this notice', 'advanced-import' ); ?></a></p>
+				<p class="submit"><?php wp_nonce_field( 'advanced-import-reset', 'advanced-import-reset' ); ?><a href="<?php echo esc_url( $reset_url ); ?>" class="button button-primary ai-wp-reset"><?php esc_html_e( 'Run the Reset Wizard', 'advanced-import' ); ?></a> <a class="button-secondary skip" href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'advanced-import-hide-notice', 'reset_notice', $current_url ), 'advanced_import_hide_notice_nonce', '_advanced_import_notice_nonce' ) ); ?>"><?php esc_attr_e( 'Hide this notice', 'advanced-import' ); ?></a></p>
 			</div>
 			<?php
 		} elseif ( isset( $_GET['reset'] ) && 'true' === $_GET['reset'] ) {
@@ -186,6 +220,31 @@ class Advanced_Import_Reset_WordPress {
 			</div>
 			<?php
 		}
+	}
+
+	/**
+	 * Before Reset Ajax callback
+	 */
+	public function before_reset() {
+		/*check for security*/
+		if ( ! current_user_can( 'upload_files' ) ) {
+			wp_send_json_error(
+				array(
+					'message' => esc_html__( 'Sorry, you are not allowed to install demo on this site.', 'advanced-import' ),
+				)
+			);
+		}
+		check_admin_referer( 'advanced-import-reset' );
+
+		/*Deactivate troubleshoot plugins before reset*/
+		$this->deactivate_plugins();
+
+		do_action( 'advanced_import_before_reset' );
+		wp_send_json_success(
+			array(
+				'message' => esc_html__( 'Success', 'advanced-import' ),
+			)
+		);
 	}
 
 

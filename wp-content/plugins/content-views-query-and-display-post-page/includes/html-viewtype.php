@@ -96,6 +96,36 @@ if ( !class_exists( 'PT_CV_Html_ViewType' ) ) {
 			}
 		}
 
+		static function onebig_wrapper( $content_items, &$content ) {
+			$list		 = $list1		 = $list2		 = array();
+			$idx		 = 0;
+			$position	 = PT_CV_Functions::setting_value( PT_CV_PREFIX . 'onePosition' );
+			foreach ( $content_items as $post_id => $content_item ) {
+				$content_item = PT_CV_Html::content_item_wrap( $content_item, '', $post_id );
+
+				if ( $position === 'beside-others' ) {
+					if ( $idx === 0 ) {
+						$list1[] = $content_item;
+					} else {
+						$list2[] = $content_item;
+					}
+				} else {
+					$list[] = $content_item;
+				}
+
+				$idx++;
+			}
+
+			if ( $list ) {
+				$content[] = implode( "\n", $list );
+			} else {
+				$class		 = PT_CV_PREFIX . 'onebig-block';
+				$list1		 = "<div class='$class'>" . implode( "\n", $list1 ) . "</div>";
+				$list2		 = "<div class='$class small-items'>" . implode( "\n", $list2 ) . "</div>";
+				$content[]	 = $list1 . $list2;
+			}
+		}
+
 		/**
 		 * Wrap content of Collapsible List type
 		 *
@@ -113,7 +143,7 @@ if ( !class_exists( 'PT_CV_Html_ViewType' ) ) {
 
 			foreach ( $content_items as $post_id => $content_item ) {
 				// Replace class in body of collapsible item, to show one (now is the first item)
-				$class			 = ( $open_all || ($idx++ == 0 && $open_first === 'yes') ) ? 'in' : '';
+				$class			 = ( $open_all || ($idx++ == 0 && $open_first) ) ? 'in' : '';
 				$content_item	 = str_replace( PT_CV_PREFIX_UPPER . 'CLASS', $class, $content_item );
 				$content_item	 = PT_CV_Html::content_item_wrap( $content_item, 'panel panel-default', $post_id );
 
@@ -288,6 +318,18 @@ if ( !class_exists( 'PT_CV_Html_ViewType' ) ) {
 			}
 
 			return $output;
+		}
+
+
+		// for Block
+		static function overlaygrid_wrapper( $content_items, &$content ) {
+			$list = array();
+			foreach ( $content_items as $post_id => $content_item ) {
+				$content_item	 = PT_CV_Html::content_item_wrap( $content_item, '', $post_id );
+				$list[]			 = $content_item;
+			}
+
+			$content[] = implode( "\n", $list );
 		}
 
 	}

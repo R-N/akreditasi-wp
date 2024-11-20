@@ -1,10 +1,9 @@
 <?php
-
 /*
 	Plugin Name: Visualizer: Tables and Charts for WordPress
-	Plugin URI: https://themeisle.com/plugins/visualizer-charts-and-graphs-lite/
-	Description: A simple, easy to use and quite powerful tool to create, manage and embed interactive charts into your WordPress posts and pages. The plugin uses Google Visualization API to render charts, which supports cross-browser compatibility (adopting VML for older IE versions) and cross-platform portability to iOS and new Android releases.
-	Version: 3.4.8
+	Plugin URI: https://themeisle.com/plugins/visualizer-charts-and-graphs/
+	Description: Effortlessly create and embed responsive charts and tables with Visualizer, a powerful WordPress plugin that enhances data presentation from multiple sources.
+	Version: 3.11.8
 	Author: Themeisle
 	Author URI: http://themeisle.com
 	License: GPL v2.0 or later
@@ -68,10 +67,13 @@ function visualizer_launch() {
 	define( 'VISUALIZER_BASENAME', plugin_basename( __FILE__ ) );
 	define( 'VISUALIZER_ABSURL', plugins_url( '/', __FILE__ ) );
 	define( 'VISUALIZER_ABSPATH', dirname( __FILE__ ) );
+	define( 'VISUALIZER_DIRNAME', basename( VISUALIZER_ABSPATH ) );
 	define( 'VISUALIZER_REST_VERSION', 1 );
 	// if the below is true, then the js/customization.js in the plugin folder will be used instead of the one in the uploads folder (if it exists).
 	// this is also used in Block.php
-	define( 'VISUALIZER_TEST_JS_CUSTOMIZATION', false );
+	if ( ! defined( 'VISUALIZER_TEST_JS_CUSTOMIZATION' ) ) {
+		define( 'VISUALIZER_TEST_JS_CUSTOMIZATION', false );
+	}
 
 	if ( ! defined( 'VISUALIZER_CSV_DELIMITER' ) ) {
 		define( 'VISUALIZER_CSV_DELIMITER', ',' );
@@ -94,6 +96,7 @@ function visualizer_launch() {
 	define( 'VISUALIZER_DOC_COLLECTION', 'https://docs.themeisle.com/search?collectionId=561ec249c69791452ed4bceb&query=#+visualizer' );
 	define( 'VISUALIZER_DEMO_URL', 'https://demo.themeisle.com/visualizer/#' );
 	define( 'VISUALIZER_CODE_SNIPPETS_URL', 'https://docs.themeisle.com/category/726-visualizer' );
+	define( 'VISUALIZER_SUBSCRIBE_API', 'https://api.themeisle.com/tracking/subscribe' );
 
 	// to redirect all themeisle_log_event to error log.
 	define( 'VISUALIZER_LOCAL_DEBUG', false );
@@ -125,15 +128,72 @@ function visualizer_launch() {
 
 	$plugin->setModule( Visualizer_Module_AMP::NAME );
 
-	$vendor_file = VISUALIZER_ABSPATH . '/vendor/autoload_52.php';
+	// Set setup wizard module.
+	$plugin->setModule( Visualizer_Module_Wizard::NAME );
+
+	$vendor_file = VISUALIZER_ABSPATH . '/vendor/autoload.php';
 	if ( is_readable( $vendor_file ) ) {
 		include_once( $vendor_file );
 	}
 	add_filter( 'themeisle_sdk_products', 'visualizer_register_sdk', 10, 1 );
 	add_filter( 'pirate_parrot_log', 'visualizer_register_parrot', 10, 1 );
+	add_filter(
+		'themeisle_sdk_compatibilities/' . VISUALIZER_DIRNAME, function ( $compatibilities ) {
+			$compatibilities['VisualizerPRO'] = array(
+				'basefile'  => defined( 'VISUALIZER_PRO_BASEFILE' ) ? VISUALIZER_PRO_BASEFILE : '',
+				'required'  => '1.8',
+				'tested_up' => '1.14',
+			);
+			return $compatibilities;
+		}
+	);
+	add_filter(
+		'visualizer_about_us_metadata',
+		function() {
+			return array(
+				'logo'             => esc_url( VISUALIZER_ABSURL . 'images/visualizer-logo.svg' ),
+				'location'         => 'visualizer',
+				'has_upgrade_menu' => ! Visualizer_Module::is_pro(),
+				'upgrade_text'     => esc_html__( 'Get Visualizer Pro', 'feedzy-rss-feeds' ),
+				'upgrade_link'     => esc_url( tsdk_utmify( Visualizer_Plugin::PRO_TEASER_URL, 'sidebarMenuUpgrade', 'index' ) ),
+			);
+		}
+	);
 
-	define( 'VISUALIZER_SURVEY', Visualizer_Module::is_pro() ? 'https://forms.gle/7Zo7FuZbvQ8DTvRi6' : 'https://forms.gle/muMtbcyvHn1aTvmJ7' );
+	if ( ! defined( 'TI_CYPRESS_TESTING' ) && 'yes' === get_option( 'visualizer_logger_flag', 'no' ) ) {
+		add_filter( 'themeisle_sdk_enable_telemetry', '__return_true' );
+		add_filter(
+			'themeisle_sdk_telemetry_products',
+			function( $products ) {
+				$already_registered = false;
 
+				$license = get_option( 'visualizer_pro_license_data', 'free' );
+				if ( ! empty( $license ) && is_object( $license ) ) {
+					$license = $license->key;
+				}
+				$track_hash = 'free' === $license ? 'free' : wp_hash( $license );
+
+				foreach ( $products as &$product ) {
+					if ( strstr( $product['slug'], 'visualizer' ) !== false ) {
+						$already_registered   = true;
+						$product['trackHash'] = $track_hash;
+					}
+				}
+
+				if ( $already_registered ) {
+					return $products;
+				}
+
+				// Add Visualizer to the list of products to track the usage of AI Block.
+				$products[] = array(
+					'slug'      => 'visualizer',
+					'consent'   => 'yes' === get_option( 'visualizer_logger_flag', 'no' ),
+					'trackHash' => $track_hash,
+				);
+				return $products;
+			}
+		);
+	}
 }
 
 /**

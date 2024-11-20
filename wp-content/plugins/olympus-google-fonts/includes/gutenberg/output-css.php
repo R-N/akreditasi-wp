@@ -8,20 +8,15 @@
  */
 
 /**
- * Enqeue the Google Fonts URL.
+ * Enqueue the Google Fonts URL.
  */
 function ogf_gutenberg_enqueue_fonts() {
-
 	$fonts = new OGF_Fonts();
 
 	if ( $fonts->has_google_fonts() ) {
 		$url = $fonts->build_url();
 		wp_enqueue_style( 'olympus-google-fonts', $url, array(), OGF_VERSION );
-
-		$css = ogf_generate_css_variables();
-		wp_add_inline_style( 'olympus-google-fonts', $css );
 	}
-
 }
 add_action( 'enqueue_block_editor_assets', 'ogf_gutenberg_enqueue_fonts' );
 
@@ -29,64 +24,70 @@ add_action( 'enqueue_block_editor_assets', 'ogf_gutenberg_enqueue_fonts' );
  * Output the font CSS to wp_head.
  */
 function ogf_gutenberg_output_css() {
-
 	// Only load on Gutenberg-enabled pages.
 	global $current_screen;
 	$current_screen = get_current_screen();
 	if ( ! method_exists( $current_screen, 'is_block_editor' ) || ! $current_screen->is_block_editor() ) {
 			return;
 	}
-
 	?>
-	<!-- Fonts Plugin Gutenberg CSS - https://fontsplugin.com/ -->
-	<style>
-		<?php
-
-		do_action( 'ogf_gutenberg_inline_styles' );
-
-		$elements = array(
-			'ogf_body' => array(
-				'selectors' => '.editor-styles-wrapper p, .editor-styles-wrapper h2, .editor-styles-wrapper h3, .editor-styles-wrapper h4, .editor-styles-wrapper h5, .editor-styles-wrapper h6, #editor .editor-styles-wrapper .editor-post-title__block .editor-post-title__input',
-			),
-			'ogf_headings' => array(
-				'selectors' => '#editor .editor-styles-wrapper .editor-post-title__block .editor-post-title__input, .editor-styles-wrapper h1, .editor-styles-wrapper h2, .editor-styles-wrapper h3, .editor-styles-wrapper h4, .editor-styles-wrapper h5, .editor-styles-wrapper h6',
-			),
-			'ogf_post_page_content' => array(
-				'selectors' => '.editor-styles-wrapper p',
-			),
-			'ogf_post_page_h1' => array(
-				'selectors' => '#editor .editor-styles-wrapper .editor-post-title__block .editor-post-title__input, .editor-styles-wrapper h1',
-			),
-			'ogf_post_page_h2' => array(
-				'selectors' => '.editor-styles-wrapper h2',
-			),
-			'ogf_post_page_h3' => array(
-				'selectors' => '.editor-styles-wrapper h3',
-			),
-			'ogf_post_page_h4' => array(
-				'selectors' => '.editor-styles-wrapper h4',
-			),
-			'ogf_post_page_h5' => array(
-				'selectors' => '.editor-styles-wrapper h5',
-			),
-			'ogf_post_page_h6' => array(
-				'selectors' => '.editor-styles-wrapper h6',
-			),
-		);
-
-		$elements = apply_filters( 'ogf_gutenberg_elements', $elements );
-
-		foreach ( $elements as $id => $values ) {
-			ogf_generate_css_gutenberg( $values['selectors'], $id );
-		}
-		?>
-	</style>
-	<!-- Fonts Plugin Gutenberg CSS -->
+		<!-- Fonts Plugin Gutenberg CSS - https://fontsplugin.com/ -->
+		<style>
+			<?php
+				do_action( 'ogf_gutenberg_inline_styles' );
+				echo ogf_gutenberg_build_css();
+			?>
+		</style>
+		<!-- Fonts Plugin Gutenberg CSS -->
 	<?php
 }
-
-// Output custom CSS to live site.
 add_action( 'admin_head', 'ogf_gutenberg_output_css' );
+
+function ogf_gutenberg_build_css() {
+	$elements = array(
+		'ogf_body'              => array(
+			'selectors' => '.editor-styles-wrapper p, .editor-styles-wrapper h2, .editor-styles-wrapper h3, .editor-styles-wrapper h4, .editor-styles-wrapper h5, .editor-styles-wrapper h6, #editor .editor-styles-wrapper .editor-post-title__block .editor-post-title__input',
+		),
+		'ogf_headings'          => array(
+			'selectors' => '#editor .editor-styles-wrapper .editor-post-title__block .editor-post-title__input, .editor-styles-wrapper h1, .editor-styles-wrapper h2, .editor-styles-wrapper h3, .editor-styles-wrapper h4, .editor-styles-wrapper h5, .editor-styles-wrapper h6',
+		),
+		'ogf_post_page_content' => array(
+			'selectors' => '.editor-styles-wrapper p',
+		),
+		'ogf_post_page_h1'      => array(
+			'selectors' => '#editor .editor-styles-wrapper .editor-post-title__block .editor-post-title__input, .editor-styles-wrapper h1',
+		),
+		'ogf_post_page_h2'      => array(
+			'selectors' => '.editor-styles-wrapper h2',
+		),
+		'ogf_post_page_h3'      => array(
+			'selectors' => '.editor-styles-wrapper h3',
+		),
+		'ogf_post_page_h4'      => array(
+			'selectors' => '.editor-styles-wrapper h4',
+		),
+		'ogf_post_page_h5'      => array(
+			'selectors' => '.editor-styles-wrapper h5',
+		),
+		'ogf_post_page_h6'      => array(
+			'selectors' => '.editor-styles-wrapper h6',
+		),
+		'ogf_site_title'        => array(
+			'selectors' => '.editor-styles-wrapper .wp-block-site-title',
+		),
+		'ogf_site_navigation'   => array(
+			'selectors' => '.editor-styles-wrapper .wp-block-navigation-item',
+		),
+	);
+
+	$elements = apply_filters( 'ogf_gutenberg_elements', $elements );
+	$array    = array();
+	foreach ( $elements as $id => $values ) {
+		$array[] = ogf_generate_css_gutenberg( $values['selectors'], $id );
+	}
+
+	return implode( ' ', $array );
+}
 
 /**
  * Helper function to build the CSS styles.
@@ -106,17 +107,15 @@ function ogf_generate_css_gutenberg( $selector, $option_name ) {
 	$return = '';
 
 	if ( ( $family !== 'default' && $family ) ||
-			 ( $line_height !== '0' && $line_height ) ||
-			 ( $weight !== '0' && $weight ) ||
-			 ( $style !== 'default' && $style ) ||
-			   $font_size ||
-			   $color ) {
-
+			( $line_height !== '0' && $line_height ) ||
+			( $weight !== '0' && $weight ) ||
+			( $style !== 'default' && $style ) ||
+				$font_size ||
+				$color ) {
 		$return .= $selector . ' {' . PHP_EOL;
 
 		// Return font-family CSS.
 		if ( false !== $family && 'default' !== $family ) {
-
 			$stack = ogf_build_font_stack( $family );
 
 			if ( ! empty( $stack ) ) {
@@ -169,8 +168,23 @@ function ogf_generate_css_gutenberg( $selector, $option_name ) {
 
 		$return .= ' }' . PHP_EOL;
 
-		echo wp_kses_post( $return );
-
+		return wp_kses_post( $return );
 	}
-
 }
+
+/**
+ * Modify the Editor settings by adding custom styles.
+ *
+ * @param array  $editor_settings An array containing the current Editor settings.
+ * @param string $editor_context  The context of the editor.
+ *
+ * @return array Modified editor settings with the added custom CSS style.
+ */
+function ogf_add_styles_to_site_editor( $editor_settings, $editor_context ) {
+	$editor_settings['styles'][] = array(
+		'css' => ogf_gutenberg_build_css(),
+	);
+
+	return $editor_settings;
+}
+add_filter( 'block_editor_settings_all', 'ogf_add_styles_to_site_editor', 10, 2 );

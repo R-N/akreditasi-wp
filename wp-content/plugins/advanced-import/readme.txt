@@ -2,11 +2,11 @@
 
 Contributors: addonspress, codersantosh, acmeit
 Donate link: https://addonspress.com/
-Tags: import, advanced import, demo import, theme import, widget import, customizer import
-Requires at least: 4.5
-Tested up to: 5.4.2
+Tags: advanced import, demo import, theme import, widget import, customizer import
+Requires at least: 5.0
+Tested up to: 6.7
 Requires PHP: 5.6.20
-Stable tag: 1.2.4
+Stable tag: 1.4.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,6 +21,8 @@ Advanced Import is one of the best and powerful data importer plugin. It has sev
 It is designed specially for theme developer who wants to provide demo data to their customer but it can be used for migration purpose too.
 
 While you use Demo Import features of themes, Advanced Import may fetches screenshots, images and templates(demo) JSON files from a respective theme site. This helps you to import your site with a single click. You must accept the terms and privacy of the themes you are using to use Demo Import ( Starter Sites Template Library ) Features.
+
+View [Advanced Import](https://www.addonspress.com/wordpress-plugins/advanced-import/) Details and Documentation
 
 Some listed features of Advanced Import are given below :
 
@@ -111,6 +113,11 @@ function prefix_demo_import_lists(){
                'name'      => __( 'Gutentor', 'text-domain' ),
                'slug'      => 'gutentor',
             ),
+             array(
+                'name'      => __( 'your plugin name', 'text-domain' ),
+                'slug'      => 'plugin-slug',
+                'source'      => 'https://downloads.wordpress.org/plugin/advanced-import.1.4.1.zip', //full url with zip, your theme url, or any site link with zip will work
+            ),
          )
       ),
         'demo2' =>array(
@@ -182,12 +189,15 @@ Here are some important list of filter hooks:
 - advanced_import_welcome_message
 - advanced_import_demo_lists
 - advanced_import_is_pro_active
-- 'advanced_import_post_data'
-- 'advanced_import_replace_post_ids'
-- 'advanced_import_replace_term_ids'
-- 'advanced_import_new_options'
-- 'advanced_import_sidebars_widgets'
-- 'advanced_import_complete_message'
+- advanced_import_post_data
+- advanced_import_replace_post_ids
+- advanced_import_replace_term_ids
+- advanced_import_new_options
+- advanced_import_sidebars_widgets
+- advanced_import_complete_message
+- advanced_import_update_option_['option-name']
+- advanced_import_update_value_['option-name']
+- advanced_import_menu_hook_suffix
 
 Here are some important list of action hooks:
 
@@ -208,10 +218,6 @@ We don't have any starter plugin but we have developed a plugin for [Acme Themes
 
 Yes, many themes are using this plugin, for an example, you can look on [CosmosWP Theme](https://cosmoswp.com/)
 
-= Can I deactivate this plugin? =
-
-Advanced Import is generally one-time use plugin, it is meant to be used for Demo Import or Site Migrate, once you complete your task you can safely deactivate it.
-
 == Screenshots ==
 
 1. Import Main Screen
@@ -222,6 +228,88 @@ Advanced Import is generally one-time use plugin, it is meant to be used for Dem
 6. The frontend of Opus Blog after Import
 
 == Changelog ==
+
+= 1.4.4 - 2024-11-12 =
+* Added: Tested with the latest WordPress
+* Added: Inbuilt support for [PatternsWP](https://patternswp.com/) themes
+
+= 1.4.3 - 2024-08-24 =
+* Added:    Plugin link to Import.
+
+= 1.4.2 - 2024-08-16 =
+* Added: Developers can now enable plugin installation from a URL by including source in the demo list array. This is ideal for plugins hosted outside of WordPress.org. Important: If a recommended plugin is already available on WordPress.org, there's no need to use the "source" option.
+
+`
+        'plugins' => array(
+            array(
+                'name'      => __( 'your plugin name', 'text-domain' ),
+                'slug'      => 'plugin-slug',
+                'source'      => 'https://downloads.wordpress.org/plugin/advanced-import.1.4.1.zip', //full url with zip, your theme url, or any site link with zip will work
+            ),
+         )
+`
+
+= 1.4.1 - 2024-04-07 =
+* Updated : Test with WordPress latest version
+
+= 1.4.0 - 2023-04-06 =
+* Added: New hook `advanced_import_force_proceed`
+* Updated : Tested up WordPress 6.2
+* Fixed : [isJson](https://wordpress.org/support/topic/function-isjson-string-causes-fatal-error/)
+
+= 1.3.9 - 2022-11-23 =
+* Added : Missing check_admin_referer in one place
+* Updated: Uses proper sanitization and escaping functions in some places
+
+= 1.3.8 - 2022-11-11 =
+* Updated : Tested up WordPress 6.1
+* Fixed : Minor changes
+
+= 1.3.7 - 2022-05-26 =
+* Added :  Cron job
+* Updated : Tested up WordPress 6
+* Fixed : Elementor imports in some cases
+
+= 1.3.6 - 2022-04-27 =
+* Updated : Reset plugin via ajax
+* Updated : Elementor imports in some cases
+
+= 1.3.5 - 2022-02-04 =
+* Added :  Plugin Errors Details
+* Updated : Latest version test
+* Fixed : Reset errors with some plugins
+
+= 1.3.4 - 2022-01-04 =
+* Added :  [Elementor global site settings](https://wordpress.org/support/topic/plugin-update-to-process-elementor-global-site-settings/)
+
+= 1.3.3 - 2021-06-15 =
+* Added : Plugin info user consent
+* Added : 4 new hooks: advanced_import_update_option_['option-name'], advanced_import_update_value_['option-name'] , advanced_import_menu_hook_suffix and advanced_import_current_url
+* Updated : Error handling and Error Message
+* Updated : recommendedPlugins check if isset
+* Fixed : Reset Message
+
+= 1.3.2 - 2021-04-22 =
+* Updated : Latest version test
+
+= 1.3.1 - 2021-01-27 =
+* Added : Filter list tab active design
+* Updated : is_pro check more strictly
+
+= 1.3.0 - 2021-01-26 =
+* Added : All, Free and Pro Tab
+* Updated : Tested up to 5.6 WordPress
+* Updated : PHPCS
+* Updated : Some minor design
+* Updated : Minor changes
+* Fixed : File Type Check
+
+= 1.2.5 - 2020-11-11 =
+* Updated : Hook attributes, control each demo import.
+Now developer can provide user template kit separately. View Example : [CosmosWP Template kits](https://www.cosmoswp.com/template-kits/)
+* Updated : PHPCS
+* Updated : Some minor design
+* Updated : Minor changes
 
 = 1.2.4 - 2020-06-22 =
 * Updated : API Url

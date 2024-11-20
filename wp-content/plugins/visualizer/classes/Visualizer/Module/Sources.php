@@ -139,14 +139,19 @@ class Visualizer_Module_Sources extends Visualizer_Module {
 			( in_array( $feature, $pro_features, true ) && ! Visualizer_Module::is_pro() )
 		) {
 			$msg = sprintf( __( 'Upgrade to %s to activate this feature!', 'visualizer' ), 'PRO' );
-			if ( Visualizer_Module::is_pro() && in_array( $feature, $biz_features, true ) ) {
-				$msg = sprintf( __( 'Upgrade your license to at least the %s version to activate this feature!', 'visualizer' ), 'DEVELOPER' );
+			$plus_msg = sprintf( __( 'Upgrade to %s plan to activate this feature!', 'visualizer' ), 'Plus' );
+			if ( in_array( $feature, $biz_features, true ) && Visualizer_Module::is_pro() ) {
+				$msg = $plus_msg;
 			}
+			if ( in_array( $feature, [ 'db-query', 'chart-permissions' ], true ) ) {
+				$msg = $plus_msg;
+			}
+
 			$return = '<div class="only-pro-content">';
 			$return .= '	<div class="only-pro-container">';
 			$return .= '		<div class="only-pro-inner">';
 			$return .= '			<p>' . $msg . '</p>';
-			$return .= '            <a target="_blank" href="' . Visualizer_Plugin::PRO_TEASER_URL . '" title="' . __( 'Buy now', 'visualizer' ) . '">' . __( 'Buy now', 'visualizer' ) . '</a>';
+			$return .= '            <a target="_blank" href="' . tsdk_utmify( Visualizer_Plugin::PRO_TEASER_URL, esc_attr( $feature ) ) . '" title="' . __( 'Upgrade Now', 'visualizer' ) . '">' . __( 'Upgrade Now', 'visualizer' ) . '</a>';
 			$return .= ' 		</div>';
 			$return .= ' 	</div>';
 			$return .= '</div>';

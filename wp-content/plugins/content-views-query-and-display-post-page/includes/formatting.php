@@ -19,7 +19,7 @@ if ( !defined( 'ABSPATH' ) ) {
  * @return string
  */
 function cv_sanitize_vid( $view_id ) {
-	return preg_replace( '/[\W]/', '', $view_id );
+	return preg_replace( '/[\W]/', '', (string) $view_id );
 }
 
 /**
@@ -54,14 +54,37 @@ function cv_sanitize_tag_content( $string, $remove_breaks = false ) {
  */
 if ( !function_exists( 'cv_esc_sql' ) ) {
 	function cv_esc_sql( $data ) {
+		// skip for rebuild key, prevent error
+		if ( is_array( $data ) && !empty( $data[ 'cvp_replace_layout_page' ] ) ) {
+			return $data;
+		}
+
 		$result = esc_sql( $data );
 
 		global $wpdb;
 		if ( method_exists( $wpdb, 'remove_placeholder_escape' ) ) {
-			return $wpdb->remove_placeholder_escape( $result );
+			return cv_remove_placeholder_escape( $result );
 		} else {
 			return $result;
 		}
 	}
 
 }
+
+function cv_remove_placeholder_escape( $data ) {
+	global $wpdb;
+	if ( is_array( $data ) ) {
+		foreach ( $data as $k => $v ) {
+			if ( is_array( $v ) ) {
+				$data[ $k ] = cv_remove_placeholder_escape( $v );
+			} else {
+				$data[ $k ] = $wpdb->remove_placeholder_escape( $v );
+			}
+		}
+	} else {
+		$data = $wpdb->remove_placeholder_escape( $data );
+	}
+
+	return $data;
+}
+

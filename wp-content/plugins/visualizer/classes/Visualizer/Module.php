@@ -67,6 +67,7 @@ class Visualizer_Module {
 		$this->_addFilter( Visualizer_Plugin::FILTER_UNDO_REVISIONS, 'undoRevisions', 10, 2 );
 		$this->_addFilter( Visualizer_Plugin::FILTER_HANDLE_REVISIONS, 'handleExistingRevisions', 10, 2 );
 		$this->_addFilter( Visualizer_Plugin::FILTER_GET_CHART_DATA_AS, 'getDataAs', 10, 3 );
+		$this->_addAction( 'pre_get_posts', 'PreGetPosts' );
 		register_shutdown_function( array($this, 'onShutdown') );
 
 	}
@@ -137,7 +138,7 @@ class Visualizer_Module {
 	 *
 	 * @access protected
 	 * @param string $tag The name of the filter to hook the $method to.
-	 * @param type   $method The name of the method to be called when the filter is applied.
+	 * @param string $method The name of the method to be called when the filter is applied.
 	 * @param int    $priority optional. Used to specify the order in which the functions associated with a particular action are executed (default: 10). Lower numbers correspond with earlier execution, and functions with the same priority are executed in the order in which they were added to the action.
 	 * @param int    $accepted_args optional. The number of arguments the function accept (default 1).
 	 * @return Visualizer_Module
@@ -234,7 +235,6 @@ class Visualizer_Module {
 			}
 
 			$filename   = $title;
-
 			switch ( $type ) {
 				case 'csv':
 					$final   = $this->_getCSV( $rows, $filename, false );
@@ -247,6 +247,9 @@ class Visualizer_Module {
 					break;
 				case 'print':
 					$final   = $this->_getHTML( $rows );
+					break;
+				case 'image':
+					$final   = $this->_getImage( $chart );
 					break;
 			}
 		}
@@ -265,7 +268,18 @@ class Visualizer_Module {
 		$filename .= '.csv';
 
 		$bom = chr( 0xEF ) . chr( 0xBB ) . chr( 0xBF );
-		$fp = tmpfile();
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		$fp = function_exists( 'tmpfile' ) ? @tmpfile() : null;
+		if ( null === $fp ) {
+			if ( ! function_exists( 'wp_tempnam' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/file.php';
+			}
+			$fp = fopen( wp_tempnam(), 'w+' );
+		}
+		if ( ! apply_filters( 'vizualizer_export_include_series_type', true ) ) {
+			unset( $rows[1] );
+			$rows = array_values( $rows );
+		}
 		// support for MS Excel
 		fprintf( $fp, $bom );
 		foreach ( $rows as $row ) {
@@ -309,29 +323,47 @@ class Visualizer_Module {
 	 * @param string $filename The name of the file to use.
 	 */
 	private function _getExcel( $rows, $filename ) {
-		// PHPExcel did not like sheet names longer than 31 characters and we will assume the same with PhpSpreadsheet
-		$chart      = substr( $filename, 0, 30 );
-		$filename   .= '.xlsx';
-
+		// OpenSpout allows for long sheet names, but let's keep the same limit for compatibility.
+		$chart     = substr( $filename, 0, 30 );
+		$filename .= '.xlsx';
+		if ( ! apply_filters( 'vizualizer_export_include_series_type', true ) ) {
+			unset( $rows[1] );
+			$rows = array_values( $rows );
+			$rows = array_map(
+				function( $r ) {
+					return array_map( 'strval', $r );
+				},
+				$rows
+			);
+		}
 		$vendor_file = VISUALIZER_ABSPATH . '/vendor/autoload.php';
 		if ( is_readable( $vendor_file ) ) {
-			include_once( $vendor_file );
+			include_once $vendor_file;
 		}
+		$xlsData = '';
+		if ( class_exists( 'OpenSpout\Writer\Common\Creator\WriterEntityFactory' ) ) {
+			try {
+				// Use OpenSpout to create the XLSX file in memory.
+				$writer = \OpenSpout\Writer\Common\Creator\WriterEntityFactory::createXLSXWriter();
+				$writer->openToFile( 'php://output' ); // Open to output instead of a file.
+				$writer->getCurrentSheet()->setName( sanitize_title( $chart ) );
 
-		$xlsData    = '';
-		if ( class_exists( 'PhpOffice\PhpSpreadsheet\Spreadsheet' ) ) {
-			$doc        = new PhpOffice\PhpSpreadsheet\Spreadsheet();
-			$doc->getActiveSheet()->fromArray( $rows, null, 'A1' );
-			$doc->getActiveSheet()->setTitle( sanitize_title( $chart ) );
-			$doc        = apply_filters( 'visualizer_excel_doc', $doc );
-			$writer = PhpOffice\PhpSpreadsheet\IOFactory::createWriter( $doc, 'Xlsx' );
-			ob_start();
-			$writer->save( 'php://output' );
-			$xlsData = ob_get_contents();
-			ob_end_clean();
+				// Write rows.
+				foreach ( $rows as $row ) {
+					$rowFromValues = \OpenSpout\Writer\Common\Creator\WriterEntityFactory::createRowFromArray( $row );
+					$writer->addRow( $rowFromValues );
+				}
+
+				ob_start();
+				$writer->close(); // Saves and closes the file in the output buffer.
+				$xlsData = ob_get_clean();
+			} catch ( Exception $e ) {
+				do_action( 'themeisle_log_event', Visualizer_Plugin::NAME, 'OpenSpout writer error: ' . $e->getMessage(), 'error', __FILE__, __LINE__ );
+				error_log( 'OpenSpout writer error: ' . $e->getMessage() );
+			}
 		} else {
-			do_action( 'themeisle_log_event', Visualizer_Plugin::NAME, 'Class PhpOffice\PhpSpreadsheet\Spreadsheet does not exist!', 'error', __FILE__, __LINE__ );
-			error_log( 'Class PhpOffice\PhpSpreadsheet\Spreadsheet does not exist!' );
+			do_action( 'themeisle_log_event', Visualizer_Plugin::NAME, 'Class OpenSpout\Writer\Common\Creator\WriterEntityFactory does not exist!', 'error', __FILE__, __LINE__ );
+			error_log( 'Class OpenSpout\Writer\Common\Creator\WriterEntityFactory does not exist!' );
 		}
 		return array(
 			'csv'  => 'data:application/vnd.ms-excel;base64,' . base64_encode( $xlsData ),
@@ -500,6 +532,10 @@ class Visualizer_Module {
 		require_once( ABSPATH . 'wp-admin/includes/file.php' );
 		WP_Filesystem();
 		global $wp_filesystem;
+		if ( ! is_a( $wp_filesystem, 'WP_Filesystem_Base' ) ) {
+			$creds = request_filesystem_credentials( site_url() );
+			wp_filesystem( $creds );
+		}
 
 		$multisite_arg = '/';
 		if ( is_multisite() && ! is_main_site() ) {
@@ -589,30 +625,29 @@ class Visualizer_Module {
 	protected function get_inline_custom_css( $id, $settings ) {
 		$css        = '';
 
-		$arguments  = array( '', $settings );
-		if ( ! isset( $settings['customcss'] ) ) {
-			return $arguments;
-		}
-
 		$classes    = array();
 		$css        = '<style type="text/css" name="visualizer-custom-css" id="customcss-' . $id . '">';
-		foreach ( $settings['customcss'] as $name => $element ) {
-			$attributes = array();
-			foreach ( $element as $property => $value ) {
-				$attributes[]   = $this->handle_css_property( $property, $value );
+		if ( ! empty( $settings['customcss'] ) ) {
+			foreach ( $settings['customcss'] as $name => $element ) {
+				$attributes = array();
+				foreach ( $element as $property => $value ) {
+					$attributes[]   = $this->handle_css_property( $property, $value );
+				}
+				$class_name = $id . $name;
+				$properties = implode( ' !important; ', array_filter( $attributes ) );
+				if ( ! empty( $properties ) ) {
+					$css    .= '.' . $class_name . ' {' . $properties . ' !important;}';
+					$classes[ $name ] = $class_name;
+				}
 			}
-			$class_name = $id . $name;
-			$properties = implode( ' !important; ', array_filter( $attributes ) );
-			if ( ! empty( $properties ) ) {
-				$css    .= '.' . $class_name . ' {' . $properties . ' !important;}';
-				$classes[ $name ] = $class_name;
-			}
+			$settings['cssClassNames']  = $classes;
 		}
-		$css        .= '</style>';
 
-		$settings['cssClassNames']  = $classes;
+		$img_path = VISUALIZER_ABSURL . 'images';
+		$css     .= ".locker,.locker-loader{position:absolute;top:0;left:0;width:100%;height:100%}.locker{z-index:1000;opacity:.8;background-color:#fff;-ms-filter:\"progid:DXImageTransform.Microsoft.Alpha(Opacity=80)\";filter:alpha(opacity=80)}.locker-loader{z-index:1001;background:url($img_path/ajax-loader.gif) no-repeat center center}.dt-button{display:none!important}.visualizer-front-container.visualizer-lazy-render{content-visibility: auto;}.google-visualization-controls-categoryfilter label.google-visualization-controls-label {vertical-align: middle;}.google-visualization-controls-categoryfilter li.goog-inline-block {margin: 0 0.2em;}.google-visualization-controls-categoryfilter li {padding: 0 0.2em;}.visualizer-front-container .dataTables_scrollHeadInner{margin: 0 auto;}";
+		$css     .= '</style>';
 
-		$arguments  = array( $css, $settings );
+		$arguments = array( $css, $settings );
 		apply_filters_ref_array( 'visualizer_inline_css', array( &$arguments ) );
 
 		return $arguments;
@@ -712,11 +747,20 @@ class Visualizer_Module {
 	 * Gets the features for the provided license type.
 	 */
 	public static final function get_features_for_license( $plan ) {
+		$is_new_personal = apply_filters( 'visualizer_is_new_personal', false );
 		switch ( $plan ) {
 			case 1:
-				return array( 'import-wp', 'db-query' );
+				$features = array( 'import-wp', 'import-wc-report', 'import-file', 'import-url' );
+				if ( ! $is_new_personal ) {
+					$features[] = 'db-query';
+				}
+				return $features;
 			case 2:
-				return array( 'schedule-chart', 'chart-permissions' );
+				$features = array( 'schedule-chart', 'chart-permissions', 'import-chart', 'data-filter-configuration', 'frontend-actions' );
+				if ( $is_new_personal ) {
+					$features[] = 'db-query';
+				}
+				return $features;
 		}
 	}
 
@@ -725,16 +769,28 @@ class Visualizer_Module {
 	 */
 	public static function get_chart_data( $chart, $type, $run_filter = true ) {
 		// change HTML entities
-		$data = unserialize( html_entity_decode( $chart->post_content ) );
-		$altered = array();
-		foreach ( $data as $index => $array ) {
-			if ( ! is_array( $index ) && is_array( $array ) ) {
-				foreach ( $array as &$datum ) {
-					if ( is_string( $datum ) ) {
-						$datum = stripslashes( $datum );
-					}
+		$post_content = html_entity_decode( htmlentities( $chart->post_content ) );
+		$post_content = preg_replace_callback(
+			'!s:(\d+):"(.*?)";!s',
+			function ( $matches ) {
+				if ( isset( $matches[2] ) ) {
+					return 's:' . strlen( $matches[2] ) . ':"' . $matches[2] . '";';
 				}
-				$altered[ $index ] = $array;
+			},
+			$post_content
+		);
+		$data = unserialize( $post_content );
+		$altered = array();
+		if ( ! empty( $data ) ) {
+			foreach ( $data as $index => $array ) {
+				if ( ! is_array( $index ) && is_array( $array ) ) {
+					foreach ( $array as &$datum ) {
+						if ( is_string( $datum ) ) {
+							$datum = stripslashes( $datum );
+						}
+					}
+					$altered[ $index ] = $array;
+				}
 			}
 		}
 		// if something goes wrong and the end result is empty, be safe and use the original data
@@ -745,5 +801,56 @@ class Visualizer_Module {
 			return apply_filters( Visualizer_Plugin::FILTER_GET_CHART_DATA, $altered, $chart->ID, $type );
 		}
 		return $altered;
+	}
+
+	/**
+	 * Get chart image.
+	 *
+	 * @param object $chart Chart data.
+	 * @return string
+	 */
+	public function _getImage( $chart = null ) {
+		$image = '';
+		if ( $chart ) {
+			$chart_image = get_post_meta( $chart->ID, Visualizer_Plugin::CF_CHART_IMAGE, true );
+			if ( ! empty( $chart_image ) ) {
+				$image = wp_get_attachment_image( $chart_image, 'full' );
+			}
+		}
+		return array(
+			'csv'  => $image,
+		);
+	}
+
+	/**
+	 * Filter chart title if visualizer post type.
+	 *
+	 * @param object $query WP Query object.
+	 * @return void
+	 */
+	public function PreGetPosts( $query ) {
+		if ( ! $query->is_main_query() ) {
+			$post_type = $query->get( 'post_type' );
+			if ( 'visualizer' === $post_type ) {
+				$this->_addFilter( Visualizer_Plugin::FILTER_CHART_TITLE, 'filterChartTitle', 10, 2 );
+			}
+		}
+	}
+
+	/**
+	 * Filter chart title.
+	 *
+	 * @access public
+	 * @param string $post_title Post title.
+	 * @param int    $post_id Post ID.
+	 * @return string
+	 */
+	public function filterChartTitle( $post_title, $post_id ) {
+		$post_type = get_post_type( $post_id );
+		$post_title     = trim( $post_title );
+		if ( 'visualizer' === $post_type && 'Visualization' === $post_title ) {
+			return sprintf( '%s #%d', $post_title, $post_id );
+		}
+		return $post_title;
 	}
 }

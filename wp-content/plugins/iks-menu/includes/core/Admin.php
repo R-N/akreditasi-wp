@@ -13,6 +13,7 @@
 namespace IksStudio\IKSM_CORE;
 
 use IksStudio\IKSM_CORE\utils\Utils;
+use IksStudio\IKSM\utils\UtilsLocal;
 
 /**
  * @subpackage Admin
@@ -113,7 +114,6 @@ class Admin {
 			'public'          => false,
 			'capability_type' => 'post',
 			'query_var'       => false,
-			'rewrite'         => false,
 			'show_ui'         => false,
 			'show_in_menu'    => true,
 			'hierarchical'    => false,

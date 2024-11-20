@@ -3,23 +3,30 @@ namespace NestedPages\Entities\Listing;
 
 use NestedPages\Entities\PluginIntegration\IntegrationFactory;
 use NestedPages\Entities\PostType\PostTypeRepository;
+use NestedPages\Config\SettingsRepository;
 
 class ListingRepository 
 {
 	/**
 	* Plugin Integrations
 	*/
-	private $integrations;
+	public $integrations;
 
 	/**
 	* Post Type Repository
 	*/
 	private $post_type_repo;
 
+	/**
+	* Settings Repository
+	*/
+	public $settings;
+
 	public function __construct()
 	{
 		$this->integrations = new IntegrationFactory;
 		$this->post_type_repo = new PostTypeRepository;
+		$this->settings = new SettingsRepository;
 	}
 
 	/**
@@ -30,7 +37,8 @@ class ListingRepository
 		$meta = get_user_meta(get_current_user_id(), 'np_visible_posts', true);
 		if ( $meta == '1' ) return [];
 		$visible = unserialize($meta);
-		if ( !$visible || !isset($visible[$post_type]) ) $visible[$post_type] = [];
+		if ( !is_array($visible) ) $visible = [];
+		if ( !isset($visible[$post_type]) ) $visible[$post_type] = [];
 		return $visible[$post_type];
 	}
 
@@ -134,7 +142,12 @@ class ListingRepository
 	*/ 
 	public function isFiltered()
 	{
-		return ( isset($_GET['category']) && $_GET['category'] !== "all" ) ? true : false;
+		$taxonomies = get_taxonomies();
+		$tax_filtered = false;
+		foreach ( $taxonomies as $tax ){
+			if ( isset($_GET[$tax]) && $_GET[$tax] !== '' ) $tax_filtered = true;
+		}
+		return ( (isset($_GET['category']) && $_GET['category'] !== "all") || $tax_filtered ) ? true : false;
 	}
 
 	/**
@@ -148,8 +161,26 @@ class ListingRepository
 			if ( $initial_orderby ) $ordered = true;
 		}
 		if ( $ordered && isset($_GET['orderby']) && $_GET['orderby'] == 'menu_order' && !isset($_GET['order']) ) $ordered = false;
-		// Enbales nesting if sorted by menu order in ascending order
+		// Enables nesting if sorted by menu order in ascending order
 		if ( isset($_GET['orderby']) && $_GET['orderby'] == 'menu_order' && isset($_GET['order']) && $_GET['order'] == 'ASC' ) $ordered = false;
 		return $ordered;
+	}
+
+	/**
+	* Do we show the "link" interface/functionality?
+	* @param $post_type - obj (WP_Post_Type)
+	* @param $user - obj (NestedPages\Entities\User\UserRepository)
+	* @return bool
+	*/
+	public function showLinks($post_type, $user)
+	{
+		$show_links = ( $user->canPublish($post_type->name) 
+			&& $post_type->name == 'page' 
+			&& !$this->isSearch() 
+			&& !$this->isOrdered($post_type->name) 
+			&& !$this->settings->menusDisabled() 
+			&& !$this->integrations->plugins->wpml->installed ) 
+		? true : false;
+		return apply_filters('nestedpages_show_links', $show_links, $post_type, $user, $this);
 	}
 }

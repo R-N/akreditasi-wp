@@ -6,7 +6,7 @@
  * @package   Iks Menu
  * @author    IksStudio
  * @license   GPL-3.0
- * @link      http://iks-menu.ru
+ * @link      https://iks-menu.com
  * @copyright 2019 IksStudio
  */
 
@@ -75,8 +75,9 @@ class AdminAPI {
 	}
 
 	public function get_post_creation_data() {
-		$taxonomies = Utils::get_taxonomy_options();
 		$sources    = UtilsLocal::get_source_options();
+		$taxonomies = Utils::get_taxonomy_options();
+		$faq_groups = Utils::get_faq_groups_options();
 		$menus      = Utils::get_menu_options();
 
 		return [
@@ -84,6 +85,7 @@ class AdminAPI {
 			"data"    => [
 				"sources"    => $sources,
 				"taxonomies" => $taxonomies,
+				"faq_groups" => $faq_groups,
 				"menus"      => $menus,
 			],
 		];

@@ -14,23 +14,24 @@
  * Prints out the excerpts tab in Relevanssi settings.
  */
 function relevanssi_excerpts_tab() {
-	$excerpts               = get_option( 'relevanssi_excerpts' );
-	$excerpt_length         = get_option( 'relevanssi_excerpt_length' );
-	$excerpt_type           = get_option( 'relevanssi_excerpt_type' );
-	$excerpt_allowable_tags = get_option( 'relevanssi_excerpt_allowable_tags' );
-	$excerpt_custom_fields  = get_option( 'relevanssi_excerpt_custom_fields' );
-	$highlight              = get_option( 'relevanssi_highlight' );
-	$txt_col                = get_option( 'relevanssi_txt_col' );
-	$bg_col                 = get_option( 'relevanssi_bg_col' );
-	$css                    = get_option( 'relevanssi_css' );
-	$class                  = get_option( 'relevanssi_class' );
-	$highlight_title        = get_option( 'relevanssi_hilite_title' );
-	$highlight_docs         = get_option( 'relevanssi_highlight_docs' );
-	$highlight_coms         = get_option( 'relevanssi_highlight_comments' );
-	$show_matches           = get_option( 'relevanssi_show_matches' );
-	$show_matches_text      = get_option( 'relevanssi_show_matches_text' );
-	$word_boundaries        = get_option( 'relevanssi_word_boundaries' );
-	$index_fields           = get_option( 'relevanssi_index_fields' );
+	$excerpts                = get_option( 'relevanssi_excerpts' );
+	$excerpt_length          = get_option( 'relevanssi_excerpt_length' );
+	$excerpt_type            = get_option( 'relevanssi_excerpt_type' );
+	$excerpt_allowable_tags  = get_option( 'relevanssi_excerpt_allowable_tags' );
+	$excerpt_custom_fields   = get_option( 'relevanssi_excerpt_custom_fields' );
+	$excerpt_specific_fields = get_option( 'relevanssi_excerpt_specific_fields' );
+	$highlight               = get_option( 'relevanssi_highlight' );
+	$txt_col                 = get_option( 'relevanssi_txt_col' );
+	$bg_col                  = get_option( 'relevanssi_bg_col' );
+	$css                     = get_option( 'relevanssi_css' );
+	$class                   = get_option( 'relevanssi_class' );
+	$highlight_title         = get_option( 'relevanssi_hilite_title' );
+	$highlight_docs          = get_option( 'relevanssi_highlight_docs' );
+	$highlight_coms          = get_option( 'relevanssi_highlight_comments' );
+	$show_matches            = get_option( 'relevanssi_show_matches' );
+	$show_matches_text       = get_option( 'relevanssi_show_matches_text' );
+	$index_fields            = get_option( 'relevanssi_index_fields' );
+	$expand_highlights       = get_option( 'relevanssi_expand_highlights' );
 
 	if ( '#' !== substr( $txt_col, 0, 1 ) ) {
 		$txt_col = '#' . $txt_col;
@@ -43,23 +44,24 @@ function relevanssi_excerpts_tab() {
 
 	$show_matches_text = stripslashes( $show_matches_text );
 
-	$excerpts              = relevanssi_check( $excerpts );
-	$excerpt_custom_fields = relevanssi_check( $excerpt_custom_fields );
-	$highlight_title       = relevanssi_check( $highlight_title );
-	$highlight_docs        = relevanssi_check( $highlight_docs );
-	$highlight_coms        = relevanssi_check( $highlight_coms );
-	$show_matches          = relevanssi_check( $show_matches );
-	$word_boundaries       = relevanssi_check( $word_boundaries );
-	$excerpt_chars         = relevanssi_select( $excerpt_type, 'chars' );
-	$excerpt_words         = relevanssi_select( $excerpt_type, 'words' );
-	$highlight_none        = relevanssi_select( $highlight, 'no' );
-	$highlight_mark        = relevanssi_select( $highlight, 'mark' );
-	$highlight_em          = relevanssi_select( $highlight, 'em' );
-	$highlight_strong      = relevanssi_select( $highlight, 'strong' );
-	$highlight_col         = relevanssi_select( $highlight, 'col' );
-	$highlight_bgcol       = relevanssi_select( $highlight, 'bgcol' );
-	$highlight_style       = relevanssi_select( $highlight, 'css' );
-	$highlight_class       = relevanssi_select( $highlight, 'class' );
+	$excerpts                = relevanssi_check( $excerpts );
+	$excerpt_custom_fields   = relevanssi_check( $excerpt_custom_fields );
+	$excerpt_specific_fields = relevanssi_check( $excerpt_specific_fields );
+	$highlight_title         = relevanssi_check( $highlight_title );
+	$highlight_docs          = relevanssi_check( $highlight_docs );
+	$highlight_coms          = relevanssi_check( $highlight_coms );
+	$show_matches            = relevanssi_check( $show_matches );
+	$expand_highlights       = relevanssi_check( $expand_highlights );
+	$excerpt_chars           = relevanssi_select( $excerpt_type, 'chars' );
+	$excerpt_words           = relevanssi_select( $excerpt_type, 'words' );
+	$highlight_none          = relevanssi_select( $highlight, 'no' );
+	$highlight_mark          = relevanssi_select( $highlight, 'mark' );
+	$highlight_em            = relevanssi_select( $highlight, 'em' );
+	$highlight_strong        = relevanssi_select( $highlight, 'strong' );
+	$highlight_col           = relevanssi_select( $highlight, 'col' );
+	$highlight_bgcol         = relevanssi_select( $highlight, 'bgcol' );
+	$highlight_style         = relevanssi_select( $highlight, 'css' );
+	$highlight_class         = relevanssi_select( $highlight, 'class' );
 
 	$txt_col_display = 'screen-reader-text';
 	$bg_col_display  = 'screen-reader-text';
@@ -81,10 +83,11 @@ function relevanssi_excerpts_tab() {
 
 	?>
 
+	<div id="custom_excerpts">
 	<h2 id="excerpts"><?php esc_html_e( 'Custom excerpts/snippets', 'relevanssi' ); ?></h2>
 
 	<table class="form-table" role="presentation">
-	<tr>
+	<tr id="row_custom_snippets">
 		<th scope="row">
 			<?php esc_html_e( 'Custom search result snippets', 'relevanssi' ); ?>
 		</th>
@@ -136,6 +139,11 @@ function relevanssi_excerpts_tab() {
 			<p class="description"><?php esc_html_e( "Using words is much faster than characters. Don't use characters, unless you have a really good reason and your posts are short.", 'relevanssi' ); ?></p>
 		</td>
 	</tr>
+	<?php
+	if ( function_exists( 'relevanssi_form_max_excerpts' ) ) {
+		relevanssi_form_max_excerpts( $excerpts );
+	}
+	?>
 	<tr id="tr_excerpt_allowable_tags"
 		<?php
 		if ( empty( $excerpts ) ) {
@@ -186,6 +194,18 @@ function relevanssi_excerpts_tab() {
 		?>
 		</p>
 
+		<p><label>
+				<input type='checkbox' name='relevanssi_excerpt_specific_fields' id='relevanssi_excerpt_specific_fields' <?php echo esc_html( $excerpt_specific_fields ); ?>
+				<?php
+				if ( empty( $excerpts ) || empty( $index_fields ) ) {
+					echo "disabled='disabled'";
+				}
+				?>
+				/>
+				<?php esc_html_e( 'Create custom field specific excerpts', 'relevanssi' ); ?>
+			</label></p>
+		<p class="description"><?php esc_html_e( 'The default method of adding custom field content to excerpts cannot tell which custom fields is the source of the excerpts. Using custom field specific excerpts is slower, but you can tell which custom field was the source of the excerpt.', 'relevanssi' ); ?>
+
 		<p class="description"><?php esc_html_e( 'Current custom field setting', 'relevanssi' ); ?>:
 		<?php
 		if ( 'visible' === $index_fields ) {
@@ -203,8 +223,25 @@ function relevanssi_excerpts_tab() {
 		</p>
 		</td>
 	</tr>
+	<?php if ( 'visible' === $index_fields || 'all' === $index_fields ) : ?>
+	<tr id="row_custom_fields">
+		<th scope="row">
+			<?php esc_html_e( 'List custom fields', 'relevanssi' ); ?>
+		</th>
+		<td>
+			<button type="button" class="button button-primary" id="list_custom_fields"><?php esc_html_e( 'List custom fields', 'relevanssi' ); ?></button>
+			<p class="description"><?php esc_html_e( 'Click the button above to see the list of indexed custom fields.', 'relevanssi' ); ?></p>
+			<div id="relevanssi_custom_field_list"></div>
+			<?php if ( class_exists( 'acf', false ) ) : ?>
+				<p class="description"><?php esc_html_e( 'Fields excluded from ACF settings and with filter functions are included here.', 'relevanssi' ); ?></p>
+			<?php endif; ?>
+		</td>
+	</tr>
+	<?php endif; ?>
 	</table>
+	</div>
 
+	<div id="highlighting">
 	<h2><?php esc_html_e( 'Search hit highlighting', 'relevanssi' ); ?></h2>
 
 	<table id="relevanssi_highlighting" class="form-table
@@ -214,7 +251,7 @@ function relevanssi_excerpts_tab() {
 	}
 	?>
 	" role="presentation">
-	<tr>
+	<tr id="row_highlight_type">
 		<th scope="row">
 			<label for='relevanssi_highlight'><?php esc_html_e( 'Highlight type', 'relevanssi' ); ?></label>
 		</th>
@@ -298,7 +335,7 @@ function relevanssi_excerpts_tab() {
 			<p class="description"><?php printf( esc_html__( 'The highlights will be wrapped in a %s with this class.', 'relevanssi' ), '&lt;span&gt;' ); ?></p>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_highlight_titles">
 		<th scope="row">
 			<?php esc_html_e( 'Highlight in titles', 'relevanssi' ); ?>
 		</th>
@@ -317,7 +354,7 @@ function relevanssi_excerpts_tab() {
 		<p class="description"><?php printf( esc_html__( 'Highlights in titles require changes to the search results template. You need to replace %1$s in the search results template with %2$s. For more information, see the contextual help.', 'relevanssi' ), '<code>the_title()</code>', '<code>relevanssi_the_title()</code>' ); ?></p>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_highlight_docs">
 		<th scope="row">
 			<?php esc_html_e( 'Highlight in documents', 'relevanssi' ); ?>
 		</th>
@@ -336,7 +373,7 @@ function relevanssi_excerpts_tab() {
 		<p class="description"><?php printf( esc_html__( 'Highlights hits when user opens the post from search results. This requires an extra parameter (%s) to the links from the search results pages, which Relevanssi should add automatically.', 'relevanssi' ), '<code>highlight</code>' ); ?></p>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_highlight_comments">
 		<th scope="row">
 			<?php esc_html_e( 'Highlight in comments', 'relevanssi' ); ?>
 		</th>
@@ -354,26 +391,28 @@ function relevanssi_excerpts_tab() {
 		<p class="description"><?php esc_html_e( 'Highlights hits in comments when user opens the post from search results.', 'relevanssi' ); ?></p>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_expand_highlights">
 		<th scope="row">
-			<?php esc_html_e( 'Highlighting problems with non-ASCII alphabet?', 'relevanssi' ); ?>
+			<?php esc_html_e( 'Expand highlights', 'relevanssi' ); ?>
 		</th>
 		<td>
-			<label for='relevanssi_word_boundaries'>
-				<input type='checkbox' name='relevanssi_word_boundaries' id='relevanssi_word_boundaries' <?php echo esc_html( $word_boundaries ); ?>
+			<label for='relevanssi_expand_highlights'>
+				<input type='checkbox' name='relevanssi_expand_highlights' id='relevanssi_expand_highlights' <?php echo esc_html( $expand_highlights ); ?>
 				<?php
 				if ( empty( $excerpts ) ) {
 					echo "disabled='disabled'";
 				}
 				?>
 				/>
-				<?php esc_html_e( 'Uncheck this if you use non-ASCII characters', 'relevanssi' ); ?>
+				<?php esc_html_e( 'Expand highlights to cover full words', 'relevanssi' ); ?>
 			</label>
-		<p class="description"><?php esc_html_e( "If you use non-ASCII characters (like Cyrillic alphabet) and the highlights don't work, unchecking this option may make the highlights work.", 'relevanssi' ); ?></p>
+		<p class="description"><?php esc_html_e( 'When a highlight matches part of the word, if this option is enabled, the highlight will be expanded to highlight the whole word.', 'relevanssi' ); ?></p>
 		</td>
 	</tr>
 	</table>
+	</div>
 
+	<div id="breakdown">
 	<h2><?php esc_html_e( 'Breakdown of search results', 'relevanssi' ); ?></h2>
 
 	<table id="relevanssi_breakdown" class="form-table
@@ -383,7 +422,7 @@ function relevanssi_excerpts_tab() {
 	}
 	?>
 	" role="presentation">
-	<tr>
+	<tr id="row_show_matches">
 		<th scope="row">
 			<?php esc_html_e( 'Breakdown of search hits in excerpts', 'relevanssi' ); ?>
 		</th>
@@ -401,7 +440,7 @@ function relevanssi_excerpts_tab() {
 		<p class="description"><?php esc_html_e( 'Requires custom snippets to work.', 'relevanssi' ); ?></p>
 		</td>
 	</tr>
-	<tr>
+	<tr id="row_show_matches_text">
 		<th scope="row">
 			<label for='relevanssi_show_matches_text'><?php esc_html_e( 'The breakdown format', 'relevanssi' ); ?></label>
 		</th>
@@ -417,7 +456,6 @@ function relevanssi_excerpts_tab() {
 		</td>
 	</tr>
 	</table>
-
-
+	</div>
 		<?php
 }

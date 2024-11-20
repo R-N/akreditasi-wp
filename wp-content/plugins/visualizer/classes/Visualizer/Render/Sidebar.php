@@ -120,6 +120,13 @@ abstract class Visualizer_Render_Sidebar extends Visualizer_Render {
 			isset( $this->titleTextStyle['color'] ) ? $this->titleTextStyle['color'] : null,
 			'#000'
 		);
+
+		self::_renderTextAreaItem(
+			esc_html__( 'Chart Description', 'visualizer' ),
+			'description',
+			$this->description,
+			sprintf( esc_html__( 'Description to display in the structured data schema as explained %1$shere%2$s', 'visualizer' ), '<a href="https://developers.google.com/search/docs/data-types/dataset#dataset" target="_blank">', '</a>' )
+		);
 	}
 
 	/**
@@ -151,12 +158,24 @@ abstract class Visualizer_Render_Sidebar extends Visualizer_Render {
 	 * @access protected
 	 */
 	protected function _renderAdvancedSettings() {
-		self::_renderGroupStart( esc_html__( 'Frontend Actions', 'visualizer' ) );
+		// Chart control settings.
+		$this->_renderChartControlsGroup();
+
+		if ( Visualizer_Module_Admin::proFeaturesLocked() ) {
+			self::_renderGroupStart( esc_html__( 'Frontend Actions', 'visualizer' ) );
+		} else {
+			self::_renderGroupStart( esc_html__( 'Frontend Actions', 'visualizer' ) . '<span class="dashicons dashicons-lock"></span>', '', apply_filters( 'visualizer_pro_upsell_class', 'only-pro-feature', 'chart-frontend-actions' ), 'vz-frontend-actions' );
+			echo '<div style="position: relative">';
+		}
 			self::_renderSectionStart();
 				self::_renderSectionDescription( esc_html__( 'Configure frontend actions that need to be shown.', 'visualizer' ) );
 			self::_renderSectionEnd();
 
 			$this->_renderActionSettings();
+		if ( ! Visualizer_Module_Admin::proFeaturesLocked() ) {
+			echo apply_filters( 'visualizer_pro_upsell', '', 'frontend-actions' );
+			echo '</div>';
+		}
 		self::_renderGroupEnd();
 
 		self::_renderGroupStart( esc_html__( 'Manual Configuration', 'visualizer' ) );
@@ -251,7 +270,7 @@ abstract class Visualizer_Render_Sidebar extends Visualizer_Render {
 			return false;
 		}
 
-		return class_exists( 'PhpOffice\PhpSpreadsheet\Spreadsheet' ) && extension_loaded( 'zip' ) && extension_loaded( 'xml' ) && extension_loaded( 'fileinfo' );
+		return class_exists( 'OpenSpout\Writer\Common\Creator\WriterEntityFactory' ) && extension_loaded( 'zip' ) && extension_loaded( 'xml' ) && extension_loaded( 'fileinfo' );
 	}
 
 	/**
@@ -309,7 +328,7 @@ abstract class Visualizer_Render_Sidebar extends Visualizer_Render {
 		echo '<div class="viz-section-item">';
 			echo '<b>', $title, '</b>';
 			echo '<div>';
-				echo '<input type="text" class="color-picker-hex color-picker" data-alpha="true" name="', $name, '" maxlength="7" placeholder="', esc_attr__( 'Hex Value', 'visualizer' ), '" value="', is_null( $value ) ? $default : esc_attr( $value ), '" data-default-color="', $default, '">';
+				echo '<input type="text" class="color-picker-hex color-picker" data-alpha-enabled="true" name="', $name, '" maxlength="7" placeholder="', esc_attr__( 'Hex Value', 'visualizer' ), '" value="', is_null( $value ) ? $default : esc_attr( $value ), '" data-default-color="', $default, '">';
 			echo '</div>';
 		echo '</div>';
 	}
@@ -329,14 +348,15 @@ abstract class Visualizer_Render_Sidebar extends Visualizer_Render {
 	 * @param string $type The type for the input (out of number, email, tel etc., default is text).
 	 * @param array  $custom_attributes The custom attributes.
 	 */
-	protected static function _renderTextItem( $title, $name, $value, $desc, $placeholder = '', $type = 'text', $custom_attributes = array() ) {
+	protected static function _renderTextItem( $title, $name, $value, $desc, $placeholder = '', $type = 'text', $custom_attributes = array(), $extra_class = array() ) {
 		$attributes     = '';
 		if ( $custom_attributes ) {
 			foreach ( $custom_attributes as $k => $v ) {
 				$attributes .= ' ' . $k . '="' . esc_attr( $v ) . '"';
 			}
 		}
-		echo '<div class="viz-section-item">';
+		$extra_class[] = 'viz-section-item';
+		echo '<div class="' . esc_attr( implode( ' ', $extra_class ) ) . '">';
 			echo '<a class="more-info" href="javascript:;">[?]</a>';
 			echo '<b>', $title, '</b>';
 			echo '<input type="', $type, '" class="control-text" ', $attributes, ' name="', $name, '" value="', esc_attr( $value ), '" placeholder="', $placeholder, '">';
@@ -452,7 +472,7 @@ abstract class Visualizer_Render_Sidebar extends Visualizer_Render {
 					esc_html__( 'Date Format', 'visualizer' ),
 					'series[' . $index . '][format]',
 					isset( $this->series[ $index ]['format'] ) ? $this->series[ $index ]['format'] : '',
-					sprintf( esc_html__( 'Enter custom format pattern to apply to this series value, similar to the %1$sICU date and time format%2$s.', 'visualizer' ), '<a href="http://userguide.icu-project.org/formatparse/datetime#TOC-Date-Time-Format-Syntax" target="_blank">', '</a>' ),
+					sprintf( esc_html__( 'Enter custom format pattern to apply to this series value, similar to the %1$sICU date and time format%2$s.', 'visualizer' ), '<a href="https://unicode-org.github.io/icu/userguide/format_parse/datetime/#datetime-format-syntax" target="_blank">', '</a>' ),
 					'eeee, dd LLLL yyyy'
 				);
 				break;
@@ -509,5 +529,278 @@ abstract class Visualizer_Render_Sidebar extends Visualizer_Render {
 			wp_register_script( 'numeral', VISUALIZER_ABSURL . 'js/lib/numeral.min.js', array(), Visualizer_Plugin::VERSION );
 		}
 
+	}
+
+	/**
+	 * Renders save chart as image setting group.
+	 *
+	 * @access protected
+	 */
+	protected function _renderChartImageSettings() {
+		// Default enable if amp is active.
+		$is_amp = function_exists( 'amp_is_enabled' ) && amp_is_enabled();
+		$this->save_chart_image = null === $this->save_chart_image && $is_amp ? true : $this->save_chart_image;
+
+		$is_create_chart = true;
+		if ( filter_input( INPUT_GET, 'library', FILTER_VALIDATE_BOOLEAN ) ) {
+			if ( filter_input( INPUT_GET, 'action' ) === Visualizer_Plugin::ACTION_EDIT_CHART ) {
+				$is_create_chart = false;
+			}
+		}
+		$this->lazy_load_chart = null === $this->lazy_load_chart && $is_create_chart ? true : $this->lazy_load_chart;
+
+		self::_renderSectionStart( esc_html__( 'Save chart as an image inside Media Library', 'visualizer' ), false );
+			self::_renderCheckboxItem(
+				esc_html__( 'Save inside media library?', 'visualizer' ),
+				'save_chart_image',
+				$this->save_chart_image ? true : false,
+				'yes',
+				esc_html__( 'To enable save the image as an inside media library.', 'visualizer' ),
+				false
+			);
+		self::_renderSectionEnd();
+
+		self::_renderSectionStart( esc_html__( 'Lazy rendering of chart', 'visualizer' ), false );
+			self::_renderCheckboxItem(
+				esc_html__( 'Enable lazy rendering of chart?', 'visualizer' ),
+				'lazy_load_chart',
+				$this->lazy_load_chart ? true : false,
+				'yes',
+				esc_html__( 'To enable lazy chart rendering.', 'visualizer' ),
+				false
+			);
+		self::_renderSectionEnd();
+	}
+
+	/**
+	 * Renders chart controls group.
+	 *
+	 * @access protected
+	 */
+	protected function _renderChartControlsGroup() {
+		if ( 'google' !== $this->getLibrary() ) {
+			return;
+		}
+		if ( Visualizer_Module_Admin::proFeaturesLocked() ) {
+			self::_renderGroupStart( esc_html__( 'Chart Data Filter Configuration', 'visualizer' ) );
+		} else {
+			self::_renderGroupStart( esc_html__( 'Chart Data Filter Configuration', 'visualizer' ) . '<span class="dashicons dashicons-lock"></span>', '', apply_filters( 'visualizer_pro_upsell_class', 'only-pro-feature', 'chart-filter-controls' ), 'vz-data-controls' );
+			echo '<div style="position: relative">';
+		}
+		self::_renderSectionStart();
+		self::_renderSectionDescription( '<span class="viz-gvlink">' . sprintf( __( 'Configure the data filter controls by providing configuration variables right from the %1$sChart Controls API%2$s. ', 'visualizer' ), '<a href="https://developers.google.com/chart/interactive/docs/gallery/controls#controls-gallery" target="_blank">', '</a>' ) . '</span>' );
+		self::_renderSectionEnd();
+		$this->_renderChartControlsSettings();
+		if ( ! Visualizer_Module_Admin::proFeaturesLocked() ) {
+			echo apply_filters( 'visualizer_pro_upsell', '', 'data-filter-configuration' );
+			echo '</div>';
+		}
+		self::_renderGroupEnd();
+	}
+
+	/**
+	 * Renders chart controls setting.
+	 *
+	 * @access protected
+	 */
+	protected function _renderChartControlsSettings() {
+
+		self::_renderSectionStart( esc_html__( 'Options', 'visualizer' ), false );
+		$control_type = ! empty( $this->controls['controlType'] ) ? $this->controls['controlType'] : '';
+
+		self::_renderSelectItem(
+			esc_html__( 'Filter Type', 'visualizer' ),
+			'controls[controlType]',
+			$control_type,
+			array(
+				''                  => '',
+				'StringFilter'      => esc_html__( 'String Filter', 'visualizer' ),
+				'NumberRangeFilter' => esc_html__( 'Number Range Filter', 'visualizer' ),
+				'CategoryFilter'    => esc_html__( 'Category Filter', 'visualizer' ),
+				'ChartRangeFilter'  => esc_html__( 'Chart Range Filter', 'visualizer' ),
+				'DateRangeFilter'   => esc_html__( 'Date Range Filter', 'visualizer' ),
+			),
+			'',
+			false,
+			array( 'vz-controls-opt' )
+		);
+
+		$column_index = [ 'false' => '' ];
+		$column_label = [ 'false' => '' ];
+		if ( ! empty( $this->__series ) ) {
+			foreach ( $this->__series as $key => $column ) {
+				$column_type            = isset( $column['type'] ) ? $column['type'] : '';
+				$label                  = isset( $column['label'] ) ? $column['label'] : '';
+				$column_label[ $label ] = $label;
+				$column_index[ $key ]   = sprintf( __( '%1$d — Column Type: %2$s ', 'visualizer' ), $key, ucfirst( $column_type ) );
+			}
+		}
+
+		self::_renderSelectItem(
+			esc_html__( 'Filter By Column Index', 'visualizer' ),
+			'controls[filterColumnIndex]',
+			isset( $this->controls['filterColumnIndex'] ) ? $this->controls['filterColumnIndex'] : '',
+			$column_index,
+			'',
+			false,
+			array( 'vz-controls-opt' )
+		);
+
+		self::_renderSelectItem(
+			esc_html__( 'Filter By Column Label', 'visualizer' ),
+			'controls[filterColumnLabel]',
+			! empty( $this->controls['filterColumnLabel'] ) ? $this->controls['filterColumnLabel'] : '',
+			$column_label,
+			'',
+			false,
+			array( 'vz-controls-opt' )
+		);
+
+		self::_renderSelectItem(
+			esc_html__( 'Use Formatted Value', 'visualizer' ),
+			'controls[useFormattedValue]',
+			! empty( $this->controls['useFormattedValue'] ) ? $this->controls['useFormattedValue'] : '',
+			array(
+				'false' => esc_html__( 'False', 'visualizer' ),
+				'true'  => esc_html__( 'True', 'visualizer' ),
+			),
+			'',
+			false
+		);
+
+		self::_renderTextItem(
+			esc_html__( 'Min Value', 'visualizer' ),
+			'controls[minValue]',
+			! empty( $this->controls['minValue'] ) ? $this->controls['minValue'] : '',
+			esc_html__( 'Minimum allowed value for the range lower extent.', 'visualizer' ),
+			'',
+			'text'
+		);
+
+		self::_renderTextItem(
+			esc_html__( 'Max Value', 'visualizer' ),
+			'controls[maxValue]',
+			! empty( $this->controls['maxValue'] ) ? $this->controls['maxValue'] : '',
+			esc_html__( 'Maximum allowed value for the range higher extent.', 'visualizer' ),
+			'',
+			'text'
+		);
+
+		self::_renderSelectItem(
+			esc_html__( 'Match Type', 'visualizer' ),
+			'controls[matchType]',
+			! empty( $this->controls['matchType'] ) ? $this->controls['matchType'] : '',
+			array(
+				'prefix' => esc_html__( 'Prefix', 'visualizer' ),
+				'exact'  => esc_html__( 'Exact', 'visualizer' ),
+				'any'    => esc_html__( 'Any', 'visualizer' ),
+			),
+			'',
+			false
+		);
+
+		self::_renderSelectItem(
+			esc_html__( 'Case Sensitive', 'visualizer' ),
+			'controls[caseSensitive]',
+			! empty( $this->controls['caseSensitive'] ) ? $this->controls['caseSensitive'] : '',
+			array(
+				'false' => esc_html__( 'False', 'visualizer' ),
+				'true'  => esc_html__( 'True', 'visualizer' ),
+			),
+			'',
+			false
+		);
+
+		self::_renderSectionEnd();
+
+		self::_renderSectionStart( esc_html__( 'UI Options', 'visualizer' ), false );
+
+		self::_renderTextItem(
+			esc_html__( 'Label', 'visualizer' ),
+			'controls[ui][label]',
+			! empty( $this->controls['ui']['label'] ) ? $this->controls['ui']['label'] : '',
+			'',
+			'',
+			'text'
+		);
+
+		self::_renderTextItem(
+			esc_html__( 'Label Separator', 'visualizer' ),
+			'controls[ui][labelSeparator]',
+			! empty( $this->controls['ui']['labelSeparator'] ) ? $this->controls['ui']['labelSeparator'] : '',
+			'',
+			'',
+			'text'
+		);
+
+		self::_renderTextItem(
+			esc_html__( 'Caption', 'visualizer' ),
+			'controls[ui][caption]',
+			! empty( $this->controls['ui']['caption'] ) ? $this->controls['ui']['caption'] : '',
+			'',
+			'',
+			'text'
+		);
+
+		self::_renderSelectItem(
+			esc_html__( 'Label Stacking', 'visualizer' ),
+			'controls[ui][labelStacking]',
+			! empty( $this->controls['ui']['labelStacking'] ) ? $this->controls['ui']['labelStacking'] : '',
+			array(
+				'horizontal' => esc_html__( 'Horizontal', 'visualizer' ),
+				'vertical'   => esc_html__( 'Vertical', 'visualizer' ),
+			),
+			'',
+			false
+		);
+
+		self::_renderSelectItem(
+			esc_html__( 'Orientation', 'visualizer' ),
+			'controls[ui][orientation]',
+			! empty( $this->controls['ui']['orientation'] ) ? $this->controls['ui']['orientation'] : '',
+			array(
+				'horizontal' => esc_html__( 'Horizontal', 'visualizer' ),
+				'vertical'   => esc_html__( 'Vertical', 'visualizer' ),
+			),
+			'',
+			false
+		);
+
+		self::_renderSelectItem(
+			esc_html__( 'Show Range Values', 'visualizer' ),
+			'controls[showRangeValues]',
+			! empty( $this->controls['showRangeValues'] ) ? $this->controls['showRangeValues'] : '',
+			array(
+				'true'  => esc_html__( 'True', 'visualizer' ),
+				'false' => esc_html__( 'False', 'visualizer' ),
+			),
+			'',
+			false
+		);
+
+		self::_renderSelectItem(
+			esc_html__( 'Allow Multiple', 'visualizer' ),
+			'controls[allowMultiple]',
+			! empty( $this->controls['allowMultiple'] ) ? $this->controls['allowMultiple'] : '',
+			array(
+				'true'  => esc_html__( 'True', 'visualizer' ),
+				'false' => esc_html__( 'False', 'visualizer' ),
+			),
+			'',
+			false
+		);
+
+		self::_renderSelectItem(
+			esc_html__( 'Allow Typing', 'visualizer' ),
+			'controls[allowTyping]',
+			! empty( $this->controls['allowTyping'] ) ? $this->controls['allowTyping'] : '',
+			array(
+				'true'  => esc_html__( 'True', 'visualizer' ),
+				'false' => esc_html__( 'False', 'visualizer' ),
+			),
+			'',
+			false
+		);
+		self::_renderSectionEnd();
 	}
 }

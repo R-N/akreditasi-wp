@@ -3,9 +3,9 @@ Contributors: kylephillips
 Donate link: https://github.com/sponsors/kylephillips/
 Tags: pages, admin, nested, tree view, page tree, sort, quick edit, structure
 Requires at least: 3.8
-Tested up to: 5.4
+Tested up to: 6.7
 Requires PHP: 5.4
-Stable tag: 3.1.10
+Stable tag: 3.2.8
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,6 +24,8 @@ Nested Pages provides a drag and drop interface for managing pages & posts in th
 * Works on touch-enabled devices
 
 For more information visit [nestedpages.com](http://nestedpages.com).
+
+For development inquiries or to submit security notices, please visit the [Github repository](https://github.com/kylephillips/wp-nested-pages).
 
 **Important: Nested Pages requires WordPress version 3.8 or higher, and PHP version 5.4 or higher.**
 
@@ -104,6 +106,97 @@ No. The menu synchronization currently only works within the pages post type.
 9. The Nested Pages interface can be enabled on a per-post-type basis, with customizable options for each type.
 
 == Changelog ==
+
+= 3.2.9 =
+* Security update addressing XSS code vulnerability (Thanks to Artyom Krugov from CleanTalk and Animesh Gaurav from Automaticc)
+
+= 3.2.8 =
+* Fixes various PHP 8 deprecation warnings when debug is enabled
+* Security update addressing CSRF issue in plugin settings 
+
+= 3.2.7 =
+* Fixes issue with cache and page ordering (Thanks to Felipe Lavín Z.)
+* Security fix in admin customization that allowed possible vulnerability from users with administration-level access with unfiltered_html capabilities.
+
+= 3.2.6 =
+* Fixes issue where bulk edit disappears when no user roles have been selected
+
+= 3.2.5 =
+* Adds ability to hide bulk edit functionality on a user-role basis. Thanks to Robert Ehrenleitner from PLUS.
+* Adds ability to include basic custom fields in bulk edit through the use of a new filter: nestedpages_bulkedit_custom_fields
+* Various bugs fixed
+* PHP 8.2 compatibility
+* WordPress 6.4 compatibility
+
+= 3.2.4 =
+* Security update
+
+= 3.2.3 =
+* Adds the ability to clone the post/page tree in hierarchical post types.
+* Adds option to set the maximum nesting level per post type. To configure, visit Settings > Nested Pages > Post Types, and select the post type you'd like to configure. The option can be located under the "Maximum Nesting Depth" tab.
+* Fixes bug where nav menu was being added when saving plugin options, even when "Disable menu sync completely" was selected.
+
+= 3.2.2 =
+* Adds option to default new pages to hide in the generated nav menu.
+* Adds two new filters: "nestedpages_page_listing" & "nestedpages_show_links". These filters allow access to add the "Links" interface to post types other than pages.
+* Fixes bug in page tree where toggle arrow was not shown if a hidden page was a child. The toggle arrow will still not show if the child list contains only hidden pages. In this case, select the "Show Hidden" link to reveal the toggle.
+* Fixes bug in WPML-enabled sites, where the total translation count did not include posts without a source language code.
+* Fixes bug in WPML-enabled sites where the default language post count was not accurate.
+
+= 3.2.1 =
+* Reverts previous wp_update_post change to prevent server errors on large sites. Replaces with optional "nestedpages_use_update_post" filter to enable hook when needed.
+
+= 3.2.0 =
+* Resolves issue where post_updated action was not firing after reordering of nested view.
+* Adds ability to save a custom URL for pages in the nav menu (Example: outputting an anchor link rather than the page's link). To add a custom link, select quick edit, followed by the "Menu Options" tab. There is a new "Custom URL" input.
+* Corrects previous version's Yoast indicator display.
+* Fixes bug where padding was not reset correctly when dragging a sub-level item to the primary/main level
+
+= 3.1.22 =
+* Fixes deprecation notice from new Yoast release
+
+= 3.1.21 =
+* Fixes issue where Nested Pages menu persists in some instances when "Disable menu completely" is checked/enabled.
+* Tested with WordPress V6
+* Security Updates
+
+= 3.1.20 =
+* Fixes bug where menu item descriptions (Added in the Appearance > Menus interface) were being removed when synchronizing the Nested Pages menu
+* Removes deprecation notice from authors dropdown in quick edit interface
+* Adds 'nestedpages_row_parent_css_classes' developer filter for filtering css classes output in each row's parent <li> element
+* Adds 'nestedpages_new_post' developer filter for filtering new posts before they are added (through child pages or through the "Add Multiple" interface)
+
+= 3.1.19 =
+* Fixes dragging/sorting bug introduced in WordPress version 5.9.
+
+= 3.1.18 =
+* Fixes issue where some custom blocks were not duplicating when cloning a post.
+
+= 3.1.17 =
+* Adds background saving of post status selection (Selecting "Published" in the post status filter will now persist on page reload)
+* Fixes bugs in admin customization related to addition of menu items added by other plugins
+* Security Update (Thanks to Chloe Chamberland at Wordfence for reporting)
+
+= 3.1.16 =
+* Includes security updates. Thanks to Ram Gall at Wordfence for reporting
+
+= 3.1.15 = 
+* Action added for outputting markup along with the add new/add multiple buttons (nestedpages_top_buttons)
+* PHP 8 deprecation errors corrected
+* Tested with WordPress v5.8
+
+= 3.1.14 =
+* Additional security enhancements (Thanks Nico Mollet)
+* Developer improvements through added filters and filter usage corrections (Thanks Bjørnar Tollaksen & Alexandre Sadowski)
+* Adds post title filter for customizing title display beyond the_title filter
+
+= 3.1.13 =
+* Corrects permission issues introduced in previous update
+
+= 3.1.12 =
+* Includes security updates
+* Fixes bug where posts not appearing when filtering by a non top-level hierarchical taxonomy. Allows order sorting while the list is filtered (not parent order)
+* Adds ability to save and synchronize post type archive menu items when using menu sync
 
 = 3.1.11 =
 * Security Update.

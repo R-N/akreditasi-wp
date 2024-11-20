@@ -60,8 +60,11 @@ class SeriesSettings extends Component {
 
 				{ Object.keys( settings.series )
 					.map( ( i, index ) => {
+						i = parseInt( i ) + 1;
                         let indexToFormat = parseInt( i );
-
+                        let label = 'object' === typeof series[i] ? series[i].label : '';
+                        let type = 'object' == typeof series[i] ? series[i].type : '';
+                        let timer = 0;
                         if ( 'tabular' !== type ) {
                             indexToFormat = index;
                         }
@@ -70,7 +73,7 @@ class SeriesSettings extends Component {
 
 						return (
 							<PanelBody
-								title={ series[i].label }
+								title={ label }
 								className="visualizer-inner-sections"
 								initialOpen={ false }
 							>
@@ -103,6 +106,15 @@ class SeriesSettings extends Component {
 												settings.series[index].lineWidth = e;
 												this.props.edit( settings );
 											} }
+											onKeyUp={ e => {
+												clearTimeout( timer );
+												timer = setTimeout( () => {
+													if ( '' != settings.series[index].lineWidth && 0 >= settings.series[index].lineWidth ) {
+														settings.series[index].lineWidth = '0.1';
+														this.props.edit( settings );
+													}
+												}, 700 );
+											} }
 										/>
 
 										<TextControl
@@ -121,7 +133,7 @@ class SeriesSettings extends Component {
 
 								{ ( -1 >= [ 'candlestick'  ].indexOf( type ) ) &&
 
-									( 'number' === series[i].type ) ? (
+									( type && 'number' === type ) ? (
 
 										<Fragment>
 
@@ -147,7 +159,7 @@ class SeriesSettings extends Component {
 
 									) :
 
-									( 0 <= [ 'date', 'datetime', 'timeofday' ].indexOf( series[i].type ) ) && (
+									( 0 <= [ 'date', 'datetime', 'timeofday' ].indexOf( type ) ) && (
 
 										<Fragment>
 
@@ -164,7 +176,7 @@ class SeriesSettings extends Component {
 
 											<p>
 												{ __( 'This is a subset of the date formatting ' ) }
-												<ExternalLink href="http://userguide.icu-project.org/formatparse/datetime#TOC-Date-Time-Format-Syntax">
+												<ExternalLink href="https://unicode-org.github.io/icu/userguide/format_parse/datetime/#datetime-format-syntax">
 													{ __( 'ICU date and time format.' ) }
 												</ExternalLink>
 											</p>

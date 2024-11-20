@@ -16,18 +16,17 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Typography control class.
  */
 class OGF_Customize_Typography_Control extends WP_Customize_Control {
-
 	/**
 	 * The type of customize control being rendered.
 	 *
 	 * @var string
 	 */
-	public $type = 'typography';
+	public $type = 'ogf-typography';
 
 	/**
 	 * Array
 	 *
-	 * @var string
+	 * @var array
 	 */
 	public $l10n = array();
 
@@ -55,7 +54,6 @@ class OGF_Customize_Typography_Control extends WP_Customize_Control {
 				'text_transform' => esc_html__( 'Text Transform', 'olympus-google-fonts' ),
 			)
 		);
-
 	}
 
 	/**
@@ -95,8 +93,6 @@ class OGF_Customize_Typography_Control extends WP_Customize_Control {
 	/**
 	 * Overwrite this method as we are rendering the template with JS.
 	 *
-	 * @access protected
-	 * @since 1.0
 	 * @return void
 	 */
 	protected function render_content() {}
@@ -128,10 +124,16 @@ class OGF_Customize_Typography_Control extends WP_Customize_Control {
 					<option value="default">
 						<?php esc_html_e( 'Default Font', 'olympus-google-fonts' ); ?>
 					</option>
-					<# if ( ! _.isEmpty( ogf_custom_fonts ) ) { #>
+					<# if ( ! _.isEmpty( ogf_custom_fonts_unique ) ) { #>
 						<option disabled><?php esc_html_e( '- Custom Fonts -', 'olympus-google-fonts' ); ?></option>
-						<# _.each( ogf_custom_fonts, function( font_data, font_id ) { #>
-							<option value="cf-{{ font_id }}" <# if ( font_id === data.family.value ) { #> selected="selected" <# } #>>{{ font_data.label }}</option>
+						<# _.each( ogf_custom_fonts_unique, function( font_data, font_id ) { #>
+							<option value="cf-{{ font_id }}" <# if ( font_id === font_data ) { #> selected="selected" <# } #>>{{ font_data }}</option>
+						<# } ) #>
+					<# } #>
+					<# if ( ! _.isEmpty( ogf_typekit_fonts ) ) { #>
+						<option disabled><?php esc_html_e( '- Typekit Fonts -', 'olympus-google-fonts' ); ?></option>
+						<# _.each( ogf_typekit_fonts, function( font_data, font_id ) { #>
+							<option value="{{ font_id }}" <# if ( font_id === data.family.value ) { #> selected="selected" <# } #>>{{ font_data.label }}</option>
 						<# } ) #>
 					<# } #>
 					<option disabled><?php esc_html_e( '- System Fonts -', 'olympus-google-fonts' ); ?></option>
@@ -148,9 +150,8 @@ class OGF_Customize_Typography_Control extends WP_Customize_Control {
 				</button>
 			</li>
 		<# } #>
-
-
 		<div class="advanced-settings-wrapper">
+			<div class="inner">
 			<# if ( data.weight && data.weight.choices ) { #>
 				<li class="typography-font-weight">
 					<# if ( data.weight.label ) { #>
@@ -177,70 +178,8 @@ class OGF_Customize_Typography_Control extends WP_Customize_Control {
 				</li>
 			<# } #>
 
-			<# if ( data.color ) { #>
-				<li class="typography-font-color">
-					<# if ( data.color.label ) { #>
-						<span class="customize-control-title">{{ data.color.label }}</span>
-					<# } #>
-					<input class="color-picker-hex" type="text" maxlength="7" {{{ data.color.link }}} value="{{ data.color.value }}" />
-				</li>
-			<# } #>
-
-			<# if ( data.size ) { #>
-				<li class="typography-font-size">
-					<div class="slider-custom-control">
-							<# if ( data.size.label ) { #>
-								<span class="customize-control-title">{{ data.size.label }}</span>
-							<# } #>
-							<span class="slider-reset dashicons dashicons-image-rotate" slider-reset-value="{{ data.size.value }}"></span>
-							<div class="slider" slider-min-value="1" slider-max-value="72" slider-step-value="1"></div>
-							<input class="customize-control-slider-value" {{{ data.size.link }}} type="number" value="{{ data.size.value }}">
-					</div>
-				</li>
-			<# } #>
-
-			<# if ( data.line_height ) { #>
-				<li class="typography-line-height">
-					<div class="slider-custom-control">
-							<# if ( data.line_height.label ) { #>
-								<span class="customize-control-title">{{ data.line_height.label }}</span>
-							<# } #>
-							<span class="slider-reset dashicons dashicons-image-rotate" slider-reset-value="{{ data.line_height.value }}"></span>
-
-							<div class="slider" slider-min-value="0" slider-max-value="3" slider-step-value=".1"></div>
-							<input class="customize-control-slider-value" {{{ data.line_height.link }}} type="number" value="{{ data.line_height.value }}">
-					</div>
-				</li>
-			<# } #>
-
-			<# if ( data.letter_spacing ) { #>
-				<li class="typography-letter-spacing">
-					<div class="slider-custom-control">
-							<# if ( data.letter_spacing.label ) { #>
-								<span class="customize-control-title">{{ data.letter_spacing.label }}</span>
-							<# } #>
-							<span class="slider-reset dashicons dashicons-image-rotate" slider-reset-value="{{ data.letter_spacing.value }}"></span>
-							<div class="slider" slider-min-value="-5" slider-max-value="5" slider-step-value=".1"></div>
-							<input class="customize-control-slider-value" {{{ data.letter_spacing.link }}} type="number" value="{{ data.letter_spacing.value }}">
-					</div>
-				</li>
-			<# } #>
-
-			<# if ( data.text_transform && data.text_transform.choices ) { #>
-				<li class="typography-text-transform">
-					<# if ( data.text_transform.label ) { #>
-						<span class="customize-control-title">{{ data.text_transform.label }}</span>
-					<# } #>
-					<select {{{ data.text_transform.link }}}>
-						<# _.each( data.text_transform.choices, function( label, choice ) { #>
-							<option value="{{ choice }}" <# if ( choice === data.text_transform.value ) { #> selected="selected" <# } #>>{{ label }}</option>
-						<# } ) #>
-					</select>
-				</li>
-			<# } #>
-
 		</div>
-
+		</div>
 		</ul>
 		<?php
 	}
@@ -249,58 +188,97 @@ class OGF_Customize_Typography_Control extends WP_Customize_Control {
 	 * Returns the available font weights.
 	 *
 	 * @param string $font User's font choice.
+	 * @return array Available font variants.
 	 */
 	public function get_font_weight_choices( $font ) {
+		$variants_to_remove = array(
+			'100i' => esc_html__( 'Thin Italic', 'olympus-google-fonts' ),
+			'200i' => esc_html__( 'Extra Light Italic', 'olympus-google-fonts' ),
+			'300i' => esc_html__( 'Light Italic', 'olympus-google-fonts' ),
+			'400i' => esc_html__( 'Normal Italic', 'olympus-google-fonts' ),
+			'500i' => esc_html__( 'Medium Italic', 'olympus-google-fonts' ),
+			'600i' => esc_html__( 'Semi Bold Italic', 'olympus-google-fonts' ),
+			'700i' => esc_html__( 'Bold Italic', 'olympus-google-fonts' ),
+			'800i' => esc_html__( 'Extra Bold Italic', 'olympus-google-fonts' ),
+			'900i' => esc_html__( 'Ultra Bold Italic', 'olympus-google-fonts' ),
+		);
 
 		$all_variants = ogf_font_variants();
 
 		if ( 'default' === $font ) {
-			return $all_variants;
+			return array_diff( $all_variants, $variants_to_remove );
 		}
 
-		if ( ogf_is_system_font( $font ) || ogf_is_custom_font( $font ) || ! ogf_is_google_font( $font ) ) {
-			return array(
-				'0'   => esc_html__( '- Default -', 'olympus-google-fonts' ),
-				'400' => esc_html__( 'Normal', 'olympus-google-fonts' ),
-				'700' => esc_html__( 'Bold', 'olympus-google-fonts' ),
-			);
+		if ( ogf_is_google_font( $font ) ) {
+			$fonts_array       = ogf_fonts_array();
+			$variants          = $fonts_array[ $font ]['v'];
+			$new_variants['0'] = esc_html__( '- Default -', 'olympus-google-fonts' );
+
+			$diff = array_diff_key( $variants, $variants_to_remove );
+
+			foreach ( $diff as $key => $value ) {
+				$new_variants[ $key ] = $all_variants[ $key ];
+			}
+
+			return $new_variants;
 		}
 
-		$fonts_array = ogf_fonts_array();
+		if ( ogf_is_typekit_font( $font ) ) {
+			$fonts_array = ogf_typekit_fonts();
 
-		$variants = $fonts_array[ $font ]['v'];
+			if ( ! array_key_exists( $font, $fonts_array ) ) {
+				return array();
+			}
 
-		$new_variants['0'] = esc_html__( '- Default -', 'olympus-google-fonts' );
+			$variants          = $fonts_array[ $font ]['variants'];
+			$new_variants['0'] = esc_html__( '- Default -', 'olympus-google-fonts' );
 
-		foreach ( $variants as $key => $value ) {
-			$new_variants[ $key ] = $all_variants[ $key ];
+			foreach ( $variants as $variant ) {
+				$new_variants[ $variant ] = $all_variants[ $variant ];
+			}
+
+			return $new_variants;
 		}
 
-		return $new_variants;
+		$choices = array(
+			'0'   => esc_html__( '- Default -', 'olympus-google-fonts' ),
+			'400' => esc_html__( 'Normal', 'olympus-google-fonts' ),
+			'700' => esc_html__( 'Bold', 'olympus-google-fonts' ),
+		);
+
+		return apply_filters( 'ogf_default_font_weight_choices', $choices );
 	}
 
 	/**
 	 * Returns the available font styles.
+	 *
+	 * @return array CSS font-style values.
 	 */
 	public function get_font_style_choices() {
-		return array(
+		$choices = array(
 			'default' => esc_html__( '- Default -', 'olympus-google-fonts' ),
 			'normal'  => esc_html__( 'Normal', 'olympus-google-fonts' ),
 			'italic'  => esc_html__( 'Italic', 'olympus-google-fonts' ),
 			'oblique' => esc_html__( 'Oblique', 'olympus-google-fonts' ),
 		);
+
+		return apply_filters( 'ogf_default_font_style_choices', $choices );
 	}
 
 	/**
 	 * Returns the available text-transform values.
+	 *
+	 * @return array CSS text-transform values.
 	 */
 	public function get_text_transform_choices() {
-		return array(
+		$choices = array(
 			''           => esc_html__( '- Default -', 'olympus-google-fonts' ),
 			'capitalize' => esc_html__( 'Capitalize', 'olympus-google-fonts' ),
 			'uppercase'  => esc_html__( 'Uppercase', 'olympus-google-fonts' ),
 			'lowercase'  => esc_html__( 'Lowercase', 'olympus-google-fonts' ),
+			'none'       => esc_html__( 'None', 'olympus-google-fonts' ),
 		);
-	}
 
+		return apply_filters( 'ogf_default_text_transform_choices', $choices );
+	}
 }

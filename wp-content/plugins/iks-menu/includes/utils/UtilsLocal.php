@@ -6,7 +6,7 @@
  * @package   Iks Menu
  * @author    IksStudio
  * @license   GPL-3.0
- * @link      http://iks-menu.ru
+ * @link      https://iks-menu.com
  * @copyright 2019 IksStudio
  */
 
@@ -29,6 +29,10 @@ class UtilsLocal {
 			[
 				"id"    => "menu",
 				"label" => Utils::t( "Custom WP menu" ),
+			],
+			[
+				"id"    => "faqs",
+				"label" => Utils::t( "FAQs" ),
 			],
 		];
 	}
@@ -57,5 +61,13 @@ class UtilsLocal {
 
 	static function custom_menus_has_images_support() {
 		return self::get_images_support_custom_menus() === true;
+	}
+
+	static function get_faqs_type() {
+		return Plugin::$post_type . "_faq";
+	}
+
+	static function get_faqs_taxonomy_type() {
+		return self::get_faqs_type() . "_group";
 	}
 }

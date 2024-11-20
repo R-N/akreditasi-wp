@@ -42,7 +42,7 @@ class SQLEditor extends Component {
 			dragDrop: false,
 			matchBrackets: true,
 			autoCloseBrackets: true,
-			extraKeys: { 'Ctrl-Space': 'autocomplete' },
+			extraKeys: { 'Shift-Space': 'autocomplete' },
 			hintOptions: { tables: visualizerLocalize.sqlTable }
 		});
 
@@ -97,7 +97,7 @@ class SQLEditor extends Component {
 				<div className="visualizer-db-query-actions">
 					<Button
 						isLarge
-						isDefault
+						variant="secondary"
 						isBusy={ this.state.isLoading }
 						onClick={ this.onSave }
 					>

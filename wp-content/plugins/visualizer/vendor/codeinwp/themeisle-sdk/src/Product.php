@@ -71,6 +71,12 @@ class Product {
 	 */
 	private $key;
 	/**
+	 * Author URL
+	 *
+	 * @var string $author_url The author url.
+	 */
+	private $author_url;
+	/**
 	 * Product store url.
 	 *
 	 * @var string $store_url The store url.
@@ -107,9 +113,16 @@ class Product {
 	 */
 	private $version;
 	/**
+	 * Holds a map of loaded products objects.
+	 *
+	 * @var array Array of loaded products.
+	 */
+	private static $cached_products = [];
+	/**
 	 * Root api endpoint.
 	 */
 	const API_URL = 'https://api.themeisle.com/';
+
 	/**
 	 * ThemeIsle_SDK_Product constructor.
 	 *
@@ -128,8 +141,25 @@ class Product {
 			$install = time();
 			update_option( $this->get_key() . '_install', time() );
 		}
-		$this->install = $install;
+		$this->install                               = $install;
+		self::$cached_products[ crc32( $basefile ) ] = $this;
+	}
 
+	/**
+	 * Return a product.
+	 *
+	 * @param string $basefile Product basefile.
+	 *
+	 * @return Product Product Object.
+	 */
+	public static function get( $basefile ) {
+		$key = crc32( $basefile );
+		if ( isset( self::$cached_products[ $key ] ) ) {
+			return self::$cached_products[ $key ];
+		}
+		self::$cached_products[ $key ] = new Product( $basefile );
+
+		return self::$cached_products[ $key ];
 	}
 
 	/**
@@ -157,7 +187,7 @@ class Product {
 	 *
 	 * @return string $name         The normalized string.
 	 */
-	static function key_ready_name( $string ) {
+	public static function key_ready_name( $string ) {
 		return str_replace( '-', '_', strtolower( trim( $string ) ) );
 	}
 
@@ -323,6 +353,15 @@ class Product {
 	}
 
 	/**
+	 * Return the product version cache key.
+	 *
+	 * @return string The product version cache key.
+	 */
+	public function get_cache_key() {
+		return $this->get_key() . '_' . preg_replace( '/[^0-9a-zA-Z ]/m', '', $this->get_version() ) . 'versions';
+	}
+
+	/**
 	 * Getter for product name.
 	 *
 	 * @return string The product name.
@@ -373,6 +412,7 @@ class Product {
 			[
 				'name'       => rawurlencode( $this->get_name() ),
 				'edd_action' => 'view_changelog',
+				'locale'     => get_user_locale(),
 			],
 			$this->get_store_url()
 		);
